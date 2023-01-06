@@ -1,0 +1,19 @@
+﻿@model DesiCorner.ViewModels.DishListViewModel
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width" />
+		<title>Desi Corner</title>
+	</head>
+	<body>
+		<h1>@Model.CurrentCategory</h1>
+		@foreach(var dish in Model.Dishes){
+			<div>
+				<h2>@dish.Name</h2>
+				<h3>@dish.Price.ToString("c")</h3>
+				<h4>@dish.Category.CategoryName</h4>
+			</div>
+		}
+	</body>
+</html>
