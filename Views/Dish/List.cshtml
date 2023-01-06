@@ -1,19 +1,23 @@
-﻿@model DesiCorner.ViewModels.DishListViewModel
-<!DOCTYPE html>
+﻿@model DishListViewModel
 
-<html>
-	<head>
-		<meta name="viewport" content="width=device-width" />
-		<title>Desi Corner</title>
-	</head>
-	<body>
-		<h1>@Model.CurrentCategory</h1>
-		@foreach(var dish in Model.Dishes){
-			<div>
-				<h2>@dish.Name</h2>
-				<h3>@dish.Price.ToString("c")</h3>
-				<h4>@dish.Category.CategoryName</h4>
-			</div>
-		}
-	</body>
-</html>
+<h1>@Model.CurrentCategory</h1>
+@foreach(var dish in Model.Dishes){
+        <div class="col">
+            <div class="card dish-card">
+                <img src="@dish.ImageThumbnailUrl" class="card-img-top" alt="@dish.Name">
+                <div class="card-body dish-button">
+                    <h4 class="d-grid">
+                    </h4>
+
+                    <div class="d-flex justify-content-between mt-2">
+                        <h2 class="text-start">
+                            <a class="dish-link">@dish.Name</a>
+                        </h2>
+                        <h5 class="text-nowrap">
+                            @dish.Price.ToString("c")
+                        </h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
