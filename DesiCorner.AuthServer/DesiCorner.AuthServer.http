@@ -1,0 +1,6 @@
+@DesiCorner.AuthServer_HostAddress = http://localhost:5113
+
+GET {{DesiCorner.AuthServer_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
