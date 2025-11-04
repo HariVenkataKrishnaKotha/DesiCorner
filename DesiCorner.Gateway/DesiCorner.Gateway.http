@@ -1,0 +1,6 @@
+@DesiCorner.Gateway_HostAddress = http://localhost:5113
+
+GET {{DesiCorner.Gateway_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
