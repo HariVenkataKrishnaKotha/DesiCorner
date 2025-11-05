@@ -150,6 +150,7 @@ app.MapGet("/test-token", async (HttpContext ctx, IConfiguration config) =>
 app.Use(async (ctx, next) =>
 {
     var path = ctx.Request.Path.Value ?? "";
+    var method = ctx.Request.Method;
 
     // PUBLIC PATHS (no Bearer token required):
     var isPublicPath = path.StartsWith("/connect", StringComparison.OrdinalIgnoreCase) ||
@@ -158,7 +159,12 @@ app.Use(async (ctx, next) =>
                        path.StartsWith("/health", StringComparison.OrdinalIgnoreCase) ||
                        path.StartsWith("/test-token", StringComparison.OrdinalIgnoreCase);
 
-    if (isPublicPath)
+    // Allow public READ access to products and categories (e-commerce browsing)
+    var isPublicProductBrowsing = method.Equals("GET", StringComparison.OrdinalIgnoreCase) &&
+                                   (path.StartsWith("/api/products", StringComparison.OrdinalIgnoreCase) ||
+                                    path.StartsWith("/api/categories", StringComparison.OrdinalIgnoreCase));
+
+    if (isPublicPath || isPublicProductBrowsing)
     {
         await next();
         return;
