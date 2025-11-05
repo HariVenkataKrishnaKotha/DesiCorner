@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesiCorner.MessageBus", "De
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesiCorner.Gateway", "DesiCorner.Gateway\DesiCorner.Gateway.csproj", "{CAA04191-BD31-4132-89F2-02DD7F41C692}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesiCorner.Services.ProductAPI", "DesiCorner.Services.ProductAPI\DesiCorner.Services.ProductAPI.csproj", "{E503EB70-A0CC-462D-AA94-6E7CC91B9719}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,10 @@ Global
 		{CAA04191-BD31-4132-89F2-02DD7F41C692}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CAA04191-BD31-4132-89F2-02DD7F41C692}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CAA04191-BD31-4132-89F2-02DD7F41C692}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E503EB70-A0CC-462D-AA94-6E7CC91B9719}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E503EB70-A0CC-462D-AA94-6E7CC91B9719}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E503EB70-A0CC-462D-AA94-6E7CC91B9719}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E503EB70-A0CC-462D-AA94-6E7CC91B9719}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -50,6 +56,7 @@ Global
 		{8B89F716-F78E-4BC7-801C-BB46BA33D6A3} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{7DF47786-EC2A-4D16-889D-3CB736004783} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{CAA04191-BD31-4132-89F2-02DD7F41C692} = {E4C0FC88-A543-4129-9E7E-88CE63A20E2E}
+		{E503EB70-A0CC-462D-AA94-6E7CC91B9719} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {AC712697-1F00-4011-9503-AC6F983A8797}
