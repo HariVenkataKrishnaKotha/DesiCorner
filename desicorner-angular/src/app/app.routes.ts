@@ -1,43 +1,23 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth-guard';
-import { adminGuard } from './core/guards/admin-guard';
 
 export const routes: Routes = [
   {
     path: '',
-    loadComponent: () => import('./features/home/home-module').then(m => m.HomeModule)
-  },
-  {
-    path: 'products',
-    loadChildren: () => import('./features/products/products-module').then(m => m.ProductsModule)
+    loadComponent: () => import('./features/home/home').then(m => m.HomeComponent)
   },
   {
     path: 'auth',
-    loadChildren: () => import('./features/auth/auth-module').then(m => m.AuthModule)
+    loadChildren: () => import('./features/auth/auth-routing-module').then(m => m.AUTH_ROUTES)
   },
   {
     path: 'cart',
-    loadComponent: () => import('./features/cart/cart-module').then(m => m.CartModule)
-  },
-  {
-    path: 'checkout',
-    loadComponent: () => import('./features/checkout/checkout-module').then(m => m.CheckoutModule),
-    canActivate: [authGuard]
-  },
-  {
-    path: 'orders',
-    loadChildren: () => import('./features/orders/orders-module').then(m => m.OrdersModule),
-    canActivate: [authGuard]
+    loadComponent: () => import('./features/cart/cart').then(m => m.CartComponent)
   },
   {
     path: 'profile',
     loadComponent: () => import('./features/profile/profile-module').then(m => m.ProfileModule),
     canActivate: [authGuard]
-  },
-  {
-    path: 'admin',
-    loadChildren: () => import('./features/admin/admin-module').then(m => m.AdminModule),
-    canActivate: [adminGuard]
   },
   {
     path: '**',
