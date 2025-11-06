@@ -1,8 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap, catchError, of } from 'rxjs';
-import { OAuthService, OAuthEvent, OAuthErrorEvent } from 'angular-oauth2-oidc';
+import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { environment } from '@env/environment';
 import { 
   LoginRequest, 
@@ -20,72 +19,43 @@ import { ApiResponse } from '../models/response.models';
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
-  private oauthService = inject(OAuthService);
 
   private authStateSubject = new BehaviorSubject<AuthState>({
     isAuthenticated: false,
-    loading: true
+    loading: false
   });
 
   public authState$ = this.authStateSubject.asObservable();
 
   constructor() {
-    this.configureOAuth();
-    this.initAuth();
+    // Check if user is logged in on init
+    this.checkAuth();
   }
 
-  private configureOAuth(): void {
-    this.oauthService.configure({
-      issuer: environment.oidc.issuer,
-      redirectUri: environment.oidc.redirectUri,
-      clientId: environment.oidc.clientId,
-      responseType: environment.oidc.responseType,
-      scope: environment.oidc.scope,
-      showDebugInformation: environment.oidc.showDebugInformation,
-      requireHttps: environment.oidc.requireHttps,
-      strictDiscoveryDocumentValidation: environment.oidc.strictDiscoveryDocumentValidation,
-      postLogoutRedirectUri: environment.oidc.postLogoutRedirectUri,
-      useSilentRefresh: true,
-      silentRefreshTimeout: 5000,
-      timeoutFactor: 0.75,
-    });
-
-    this.oauthService.setupAutomaticSilentRefresh();
-
-    // Listen to OAuth events
-    this.oauthService.events.subscribe(event => {
-      if (event instanceof OAuthErrorEvent) {
-        console.error('OAuth error:', event);
-      }
-    });
-  }
-
-  private async initAuth(): Promise<void> {
-    try {
-      await this.oauthService.loadDiscoveryDocument();
-      
-      // Check if we have a valid token
-      if (this.oauthService.hasValidAccessToken()) {
-        await this.loadUserProfile();
-      } else {
-        // Try to get token from URL (OAuth callback)
-        await this.oauthService.tryLogin();
-        
-        if (this.oauthService.hasValidAccessToken()) {
-          await this.loadUserProfile();
+  private checkAuth(): void {
+    this.authStateSubject.next({ ...this.authStateSubject.value, loading: true });
+    
+    // Check authentication status from backend
+    this.http.get<ApiResponse<UserProfile>>(`${environment.gatewayUrl}/api/account/profile`, { withCredentials: true })
+      .subscribe({
+        next: (response) => {
+          if (response.isSuccess && response.result) {
+            this.authStateSubject.next({
+              isAuthenticated: true,
+              userId: response.result.id,
+              profile: response.result,
+              loading: false
+            });
+          } else {
+            this.authStateSubject.next({ isAuthenticated: false, loading: false });
+          }
+        },
+        error: () => {
+          this.authStateSubject.next({ isAuthenticated: false, loading: false });
         }
-      }
-    } catch (error) {
-      console.error('Auth initialization error:', error);
-    } finally {
-      this.authStateSubject.next({
-        ...this.authStateSubject.value,
-        loading: false
       });
-    }
   }
 
-  // Cookie-based login (for simple scenarios)
   login(request: LoginRequest): Observable<ApiResponse> {
     return this.http.post<ApiResponse>(
       `${environment.gatewayUrl}/api/account/login`,
@@ -94,16 +64,11 @@ export class AuthService {
     ).pipe(
       tap(response => {
         if (response.isSuccess) {
-          // After cookie login, initiate OAuth flow for token
-          this.startOAuthFlow();
+          // Immediately load profile after successful login
+          setTimeout(() => this.loadUserProfile(), 100);
         }
       })
     );
-  }
-
-  // OAuth PKCE flow (recommended for SPA)
-  startOAuthFlow(): void {
-    this.oauthService.initCodeFlow();
   }
 
   register(request: RegisterRequest): Observable<ApiResponse> {
@@ -127,38 +92,55 @@ export class AuthService {
     );
   }
 
-  async loadUserProfile(): Promise<void> {
-    try {
-      const response = await this.http.get<ApiResponse<UserProfile>>(
-        `${environment.gatewayUrl}/api/account/profile`,
-        { withCredentials: true }
-      ).toPromise();
-
-      if (response?.isSuccess && response.result) {
+  loadUserProfile(): void {
+    this.http.get<ApiResponse<UserProfile>>(
+      `${environment.gatewayUrl}/api/account/profile`,
+      { withCredentials: true }
+    ).subscribe({
+      next: (response) => {
+        if (response?.isSuccess && response.result) {
+          this.authStateSubject.next({
+            isAuthenticated: true,
+            userId: response.result.id,
+            profile: response.result,
+            loading: false
+          });
+          console.log('User profile loaded:', response.result);
+        } else {
+          this.authStateSubject.next({
+            isAuthenticated: false,
+            loading: false
+          });
+        }
+      },
+      error: (error) => {
+        console.error('Failed to load profile:', error);
         this.authStateSubject.next({
-          isAuthenticated: true,
-          userId: response.result.id,
-          profile: response.result,
-          accessToken: this.oauthService.getAccessToken(),
+          isAuthenticated: false,
           loading: false
         });
       }
-    } catch (error) {
-      console.error('Failed to load user profile:', error);
-      this.authStateSubject.next({
-        isAuthenticated: false,
-        loading: false
-      });
-    }
+    });
   }
 
   logout(): void {
-    this.oauthService.logOut();
-    this.authStateSubject.next({
-      isAuthenticated: false,
-      loading: false
-    });
-    this.router.navigate(['/']);
+    this.http.post(`${environment.gatewayUrl}/api/account/logout`, {}, { withCredentials: true })
+      .subscribe({
+        next: () => {
+          this.authStateSubject.next({
+            isAuthenticated: false,
+            loading: false
+          });
+          this.router.navigate(['/']);
+        },
+        error: () => {
+          this.authStateSubject.next({
+            isAuthenticated: false,
+            loading: false
+          });
+          this.router.navigate(['/']);
+        }
+      });
   }
 
   get isAuthenticated(): boolean {
@@ -170,7 +152,7 @@ export class AuthService {
   }
 
   get accessToken(): string | null {
-    return this.oauthService.getAccessToken();
+    return null;
   }
 
   hasRole(role: string): boolean {

@@ -120,8 +120,8 @@ builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = ".DesiCorner.Auth";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.Cookie.SameSite = SameSiteMode.None; // Important for cross-origin (Angular on different port)
+    options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+    options.Cookie.SameSite = SameSiteMode.Lax; // Important for cross-origin (Angular on different port)
     options.ExpireTimeSpan = TimeSpan.FromHours(1);
     options.SlidingExpiration = true;
 

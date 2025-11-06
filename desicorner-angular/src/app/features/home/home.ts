@@ -36,35 +36,37 @@ export class HomeComponent implements OnInit {
   }
 
   loadData(): void {
-    this.loading = true;
+  this.loading = true;
 
-    // Load categories
-    this.productService.loadCategories().subscribe({
-      next: (response) => {
-        if (response.isSuccess && response.result) {
-          this.categories = response.result;
-        }
-      },
-      error: (error) => {
-        console.error('Failed to load categories', error);
+  // Load categories
+  this.productService.loadCategories().subscribe({
+    next: (response) => {
+      if (response.isSuccess && response.result) {
+        this.categories = response.result;
       }
-    });
+    },
+    error: (error) => {
+      console.error('Failed to load categories', error);
+      // Don't show toast - error interceptor handles it
+    }
+  });
 
-    // Load products
-    this.productService.loadProducts().subscribe({
-      next: (response) => {
-        if (response.isSuccess && response.result) {
-          // Get first 6 products as featured
-          this.featuredProducts = response.result.slice(0, 6);
-        }
-        this.loading = false;
-      },
-      error: (error) => {
-        console.error('Failed to load products', error);
-        this.loading = false;
+  // Load products
+  this.productService.loadProducts().subscribe({
+    next: (response) => {
+      if (response.isSuccess && response.result) {
+        // Get first 6 products as featured
+        this.featuredProducts = response.result.slice(0, 6);
       }
-    });
-  }
+      this.loading = false;
+    },
+    error: (error) => {
+      console.error('Failed to load products', error);
+      this.loading = false;
+      // Don't show toast - error interceptor handles it
+    }
+  });
+}
 
   addToCart(product: Product): void {
     this.cartService.addItem(product, 1);

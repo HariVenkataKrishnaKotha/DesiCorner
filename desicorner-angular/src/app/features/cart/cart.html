@@ -1,0 +1,127 @@
+<div class="container">
+  <h1>Shopping Cart</h1>
+  
+  @if (cartService.cart$ | async; as cart) {
+    @if (cart.items.length > 0) {
+      <mat-card>
+        <mat-card-content>
+          <div class="cart-items">
+            @for (item of cart.items; track item.productId) {
+              <div class="cart-item">
+                <div class="item-image">
+                  @if (item.productImage) {
+                    <img [src]="item.productImage" [alt]="item.productName">
+                  } @else {
+                    <div class="item-image-placeholder">🍽️</div>
+                  }
+                </div>
+                
+                <div class="item-details">
+                  <h3>{{ item.productName }}</h3>
+                  <div class="item-badges">
+                    @if (item.isVegetarian) {
+                      <span class="badge badge-success">🥬 Veg</span>
+                    }
+                    @if (item.isSpicy) {
+                      <span class="badge badge-danger">🌶️ Spicy</span>
+                    }
+                  </div>
+                  <p class="item-price">${{ item.price.toFixed(2) }}</p>
+                </div>
+                
+                <div class="item-quantity">
+                  <button 
+                    mat-icon-button 
+                    (click)="cartService.updateQuantity(item.productId, item.quantity - 1)"
+                    aria-label="Decrease quantity">
+                    <mat-icon>remove</mat-icon>
+                  </button>
+                  <span class="quantity">{{ item.quantity }}</span>
+                  <button 
+                    mat-icon-button 
+                    (click)="cartService.updateQuantity(item.productId, item.quantity + 1)"
+                    aria-label="Increase quantity">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                </div>
+                
+                <div class="item-total">
+                  <p>${{ (item.price * item.quantity).toFixed(2) }}</p>
+                  <button 
+                    mat-icon-button 
+                    color="warn"
+                    (click)="cartService.removeItem(item.productId)"
+                    aria-label="Remove item">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+          
+          <div class="cart-summary">
+            <div class="summary-row">
+              <span>Subtotal:</span>
+              <span>${{ cart.subtotal.toFixed(2) }}</span>
+            </div>
+            <div class="summary-row">
+              <span>Tax (8%):</span>
+              <span>${{ cart.tax.toFixed(2) }}</span>
+            </div>
+            <div class="summary-row">
+              <span>Delivery Fee:</span>
+              <span>
+                @if (cart.deliveryFee === 0) {
+                  <span class="free">FREE</span>
+                } @else {
+                  ${{ cart.deliveryFee.toFixed(2) }}
+                }
+              </span>
+            </div>
+            @if (cart.discount > 0) {
+              <div class="summary-row discount">
+                <span>Discount:</span>
+                <span>-${{ cart.discount.toFixed(2) }}</span>
+              </div>
+            }
+            <div class="summary-row total">
+              <span>Total:</span>
+              <span>${{ cart.total.toFixed(2) }}</span>
+            </div>
+            
+            @if (cart.subtotal < 50) {
+              <p class="free-delivery-notice">
+                Add ${{ (50 - cart.subtotal).toFixed(2) }} more for FREE delivery!
+              </p>
+            }
+          </div>
+          
+          <div class="cart-actions">
+            <button mat-stroked-button routerLink="/">
+              <mat-icon>arrow_back</mat-icon>
+              Continue Shopping
+            </button>
+            <button mat-raised-button color="primary" routerLink="/checkout">
+              Proceed to Checkout
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    } @else {
+      <mat-card class="empty-cart">
+        <mat-card-content>
+          <div class="empty-state">
+            <mat-icon>shopping_cart</mat-icon>
+            <h2>Your cart is empty</h2>
+            <p>Add some delicious items to get started!</p>
+            <button mat-raised-button color="primary" routerLink="/">
+              <mat-icon>restaurant_menu</mat-icon>
+              Browse Menu
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</div>
