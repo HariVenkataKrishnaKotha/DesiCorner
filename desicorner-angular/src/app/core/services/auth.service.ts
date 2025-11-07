@@ -13,6 +13,12 @@ import {
 } from '../models/auth.models';
 import { ApiResponse } from '../models/response.models';
 
+interface LoginResponse {
+  token: string;
+  user: UserProfile;
+  expiresIn: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -26,6 +32,8 @@ export class AuthService {
   });
 
   public authState$ = this.authStateSubject.asObservable();
+  private readonly TOKEN_KEY = 'desicorner_token';
+  private readonly USER_KEY = 'desicorner_user';
 
   constructor() {
     // Check if user is logged in on init
@@ -33,39 +41,35 @@ export class AuthService {
   }
 
   private checkAuth(): void {
-    this.authStateSubject.next({ ...this.authStateSubject.value, loading: true });
-    
-    // Check authentication status from backend
-    this.http.get<ApiResponse<UserProfile>>(`${environment.gatewayUrl}/api/account/profile`, { withCredentials: true })
-      .subscribe({
-        next: (response) => {
-          if (response.isSuccess && response.result) {
-            this.authStateSubject.next({
-              isAuthenticated: true,
-              userId: response.result.id,
-              profile: response.result,
-              loading: false
-            });
-          } else {
-            this.authStateSubject.next({ isAuthenticated: false, loading: false });
-          }
-        },
-        error: () => {
-          this.authStateSubject.next({ isAuthenticated: false, loading: false });
-        }
-      });
+    const token = this.getToken();
+    const user = this.getStoredUser();
+
+    if (token && user) {
+      // Token exists, verify it's still valid
+      this.loadUserProfile();
+    } else {
+      this.authStateSubject.next({ isAuthenticated: false, loading: false });
+    }
   }
 
-  login(request: LoginRequest): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(
+  login(request: LoginRequest): Observable<ApiResponse<LoginResponse>> {
+    return this.http.post<ApiResponse<LoginResponse>>(
       `${environment.gatewayUrl}/api/account/login`,
-      request,
-      { withCredentials: true }
+      request
     ).pipe(
       tap(response => {
-        if (response.isSuccess) {
-          // Immediately load profile after successful login
-          setTimeout(() => this.loadUserProfile(), 100);
+        if (response.isSuccess && response.result) {
+          // Store token and user data
+          this.setToken(response.result.token);
+          this.setStoredUser(response.result.user);
+          
+          // Update auth state
+          this.authStateSubject.next({
+            isAuthenticated: true,
+            userId: response.result.user.id,
+            profile: response.result.user,
+            loading: false
+          });
         }
       })
     );
@@ -94,11 +98,11 @@ export class AuthService {
 
   loadUserProfile(): void {
     this.http.get<ApiResponse<UserProfile>>(
-      `${environment.gatewayUrl}/api/account/profile`,
-      { withCredentials: true }
+      `${environment.gatewayUrl}/api/account/profile`
     ).subscribe({
       next: (response) => {
         if (response?.isSuccess && response.result) {
+          this.setStoredUser(response.result);
           this.authStateSubject.next({
             isAuthenticated: true,
             userId: response.result.id,
@@ -107,40 +111,56 @@ export class AuthService {
           });
           console.log('User profile loaded:', response.result);
         } else {
-          this.authStateSubject.next({
-            isAuthenticated: false,
-            loading: false
-          });
+          this.logout();
         }
       },
       error: (error) => {
         console.error('Failed to load profile:', error);
-        this.authStateSubject.next({
-          isAuthenticated: false,
-          loading: false
-        });
+        this.logout();
       }
     });
   }
 
   logout(): void {
-    this.http.post(`${environment.gatewayUrl}/api/account/logout`, {}, { withCredentials: true })
-      .subscribe({
-        next: () => {
-          this.authStateSubject.next({
-            isAuthenticated: false,
-            loading: false
-          });
-          this.router.navigate(['/']);
-        },
-        error: () => {
-          this.authStateSubject.next({
-            isAuthenticated: false,
-            loading: false
-          });
-          this.router.navigate(['/']);
-        }
-      });
+    // Clear local storage
+    this.removeToken();
+    this.removeStoredUser();
+    
+    // Update auth state
+    this.authStateSubject.next({
+      isAuthenticated: false,
+      loading: false
+    });
+    
+    // Navigate to home
+    this.router.navigate(['/']);
+  }
+
+  // Token management
+  getToken(): string | null {
+    return localStorage.getItem(this.TOKEN_KEY);
+  }
+
+  private setToken(token: string): void {
+    localStorage.setItem(this.TOKEN_KEY, token);
+  }
+
+  private removeToken(): void {
+    localStorage.removeItem(this.TOKEN_KEY);
+  }
+
+  // User management
+  private getStoredUser(): UserProfile | null {
+    const user = localStorage.getItem(this.USER_KEY);
+    return user ? JSON.parse(user) : null;
+  }
+
+  private setStoredUser(user: UserProfile): void {
+    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+  }
+
+  private removeStoredUser(): void {
+    localStorage.removeItem(this.USER_KEY);
   }
 
   get isAuthenticated(): boolean {
@@ -152,7 +172,7 @@ export class AuthService {
   }
 
   get accessToken(): string | null {
-    return null;
+    return this.getToken();
   }
 
   hasRole(role: string): boolean {
