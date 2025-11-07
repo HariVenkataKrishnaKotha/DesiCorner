@@ -1,12 +1,19 @@
 import { HttpInterceptorFn } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { AuthService } from '../services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  // For cookie-based authentication, just ensure credentials are sent
-  // No need to add Authorization header since we're using cookies
+  const authService = inject(AuthService);
   
-  if (req.url.includes('/api/')) {
+  // Get the JWT token
+  const token = authService.accessToken;
+  
+  // Clone the request and add authorization header if token exists
+  if (token) {
     req = req.clone({
-      withCredentials: true
+      setHeaders: {
+        Authorization: `Bearer ${token}`
+      }
     });
   }
   

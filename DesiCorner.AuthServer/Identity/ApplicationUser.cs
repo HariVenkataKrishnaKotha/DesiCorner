@@ -2,7 +2,7 @@
 
 namespace DesiCorner.AuthServer.Identity;
 
-public sealed class ApplicationUser : IdentityUser<Guid>
+public class ApplicationUser : IdentityUser<Guid>
 {
     // Profile Information
     public string? DietaryPreference { get; set; } // Veg, Non-Veg, Vegan

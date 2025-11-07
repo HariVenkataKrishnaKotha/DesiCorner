@@ -2,7 +2,7 @@
 using DesiCorner.AuthServer.Services;
 using DesiCorner.Contracts.Auth;
 using DesiCorner.Contracts.Common;
-using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -16,9 +16,11 @@ namespace DesiCorner.AuthServer.Controllers;
 [Route("api/[controller]")]
 public class AccountController : ControllerBase
 {
+    private const string CombinedAuthSchemes = "Identity.Application,JwBearer";
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IOtpService _otpService;
+    private readonly ITokenService _tokenService;
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<AccountController> _logger;
 
@@ -27,13 +29,14 @@ public class AccountController : ControllerBase
         SignInManager<ApplicationUser> signInManager,
         IOtpService otpService,
         IConnectionMultiplexer redis,
-        ILogger<AccountController> logger)
+        ILogger<AccountController> logger,ITokenService tokenService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _otpService = otpService;
         _redis = redis;
         _logger = logger;
+        _tokenService = tokenService;
     }
 
     /// <summary>
@@ -95,7 +98,7 @@ public class AccountController : ControllerBase
     }
 
     /// <summary>
-    /// Login - Sets authentication cookie for OAuth flow
+    /// Login - Sets authentication cookie for OAuth flow AND returns JWT token
     /// </summary>
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
@@ -137,17 +140,31 @@ public class AccountController : ControllerBase
             user.LastLoginAt = DateTime.UtcNow;
             await _userManager.UpdateAsync(user);
 
+            // Get user roles
+            var roles = await _userManager.GetRolesAsync(user);
+
+            // Generate JWT token
+            var token = _tokenService.GenerateAccessToken(user, roles);
+
             _logger.LogInformation("User {Email} logged in successfully", request.Email);
 
             return Ok(new ResponseDto
             {
                 IsSuccess = true,
-                Message = "Login successful. You can now proceed with OAuth authorization.",
+                Message = "Login successful",
                 Result = new
                 {
-                    UserId = user.Id,
-                    Email = user.Email,
-                    RequiresOtp = false // Set to true if you want 2FA
+                    token, // ← JWT Token for Angular
+                    user = new
+                    {
+                        id = user.Id.ToString(),
+                        email = user.Email,
+                        phoneNumber = user.PhoneNumber,
+                        dietaryPreference = user.DietaryPreference,
+                        rewardPoints = user.RewardPoints,
+                        roles
+                    },
+                    expiresIn = 1440 * 60 // 24 hours in seconds
                 }
             });
         }
@@ -289,7 +306,7 @@ public class AccountController : ControllerBase
     /// <summary>
     /// Logout - Clears authentication cookie
     /// </summary>
-    [Authorize]
+    [Authorize(AuthenticationSchemes = CombinedAuthSchemes)]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
@@ -301,17 +318,33 @@ public class AccountController : ControllerBase
         });
     }
 
-    /// <summary>
-    /// Get current user profile
+    // <summary>
+    /// Get current user profile - Supports both Cookie and JWT authentication
     /// </summary>
-    [Authorize]
+    [Authorize(AuthenticationSchemes = CombinedAuthSchemes)]
     [HttpGet("profile")]
     public async Task<IActionResult> GetProfile()
     {
-        var user = await _userManager.GetUserAsync(User);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized(new ResponseDto
+            {
+                IsSuccess = false,
+                Message = "User not authenticated"
+            });
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+
         if (user is null)
         {
-            return Unauthorized();
+            return NotFound(new ResponseDto
+            {
+                IsSuccess = false,
+                Message = "User not found"
+            });
         }
 
         var roles = await _userManager.GetRolesAsync(user);
@@ -337,7 +370,7 @@ public class AccountController : ControllerBase
         {
             Id = user.Id,
             Email = user.Email!,
-            PhoneNumber = user.PhoneNumber!,
+            PhoneNumber = user.PhoneNumber,
             PhoneNumberConfirmed = user.PhoneNumberConfirmed,
             DietaryPreference = user.DietaryPreference,
             RewardPoints = user.RewardPoints,
@@ -352,10 +385,10 @@ public class AccountController : ControllerBase
         });
     }
 
-    /// <summary>
+    // <summary>
     /// Add delivery address
     /// </summary>
-    [Authorize]
+    [Authorize(AuthenticationSchemes = CombinedAuthSchemes)]
     [HttpPost("addresses")]
     public async Task<IActionResult> AddAddress([FromBody] AddAddressDto request)
     {
@@ -413,10 +446,10 @@ public class AccountController : ControllerBase
         });
     }
 
-    /// <summary>
+    // <summary>
     /// Change password
     /// </summary>
-    [Authorize]
+    [Authorize(AuthenticationSchemes = CombinedAuthSchemes)]
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto request)
     {

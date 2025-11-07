@@ -1,15 +1,16 @@
-using DesiCorner.AuthServer.Data;
+﻿using DesiCorner.AuthServer.Data;
 using DesiCorner.AuthServer.Identity;
 using DesiCorner.AuthServer.Infrastructure;
+using DesiCorner.AuthServer.Models;
 using DesiCorner.AuthServer.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
-using System.Net;
-using Twilio.Types;
-using static System.Net.WebRequestMethods;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
@@ -21,7 +22,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(opt =>
 builder.Services.AddDbContext<DataProtectionKeyContext>(opt =>
     opt.UseSqlServer(cfg.GetConnectionString("DataProtection")));
 
-// Data Protection keys (for multi-instance deployments)
+// Data Protection keys
 builder.Services.AddDataProtection()
     .PersistKeysToDbContext<DataProtectionKeyContext>();
 
@@ -46,17 +47,58 @@ builder.Services
 // Controllers
 builder.Services.AddControllers();
 
-// Redis (local instance)
+// Redis
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
     ConnectionMultiplexer.Connect(cfg["Redis:Configuration"]!));
 
-// Mock service instead
-//builder.Services.AddSingleton<IOtpService, MockOtpService>();
+// Configure JWT Settings
+builder.Services.Configure<JwtSettings>(cfg.GetSection("JwtSettings"));
+var jwtSettings = cfg.GetSection("JwtSettings").Get<JwtSettings>();
 
-// Services
+if (jwtSettings == null)
+{
+    throw new InvalidOperationException("JWT Settings not configured");
+}
+
 // Services
 builder.Services.AddSingleton<IEmailService, EmailService>();
 builder.Services.AddSingleton<IOtpService, OtpService>();
+builder.Services.AddScoped<ITokenService, TokenService>(); // ← JWT Token Service
+
+// Authentication - Both Cookie (for OAuth) and JWT (for API)
+builder.Services.AddAuthentication(options =>
+{
+    // Set default to support BOTH schemes
+    options.DefaultScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+})
+.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    options.SaveToken = true;
+    options.RequireHttpsMetadata = false; // For development
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
+        ValidateIssuer = true,
+        ValidIssuer = jwtSettings.Issuer,
+        ValidateAudience = true,
+        ValidAudience = jwtSettings.Audience,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+// Configure authorization to accept BOTH Cookie and JWT
+builder.Services.AddAuthorization(options =>
+{
+    options.DefaultPolicy = new AuthorizationPolicyBuilder()
+        .AddAuthenticationSchemes(
+            IdentityConstants.ApplicationScheme,  // Cookie for OpenIddict
+            JwtBearerDefaults.AuthenticationScheme) // JWT for direct API
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 // OpenIddict
 builder.Services.AddOpenIddict()
@@ -66,7 +108,7 @@ builder.Services.AddOpenIddict()
         opt.SetIssuer(new Uri(cfg["OpenIddict:Issuer"]!));
         opt.DisableAccessTokenEncryption();
 
-        // Development only - remove in production!
+        // Development only
         opt.UseAspNetCore().DisableTransportSecurityRequirement();
 
         // Endpoints
@@ -80,7 +122,7 @@ builder.Services.AddOpenIddict()
         opt.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange();
         opt.AllowRefreshTokenFlow();
 
-        // Development keys (use proper keys in production!)
+        // Development keys
         opt.AddEphemeralEncryptionKey()
            .AddEphemeralSigningKey();
 
@@ -121,11 +163,11 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.Name = ".DesiCorner.Auth";
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.None;
-    options.Cookie.SameSite = SameSiteMode.Lax; // Important for cross-origin (Angular on different port)
+    options.Cookie.SameSite = SameSiteMode.Lax;
     options.ExpireTimeSpan = TimeSpan.FromHours(1);
     options.SlidingExpiration = true;
 
-    // API-only - return 401 instead of redirecting to login page
+    // API-only - return 401 instead of redirecting
     options.Events.OnRedirectToLogin = context =>
     {
         context.Response.StatusCode = 401;
@@ -133,7 +175,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     };
 });
 
-// CORS - Allow Angular app
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Angular", policy =>
@@ -141,13 +183,45 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("http://localhost:4200", "https://localhost:4200")
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials(); // Important for cookies!
+              .AllowCredentials();
     });
 });
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "DesiCorner Auth API",
+        Version = "v1"
+    });
+
+    // Add JWT authentication to Swagger
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token.",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 var app = builder.Build();
 
@@ -161,6 +235,11 @@ using (var scope = app.Services.CreateScope())
     await dp.Database.MigrateAsync();
 
     await Seed.InitializeAsync(app.Services, cfg["OpenIddict:Issuer"]!);
+
+    // Also seed with DbInitializer for roles
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
+    await DbInitializer.Initialize(db, userManager, roleManager);
 }
 
 // Configure pipeline
@@ -171,13 +250,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-// CORS must be before Authentication
 app.UseCors("Angular");
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 // Health endpoints
