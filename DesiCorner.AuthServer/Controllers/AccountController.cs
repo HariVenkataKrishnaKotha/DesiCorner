@@ -43,6 +43,7 @@ public class AccountController : ControllerBase
     /// Register a new user
     /// </summary>
     [HttpPost("register")]
+    [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
     {
         // Rate limiting
@@ -101,6 +102,7 @@ public class AccountController : ControllerBase
     /// Login - Sets authentication cookie for OAuth flow AND returns JWT token
     /// </summary>
     [HttpPost("login")]
+    [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
     {
         // Rate limiting
@@ -199,6 +201,7 @@ public class AccountController : ControllerBase
     /// Check if user is authenticated (for Angular to verify before OAuth redirect)
     /// </summary>
     [HttpGet("check-auth")]
+    [AllowAnonymous]
     public IActionResult CheckAuth()
     {
         if (User.Identity?.IsAuthenticated == true)
@@ -227,6 +230,7 @@ public class AccountController : ControllerBase
     /// Send OTP to phone number
     /// </summary>
     [HttpPost("send-otp")]
+    [AllowAnonymous]
     public async Task<IActionResult> SendOtp([FromBody] SendOtpRequestDto request)
     {
         // Determine identifier (email or phone)
@@ -265,6 +269,7 @@ public class AccountController : ControllerBase
     /// Verify OTP
     /// </summary>
     [HttpPost("verify-otp")]
+    [AllowAnonymous]
     public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequestDto request)
     {
         var (isValid, error) = await _otpService.ValidateOtpAsync(request.Identifier, request.Otp);
@@ -306,7 +311,7 @@ public class AccountController : ControllerBase
     /// <summary>
     /// Logout - Clears authentication cookie
     /// </summary>
-    [Authorize(AuthenticationSchemes = CombinedAuthSchemes)]
+    [Authorize]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
@@ -321,7 +326,7 @@ public class AccountController : ControllerBase
     // <summary>
     /// Get current user profile - Supports both Cookie and JWT authentication
     /// </summary>
-    [Authorize(AuthenticationSchemes = CombinedAuthSchemes)]
+    [Authorize]
     [HttpGet("profile")]
     public async Task<IActionResult> GetProfile()
     {
@@ -388,7 +393,7 @@ public class AccountController : ControllerBase
     // <summary>
     /// Add delivery address
     /// </summary>
-    [Authorize(AuthenticationSchemes = CombinedAuthSchemes)]
+    [Authorize]
     [HttpPost("addresses")]
     public async Task<IActionResult> AddAddress([FromBody] AddAddressDto request)
     {
@@ -449,7 +454,7 @@ public class AccountController : ControllerBase
     // <summary>
     /// Change password
     /// </summary>
-    [Authorize(AuthenticationSchemes = CombinedAuthSchemes)]
+    [Authorize]
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto request)
     {

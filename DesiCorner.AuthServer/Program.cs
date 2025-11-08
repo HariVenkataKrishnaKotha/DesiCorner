@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -65,17 +66,16 @@ builder.Services.AddSingleton<IEmailService, EmailService>();
 builder.Services.AddSingleton<IOtpService, OtpService>();
 builder.Services.AddScoped<ITokenService, TokenService>(); // ← JWT Token Service
 
-// Authentication - Both Cookie (for OAuth) and JWT (for API)
+// Authentication - Support BOTH Cookie (OpenIddict) and JWT (Direct API)
 builder.Services.AddAuthentication(options =>
 {
-    // Set default to support BOTH schemes
     options.DefaultScheme = IdentityConstants.ApplicationScheme;
     options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
 })
-.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+.AddJwtBearer(options =>
 {
     options.SaveToken = true;
-    options.RequireHttpsMetadata = false; // For development
+    options.RequireHttpsMetadata = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
@@ -87,17 +87,36 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
+
+    // Map JWT claims to User.Identity claims
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("JWT token validated for user: {User}",
+                context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            return Task.CompletedTask;
+        },
+        OnAuthenticationFailed = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError(context.Exception, "JWT authentication failed");
+            return Task.CompletedTask;
+        }
+    };
 });
 
-// Configure authorization to accept BOTH Cookie and JWT
+// Authorization - Create policy that accepts BOTH schemes
+// Don't set FallbackPolicy - it will override [AllowAnonymous]
 builder.Services.AddAuthorization(options =>
 {
-    options.DefaultPolicy = new AuthorizationPolicyBuilder()
-        .AddAuthenticationSchemes(
-            IdentityConstants.ApplicationScheme,  // Cookie for OpenIddict
-            JwtBearerDefaults.AuthenticationScheme) // JWT for direct API
+    var defaultPolicy = new AuthorizationPolicyBuilder()
+        .AddAuthenticationSchemes(IdentityConstants.ApplicationScheme, JwtBearerDefaults.AuthenticationScheme)
         .RequireAuthenticatedUser()
         .Build();
+
+    options.DefaultPolicy = defaultPolicy;
 });
 
 // OpenIddict
