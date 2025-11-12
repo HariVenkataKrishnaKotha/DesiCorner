@@ -1,0 +1,152 @@
+<!-- Hero Section -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-content">
+      <h1 class="hero-title">🍛 Welcome to DesiCorner</h1>
+      <p class="hero-subtitle">Authentic Indian Cuisine Delivered to Your Doorstep</p>
+      <div class="hero-actions">
+        <button mat-raised-button color="primary" routerLink="/products" class="hero-btn">
+          <mat-icon>restaurant_menu</mat-icon>
+          Browse Menu
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Categories Section -->
+<section class="categories-section">
+  <div class="container">
+    <h2 class="section-title">Browse by Category</h2>
+    
+    @if (loading) {
+      <div class="loading-spinner">
+        <mat-icon class="spinning">refresh</mat-icon>
+        <p>Loading categories...</p>
+      </div>
+    } @else if (categories.length > 0) {
+      <div class="categories-grid">
+        @for (category of categories; track category.id) {
+          <mat-card class="category-card" [routerLink]="['/products']" [queryParams]="{category: category.id}">
+            <mat-card-content>
+              <div class="category-icon">
+                @switch (category.name) {
+                  @case ('Appetizers') { 🥟 }
+                  @case ('Main Course') { 🍛 }
+                  @case ('Biryani') { 🍚 }
+                  @case ('Desserts') { 🍮 }
+                  @case ('Beverages') { 🥤 }
+                  @default { 🍽️ }
+                }
+              </div>
+              <h3>{{ category.name }}</h3>
+              <p>{{ category.description }}</p>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    }
+  </div>
+</section>
+
+<!-- Featured Products Section -->
+<section class="featured-section">
+  <div class="container">
+    <h2 class="section-title">Featured Dishes</h2>
+    
+    @if (loading) {
+      <div class="loading-spinner">
+        <mat-icon class="spinning">refresh</mat-icon>
+        <p>Loading products...</p>
+      </div>
+    } @else if (featuredProducts.length > 0) {
+      <div class="products-grid">
+        @for (product of featuredProducts; track product.id) {
+          <mat-card class="product-card">
+            <div class="product-image">
+              @if (product.imageUrl) {
+                <img [src]="product.imageUrl" [alt]="product.name">
+              } @else {
+                <div class="product-image-placeholder">
+                  🍽️
+                </div>
+              }
+            </div>
+            
+            <mat-card-content>
+              <div class="product-header">
+                <h3>{{ product.name }}</h3>
+                <div class="product-badges">
+                  @if (product.isVegetarian) {
+                    <span class="badge badge-success">🥬 Veg</span>
+                  }
+                  @if (product.isSpicy) {
+                    <span class="badge badge-danger">🌶️ Spicy</span>
+                  }
+                </div>
+              </div>
+              
+              <p class="product-description">{{ product.description }}</p>
+              
+              <div class="product-info">
+                <span class="product-time">
+                  <mat-icon>schedule</mat-icon>
+                  {{ product.preparationTime }} min
+                </span>
+                <span class="product-category">{{ product.categoryName }}</span>
+              </div>
+              
+              <div class="product-footer">
+                <span class="price">${{ product.price.toFixed(2) }}</span>
+                <button 
+                  mat-raised-button 
+                  color="primary" 
+                  (click)="addToCart(product)"
+                  [disabled]="!product.isAvailable">
+                  <mat-icon>add_shopping_cart</mat-icon>
+                  Add to Cart
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+      
+      <div class="view-all">
+        <button mat-raised-button color="accent" routerLink="/products">
+          View All Products
+          <mat-icon>arrow_forward</mat-icon>
+        </button>
+      </div>
+    } @else {
+      <div class="empty-state">
+        <mat-icon>restaurant</mat-icon>
+        <h3>No products available</h3>
+        <p>Check back soon for delicious dishes!</p>
+      </div>
+    }
+  </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section">
+  <div class="container">
+    <div class="features-grid">
+      <div class="feature">
+        <mat-icon color="primary">local_shipping</mat-icon>
+        <h3>Fast Delivery</h3>
+        <p>Get your food delivered hot and fresh within 30-45 minutes</p>
+      </div>
+      <div class="feature">
+        <mat-icon color="primary">verified</mat-icon>
+        <h3>Quality Assured</h3>
+        <p>100% authentic recipes with the finest ingredients</p>
+      </div>
+      <div class="feature">
+        <mat-icon color="primary">restaurant</mat-icon>
+        <h3>Wide Selection</h3>
+        <p>From mild to extra spicy, vegetarian to non-vegetarian</p>
+      </div>
+    </div>
+  </div>
+</section>

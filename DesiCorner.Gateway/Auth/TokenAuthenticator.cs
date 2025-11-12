@@ -156,7 +156,7 @@ public sealed class TokenAuthenticator : ITokenAuthenticator
         }
         catch (SecurityTokenSignatureKeyNotFoundException ex)
         {
-            _log.LogWarning("Signature key not found, invalidating JWKS cache and retrying");
+            _log.LogWarning("Signature key not found, invalidating JWKS cache and retrying" + ex);
 
             await _jwks.InvalidateAsync(ct);
 
