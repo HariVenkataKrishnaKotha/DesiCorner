@@ -68,6 +68,7 @@ public static class Seed
 
                     Permissions.GrantTypes.AuthorizationCode,
                     Permissions.GrantTypes.RefreshToken,
+                    Permissions.GrantTypes.Password,
 
                     Permissions.ResponseTypes.Code,
                     
@@ -91,6 +92,25 @@ public static class Seed
                     Requirements.Features.ProofKeyForCodeExchange
                 }
             });
+        }
+        else
+        {
+            var descriptor = new OpenIddictApplicationDescriptor();
+
+            await manager.PopulateAsync(descriptor, angularClient);
+
+            // Update existing client to support password grant
+            descriptor.ClientType = ClientTypes.Confidential;
+            descriptor.ClientSecret = "secret_for_testing_password_grant"; 
+
+            // Ensure Password grant permission exists
+            if (!descriptor.Permissions.Contains(Permissions.GrantTypes.Password))
+            {
+                descriptor.Permissions.Add(Permissions.GrantTypes.Password);
+            }
+
+            // Update the client with modified descriptor
+            await manager.UpdateAsync(angularClient, descriptor);
         }
 
         // YARP Gateway Client (for introspection)

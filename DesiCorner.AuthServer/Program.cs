@@ -120,6 +120,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 // OpenIddict
+// OpenIddict
 builder.Services.AddOpenIddict()
     .AddCore(opt => opt.UseEntityFrameworkCore().UseDbContext<ApplicationDbContext>())
     .AddServer(opt =>
@@ -127,7 +128,7 @@ builder.Services.AddOpenIddict()
         opt.SetIssuer(new Uri(cfg["OpenIddict:Issuer"]!));
         opt.DisableAccessTokenEncryption();
 
-        // Development only
+        // Development only - remove in production!
         opt.UseAspNetCore().DisableTransportSecurityRequirement();
 
         // Endpoints
@@ -137,11 +138,12 @@ builder.Services.AddOpenIddict()
            .SetRevocationEndpointUris("/connect/revocation")
            .SetUserInfoEndpointUris("/connect/userinfo");
 
-        // Flows
+        // Flows - ADD PASSWORD FLOW HERE
         opt.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange();
         opt.AllowRefreshTokenFlow();
+        opt.AllowPasswordFlow(); // ← ADD THIS LINE
 
-        // Development keys
+        // Development keys (use proper keys in production!)
         opt.AddEphemeralEncryptionKey()
            .AddEphemeralSigningKey();
 
@@ -197,7 +199,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 // CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("Angular", policy =>
+    options.AddPolicy("desicorner-angular", policy =>
     {
         policy.WithOrigins("http://localhost:4200", "https://localhost:4200")
               .AllowAnyHeader()
@@ -269,7 +271,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("Angular");
+app.UseCors("desicorner-angular");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
