@@ -76,7 +76,7 @@ builder.Services.AddAuthorization(opt =>
 // CORS - Allow Angular app
 builder.Services.AddCors(opt =>
 {
-    opt.AddPolicy("Angular", p => p
+    opt.AddPolicy("desicorner-angular", p => p
         .WithOrigins("https://localhost:4200", "http://localhost:4200")
         .AllowAnyHeader()
         .AllowAnyMethod()
@@ -111,7 +111,7 @@ app.Use(async (ctx, next) =>
 });
 
 // CORS
-app.UseCors("Angular");
+app.UseCors("desicorner-angular");
 
 // Request logging
 app.Use(async (ctx, next) =>
