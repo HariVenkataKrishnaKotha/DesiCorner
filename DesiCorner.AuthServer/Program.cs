@@ -66,7 +66,8 @@ builder.Services.AddSingleton<IEmailService, EmailService>();
 builder.Services.AddSingleton<IOtpService, OtpService>();
 builder.Services.AddScoped<ITokenService, TokenService>(); // ← JWT Token Service
 
-// Authentication - Support BOTH Cookie (OpenIddict) and JWT (Direct API)
+// JWT Authentication - Use Authority for OpenIddict tokens
+// This allows the profile endpoint to validate tokens issued by OpenIddict
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = IdentityConstants.ApplicationScheme;
@@ -75,36 +76,54 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     options.SaveToken = true;
-    options.RequireHttpsMetadata = false;
+    options.RequireHttpsMetadata = false; // Dev only!
+
+    // Use Authority for JWKS discovery (validates OpenIddict's RSA tokens)
+    options.Authority = cfg["OpenIddict:Issuer"];
+    options.Audience = cfg["OpenIddict:Audience"];
+
+    // Allow both OpenIddict tokens (RSA) and validation tokens
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
         ValidateIssuer = true,
-        ValidIssuer = jwtSettings.Issuer,
+        ValidIssuer = cfg["OpenIddict:Issuer"],
         ValidateAudience = true,
-        ValidAudience = jwtSettings.Audience,
+        ValidAudiences = new[] { "desicorner-api", "desicorner-angular" },
         ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.FromSeconds(60),
+        ValidateIssuerSigningKey = true
+        // Note: IssuerSigningKey is NOT set here - it will be retrieved from JWKS endpoint
     };
 
-    // Map JWT claims to User.Identity claims
     options.Events = new JwtBearerEvents
     {
         OnTokenValidated = context =>
         {
-            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogInformation("JWT token validated for user: {User}",
-                context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            var logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("✅ JWT validated for user: {User}",
+                context.Principal?.Identity?.Name);
             return Task.CompletedTask;
         },
         OnAuthenticationFailed = context =>
         {
-            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogError(context.Exception, "JWT authentication failed");
+            var logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILogger<Program>>();
+            logger.LogError(context.Exception, "❌ JWT authentication failed");
             return Task.CompletedTask;
         }
     };
+});
+
+// Authorization - Accept both Cookie and JWT
+builder.Services.AddAuthorization(options =>
+{
+    var defaultPolicy = new AuthorizationPolicyBuilder()
+        .AddAuthenticationSchemes(IdentityConstants.ApplicationScheme, JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        .Build();
+
+    options.DefaultPolicy = defaultPolicy;
 });
 
 // Authorization - Create policy that accepts BOTH schemes
