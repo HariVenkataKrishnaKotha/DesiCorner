@@ -122,6 +122,9 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Image Storage Service
+builder.Services.AddScoped<IImageStorageService, LocalImageStorageService>();
+
 var app = builder.Build();
 
 // Migrate database
@@ -140,7 +143,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("Gateway");
-
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
