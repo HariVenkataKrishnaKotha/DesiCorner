@@ -22,4 +22,9 @@
     <ProjectReference Include="..\DesiCorner.MessageBus\DesiCorner.MessageBus.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\uploads\categories\" />
+    <Folder Include="wwwroot\uploads\products\" />
+  </ItemGroup>
+
 </Project>
