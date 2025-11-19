@@ -30,13 +30,10 @@
           <mat-card class="category-card" [routerLink]="['/products']" [queryParams]="{category: category.id}">
             <mat-card-content>
               <div class="category-icon">
-                @switch (category.name) {
-                  @case ('Appetizers') { 🥟 }
-                  @case ('Main Course') { 🍛 }
-                  @case ('Biryani') { 🍚 }
-                  @case ('Desserts') { 🍮 }
-                  @case ('Beverages') { 🥤 }
-                  @default { 🍽️ }
+                @if (category.imageUrl) {
+                  <img [src]="category.imageUrl" [alt]="category.name" class="category-image">
+                } @else {
+                  <span class="category-emoji">{{ getCategoryEmoji(category.name) }}</span>
                 }
               </div>
               <h3>{{ category.name }}</h3>
