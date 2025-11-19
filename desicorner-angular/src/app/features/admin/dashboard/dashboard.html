@@ -1,0 +1,53 @@
+<div class="admin-dashboard">
+  <h1>Admin Dashboard</h1>
+
+  <div class="stats-grid">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <mat-icon color="primary">restaurant</mat-icon>
+        <div class="stat-info">
+          <h2>{{ stats.totalProducts }}</h2>
+          <p>Total Products</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <mat-icon color="accent">category</mat-icon>
+        <div class="stat-info">
+          <h2>{{ stats.totalCategories }}</h2>
+          <p>Categories</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <mat-icon color="primary">check_circle</mat-icon>
+        <div class="stat-info">
+          <h2>{{ stats.activeProducts }}</h2>
+          <p>Active Products</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <div class="action-cards">
+    <mat-card class="action-card" routerLink="/admin/products">
+      <mat-card-content>
+        <mat-icon>restaurant_menu</mat-icon>
+        <h3>Manage Products</h3>
+        <p>Add, edit, or remove products</p>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="action-card" routerLink="/admin/categories">
+      <mat-card-content>
+        <mat-icon>category</mat-icon>
+        <h3>Manage Categories</h3>
+        <p>Add, edit, or remove categories</p>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
