@@ -1,0 +1,253 @@
+<div class="admin-products">
+  <div class="page-header">
+    <h1>Product Management</h1>
+    <button mat-raised-button color="primary" (click)="onAddNew()" *ngIf="!showForm">
+      <mat-icon>add</mat-icon>
+      Add New Product
+    </button>
+  </div>
+
+  <!-- Product Form -->
+  @if (showForm) {
+    <mat-card class="product-form">
+      <mat-card-header>
+        <mat-card-title>{{ editMode ? 'Edit Product' : 'Create New Product' }}</mat-card-title>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <form [formGroup]="productForm" (ngSubmit)="onSubmit()">
+          <div class="form-grid">
+            <!-- Name -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Product Name</mat-label>
+              <input matInput formControlName="name" placeholder="e.g., Butter Chicken">
+              <mat-error *ngIf="productForm.get('name')?.hasError('required')">
+                Name is required
+              </mat-error>
+              <mat-error *ngIf="productForm.get('name')?.hasError('minlength')">
+                Name must be at least 3 characters
+              </mat-error>
+            </mat-form-field>
+
+            <!-- Category -->
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Category</mat-label>
+              <mat-select formControlName="categoryId">
+                @for (category of categories; track category.id) {
+                  <mat-option [value]="category.id">{{ category.name }}</mat-option>
+                }
+              </mat-select>
+              <mat-error>Category is required</mat-error>
+            </mat-form-field>
+
+            <!-- Description -->
+            <mat-form-field appearance="outline" class="full-width span-2">
+              <mat-label>Description</mat-label>
+              <textarea 
+                matInput 
+                formControlName="description" 
+                rows="3"
+                placeholder="Describe your dish..."></textarea>
+              <mat-error>Description is required</mat-error>
+            </mat-form-field>
+
+            <!-- Price -->
+            <mat-form-field appearance="outline">
+              <mat-label>Price ($)</mat-label>
+              <input matInput type="number" formControlName="price" step="0.01" min="0">
+              <mat-error *ngIf="productForm.get('price')?.hasError('required')">
+                Price is required
+              </mat-error>
+              <mat-error *ngIf="productForm.get('price')?.hasError('min')">
+                Price must be greater than 0
+              </mat-error>
+            </mat-form-field>
+
+            <!-- Preparation Time -->
+            <mat-form-field appearance="outline">
+              <mat-label>Preparation Time (minutes)</mat-label>
+              <input matInput type="number" formControlName="preparationTime" min="1">
+              <mat-error>Required (min: 1)</mat-error>
+            </mat-form-field>
+
+            <!-- Spice Level -->
+            <mat-form-field appearance="outline">
+              <mat-label>Spice Level (0-5)</mat-label>
+              <input matInput type="number" formControlName="spiceLevel" min="0" max="5">
+              <mat-hint>0 = Not Spicy, 5 = Very Spicy</mat-hint>
+            </mat-form-field>
+
+            <!-- Allergens -->
+            <mat-form-field appearance="outline">
+              <mat-label>Allergens (Optional)</mat-label>
+              <input matInput formControlName="allergens" placeholder="e.g., Dairy, Nuts">
+            </mat-form-field>
+
+            <!-- Checkboxes -->
+            <div class="checkbox-group span-2">
+              <mat-checkbox formControlName="isAvailable">Available</mat-checkbox>
+              <mat-checkbox formControlName="isVegetarian">Vegetarian</mat-checkbox>
+              <mat-checkbox formControlName="isVegan">Vegan</mat-checkbox>
+              <mat-checkbox formControlName="isSpicy">Spicy</mat-checkbox>
+            </div>
+
+            <!-- Image Upload -->
+            <div class="image-upload span-2">
+              <label class="upload-label">Product Image</label>
+              
+              @if (imagePreview) {
+                <div class="image-preview">
+                  <img [src]="imagePreview" alt="Preview">
+                  <button 
+                    mat-icon-button 
+                    color="warn" 
+                    type="button"
+                    (click)="onRemoveImage()"
+                    matTooltip="Remove image">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              }
+
+              <input 
+                type="file" 
+                accept="image/*" 
+                (change)="onImageSelected($event)"
+                #fileInput
+                style="display: none">
+              
+              <button 
+                mat-stroked-button 
+                type="button" 
+                (click)="fileInput.click()">
+                <mat-icon>upload</mat-icon>
+                {{ imagePreview ? 'Change Image' : 'Upload Image' }}
+              </button>
+              <p class="hint">Max size: 5MB. Formats: JPG, PNG, GIF, WebP</p>
+
+              @if (deleteImageFlag) {
+                <p class="delete-notice">⚠️ Image will be deleted on save</p>
+              }
+            </div>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="form-actions">
+            <button mat-button type="button" (click)="onCancel()">Cancel</button>
+            <button 
+              mat-raised-button 
+              color="primary" 
+              type="submit"
+              [disabled]="productForm.invalid || loading">
+              {{ editMode ? 'Update' : 'Create' }} Product
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Products Table -->
+  @if (!showForm) {
+    <mat-card class="products-table">
+      @if (loading) {
+        <div class="loading">
+          <mat-icon class="spinning">refresh</mat-icon>
+          <p>Loading products...</p>
+        </div>
+      } @else if (products.length > 0) {
+        <table mat-table [dataSource]="products" class="full-width">
+          <!-- Image Column -->
+          <ng-container matColumnDef="image">
+            <th mat-header-cell *matHeaderCellDef>Image</th>
+            <td mat-cell *matCellDef="let product">
+              <div class="product-image">
+                @if (product.imageUrl) {
+                  <img [src]="product.imageUrl" [alt]="product.name">
+                } @else {
+                  <div class="no-image">🍽️</div>
+                }
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Name Column -->
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>Product</th>
+            <td mat-cell *matCellDef="let product">
+              <div class="product-info">
+                <strong>{{ product.name }}</strong>
+                <div class="badges">
+                  @if (product.isVegetarian) {
+                    <mat-chip class="veg-chip">🥬 Veg</mat-chip>
+                  }
+                  @if (product.isSpicy) {
+                    <mat-chip class="spicy-chip">🌶️ Spicy ({{ product.spiceLevel }})</mat-chip>
+                  }
+                </div>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Category Column -->
+          <ng-container matColumnDef="category">
+            <th mat-header-cell *matHeaderCellDef>Category</th>
+            <td mat-cell *matCellDef="let product">
+              {{ getCategoryName(product.categoryId) }}
+            </td>
+          </ng-container>
+
+          <!-- Price Column -->
+          <ng-container matColumnDef="price">
+            <th mat-header-cell *matHeaderCellDef>Price</th>
+            <td mat-cell *matCellDef="let product">
+              <strong class="price">${{ product.price.toFixed(2) }}</strong>
+            </td>
+          </ng-container>
+
+          <!-- Status Column -->
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let product">
+              @if (product.isAvailable) {
+                <mat-chip class="status-active">Active</mat-chip>
+              } @else {
+                <mat-chip class="status-inactive">Inactive</mat-chip>
+              }
+            </td>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let product">
+              <button 
+                mat-icon-button 
+                color="primary"
+                (click)="onEdit(product)"
+                matTooltip="Edit">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button 
+                mat-icon-button 
+                color="warn"
+                (click)="onDelete(product)"
+                matTooltip="Delete">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      } @else {
+        <div class="empty-state">
+          <mat-icon>restaurant</mat-icon>
+          <h3>No products yet</h3>
+          <p>Click "Add New Product" to create your first product</p>
+        </div>
+      }
+    </mat-card>
+  }
+</div>
