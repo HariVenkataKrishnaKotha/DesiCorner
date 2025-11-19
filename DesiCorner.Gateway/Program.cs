@@ -1,4 +1,4 @@
-using DesiCorner.Gateway.Auth;
+﻿using DesiCorner.Gateway.Auth;
 using DesiCorner.Gateway.Infrastructure;
 using DesiCorner.Gateway.Policies;
 using DesiCorner.Gateway.Transforms;
@@ -162,7 +162,8 @@ app.Use(async (ctx, next) =>
     // Allow public READ access to products and categories (e-commerce browsing)
     var isPublicProductBrowsing = method.Equals("GET", StringComparison.OrdinalIgnoreCase) &&
                                    (path.StartsWith("/api/products", StringComparison.OrdinalIgnoreCase) ||
-                                    path.StartsWith("/api/categories", StringComparison.OrdinalIgnoreCase));
+                                    path.StartsWith("/api/categories", StringComparison.OrdinalIgnoreCase) ||
+                                    path.StartsWith("/api/cart", StringComparison.OrdinalIgnoreCase));
 
     if (isPublicPath || isPublicProductBrowsing)
     {
