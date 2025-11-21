@@ -16,6 +16,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/cart/cart').then(m => m.CartComponent)
   },
   {
+    path: 'checkout',
+    loadComponent: () => import('./features/checkout/checkout').then(m => m.CheckoutComponent)
+  },
+  {
     path: 'admin',
     canActivate: [adminGuard],
     children: [

@@ -24,18 +24,20 @@ public class CartController : ControllerBase
     /// Get cart for current user or session
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetCart([FromQuery] string? sessionId, CancellationToken ct)
+    [AllowAnonymous]
+    public async Task<IActionResult> GetCart(CancellationToken ct)
     {
         try
         {
             var userId = GetUserId();
+            var sessionId = GetSessionId();
 
             if (!userId.HasValue && string.IsNullOrEmpty(sessionId))
             {
                 return BadRequest(new ResponseDto
                 {
                     IsSuccess = false,
-                    Message = "Either user must be authenticated or sessionId must be provided"
+                    Message = "Either user must be authenticated or X-Session-Id header must be provided"
                 });
             }
 
@@ -86,24 +88,26 @@ public class CartController : ControllerBase
     /// Add item to cart
     /// </summary>
     [HttpPost("add")]
+    [AllowAnonymous]
     public async Task<IActionResult> AddToCart([FromBody] AddToCartDto request, CancellationToken ct)
     {
         try
         {
             var userId = GetUserId();
+            var sessionId = GetSessionId() ?? request.SessionId;
 
-            if (!userId.HasValue && string.IsNullOrEmpty(request.SessionId))
+            if (!userId.HasValue && string.IsNullOrEmpty(sessionId))
             {
                 return BadRequest(new ResponseDto
                 {
                     IsSuccess = false,
-                    Message = "Either user must be authenticated or sessionId must be provided"
+                    Message = "Either user must be authenticated or X-Session-Id header must be provided"
                 });
             }
 
             var cart = await _cartService.AddToCartAsync(
                 userId ?? request.UserId,
-                request.SessionId,
+                sessionId,
                 request.ProductId,
                 request.Quantity,
                 ct);
@@ -140,6 +144,7 @@ public class CartController : ControllerBase
     /// Update cart item quantity
     /// </summary>
     [HttpPut("update")]
+    [AllowAnonymous]
     public async Task<IActionResult> UpdateCartItem([FromBody] UpdateCartItemDto request, CancellationToken ct)
     {
         try
@@ -177,10 +182,26 @@ public class CartController : ControllerBase
     /// Remove item from cart
     /// </summary>
     [HttpDelete("item/{cartItemId}")]
+    [AllowAnonymous]
     public async Task<IActionResult> RemoveFromCart(Guid cartItemId, CancellationToken ct)
     {
         try
         {
+            var userId = GetUserId();
+            var sessionId = GetSessionId();
+
+            // First get the cart to return after removal
+            var cart = await _cartService.GetCartAsync(userId, sessionId, ct);
+
+            if (cart == null)
+            {
+                return NotFound(new ResponseDto
+                {
+                    IsSuccess = false,
+                    Message = "Cart not found"
+                });
+            }
+
             var result = await _cartService.RemoveFromCartAsync(cartItemId, ct);
 
             if (!result)
@@ -192,10 +213,39 @@ public class CartController : ControllerBase
                 });
             }
 
+            // Get updated cart after removal
+            cart = await _cartService.GetCartAsync(userId, sessionId, ct);
+
+            if (cart == null)
+            {
+                // Cart was emptied
+                return Ok(new ResponseDto
+                {
+                    IsSuccess = true,
+                    Message = "Item removed from cart successfully",
+                    Result = new CartDto
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = userId,
+                        SessionId = sessionId,
+                        Items = new List<CartItemDto>(),
+                        SubTotal = 0,
+                        TaxAmount = 0,
+                        DeliveryFee = 0,
+                        Total = 0,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    }
+                });
+            }
+
+            var cartDto = MapToDto(cart);
+
             return Ok(new ResponseDto
             {
                 IsSuccess = true,
-                Message = "Item removed from cart successfully"
+                Message = "Item removed from cart successfully",
+                Result = cartDto
             });
         }
         catch (Exception ex)
@@ -213,18 +263,20 @@ public class CartController : ControllerBase
     /// Clear entire cart
     /// </summary>
     [HttpDelete("clear")]
-    public async Task<IActionResult> ClearCart([FromQuery] string? sessionId, CancellationToken ct)
+    [AllowAnonymous]
+    public async Task<IActionResult> ClearCart(CancellationToken ct)
     {
         try
         {
             var userId = GetUserId();
+            var sessionId = GetSessionId();
 
             if (!userId.HasValue && string.IsNullOrEmpty(sessionId))
             {
                 return BadRequest(new ResponseDto
                 {
                     IsSuccess = false,
-                    Message = "Either user must be authenticated or sessionId must be provided"
+                    Message = "Either user must be authenticated or X-Session-Id header must be provided"
                 });
             }
 
@@ -251,6 +303,7 @@ public class CartController : ControllerBase
     /// Apply coupon code
     /// </summary>
     [HttpPost("apply-coupon")]
+    [AllowAnonymous]
     public async Task<IActionResult> ApplyCoupon([FromBody] ApplyCouponDto request, CancellationToken ct)
     {
         try
@@ -288,6 +341,7 @@ public class CartController : ControllerBase
     /// Remove coupon code
     /// </summary>
     [HttpPost("remove-coupon/{cartId}")]
+    [AllowAnonymous]
     public async Task<IActionResult> RemoveCoupon(Guid cartId, CancellationToken ct)
     {
         try
@@ -325,6 +379,11 @@ public class CartController : ControllerBase
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return Guid.TryParse(userIdClaim, out var userId) ? userId : null;
+    }
+
+    private string? GetSessionId()
+    {
+        return Request.Headers["X-Session-Id"].FirstOrDefault();
     }
 
     private static CartDto MapToDto(Models.Cart cart)
