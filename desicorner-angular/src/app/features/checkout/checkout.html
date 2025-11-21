@@ -1,0 +1,151 @@
+<div class="checkout-container">
+  <h1>Checkout</h1>
+  
+  <!-- Empty Cart Message -->
+  <mat-card *ngIf="cart.items.length === 0" class="empty-cart">
+    <mat-card-content>
+      <mat-icon>shopping_cart</mat-icon>
+      <h2>Your cart is empty</h2>
+      <p>Add some delicious items to your cart before checkout.</p>
+      <a mat-raised-button color="primary" routerLink="/">Browse Menu</a>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="checkout-content" *ngIf="cart.items.length > 0">
+    <!-- Order Summary -->
+    <mat-card class="order-summary">
+      <mat-card-header>
+        <mat-card-title>Order Summary</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="cart-items">
+          <div class="cart-item" *ngFor="let item of cart.items">
+            <div class="item-info">
+              <span class="item-name">{{ item.productName }}</span>
+              <span class="item-qty">x {{ item.quantity }}</span>
+            </div>
+            <span class="item-price">${{ (item.price * item.quantity).toFixed(2) }}</span>
+          </div>
+        </div>
+        
+        <mat-divider></mat-divider>
+        
+        <div class="totals">
+          <div class="total-row">
+            <span>Subtotal</span>
+            <span>${{ cart.subtotal.toFixed(2) }}</span>
+          </div>
+          <div class="total-row">
+            <span>Tax (6%)</span>
+            <span>${{ cart.tax.toFixed(2) }}</span>
+          </div>
+          <div class="total-row">
+            <span>Delivery Fee</span>
+            <span>{{ cart.deliveryFee === 0 ? 'FREE' : '$' + cart.deliveryFee.toFixed(2) }}</span>
+          </div>
+          <div class="total-row discount" *ngIf="cart.discount > 0">
+            <span>Discount</span>
+            <span>-${{ cart.discount.toFixed(2) }}</span>
+          </div>
+          <mat-divider></mat-divider>
+          <div class="total-row grand-total">
+            <span>Total</span>
+            <span>${{ cart.total.toFixed(2) }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Delivery Information Form -->
+    <mat-card class="delivery-form">
+      <mat-card-header>
+        <mat-card-title>Delivery Information</mat-card-title>
+        <mat-card-subtitle *ngIf="!isAuthenticated">
+          Continue as guest or <a routerLink="/auth/login" [queryParams]="{returnUrl: '/checkout'}">login</a>
+        </mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <form [formGroup]="checkoutForm" (ngSubmit)="onSubmit()">
+          <!-- Contact Info (for guests) -->
+          <div class="form-section" *ngIf="!isAuthenticated">
+            <h3>Contact Information</h3>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Email</mat-label>
+              <input matInput formControlName="email" type="email" placeholder="your@email.com">
+              <mat-error *ngIf="checkoutForm.get('email')?.hasError('required')">Email is required</mat-error>
+              <mat-error *ngIf="checkoutForm.get('email')?.hasError('email')">Invalid email format</mat-error>
+            </mat-form-field>
+            
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Phone</mat-label>
+              <input matInput formControlName="phone" type="tel" placeholder="(555) 123-4567">
+              <mat-error *ngIf="checkoutForm.get('phone')?.hasError('required')">Phone is required</mat-error>
+            </mat-form-field>
+          </div>
+
+          <!-- Delivery Address -->
+          <div class="form-section">
+            <h3>Delivery Address</h3>
+            
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Full Name</mat-label>
+              <input matInput formControlName="fullName" placeholder="John Doe">
+              <mat-error *ngIf="checkoutForm.get('fullName')?.hasError('required')">Name is required</mat-error>
+            </mat-form-field>
+            
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Street Address</mat-label>
+              <input matInput formControlName="street" placeholder="123 Main St">
+              <mat-error *ngIf="checkoutForm.get('street')?.hasError('required')">Street address is required</mat-error>
+            </mat-form-field>
+            
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Apartment/Suite (Optional)</mat-label>
+              <input matInput formControlName="apartment" placeholder="Apt 4B">
+            </mat-form-field>
+            
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>City</mat-label>
+                <input matInput formControlName="city" placeholder="New York">
+                <mat-error *ngIf="checkoutForm.get('city')?.hasError('required')">City is required</mat-error>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline">
+                <mat-label>State</mat-label>
+                <input matInput formControlName="state" placeholder="NY">
+                <mat-error *ngIf="checkoutForm.get('state')?.hasError('required')">State is required</mat-error>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline">
+                <mat-label>ZIP Code</mat-label>
+                <input matInput formControlName="zipCode" placeholder="10001">
+                <mat-error *ngIf="checkoutForm.get('zipCode')?.hasError('required')">ZIP is required</mat-error>
+              </mat-form-field>
+            </div>
+          </div>
+
+          <!-- Special Instructions -->
+          <div class="form-section">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Special Instructions (Optional)</mat-label>
+              <textarea matInput formControlName="instructions" rows="3" 
+                placeholder="Any special delivery instructions..."></textarea>
+            </mat-form-field>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="form-actions">
+            <a mat-button routerLink="/cart">Back to Cart</a>
+            <button mat-raised-button color="primary" type="submit" 
+              [disabled]="checkoutForm.invalid || isSubmitting">
+              <mat-spinner diameter="20" *ngIf="isSubmitting"></mat-spinner>
+              <span *ngIf="!isSubmitting">Place Order - ${{ cart.total.toFixed(2) }}</span>
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

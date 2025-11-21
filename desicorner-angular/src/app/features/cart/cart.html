@@ -6,7 +6,7 @@
       <mat-card>
         <mat-card-content>
           <div class="cart-items">
-            @for (item of cart.items; track item.productId) {
+            @for (item of cart.items; track item.id || item.productId) {
               <div class="cart-item">
                 <div class="item-image">
                   @if (item.productImage) {
@@ -32,14 +32,14 @@
                 <div class="item-quantity">
                   <button 
                     mat-icon-button 
-                    (click)="cartService.updateQuantity(item.productId, item.quantity - 1)"
+                    (click)="cartService.updateQuantity(item.id || item.productId, item.quantity - 1)"
                     aria-label="Decrease quantity">
                     <mat-icon>remove</mat-icon>
                   </button>
                   <span class="quantity">{{ item.quantity }}</span>
                   <button 
                     mat-icon-button 
-                    (click)="cartService.updateQuantity(item.productId, item.quantity + 1)"
+                    (click)="cartService.updateQuantity(item.id || item.productId, item.quantity + 1)"
                     aria-label="Increase quantity">
                     <mat-icon>add</mat-icon>
                   </button>
@@ -50,7 +50,7 @@
                   <button 
                     mat-icon-button 
                     color="warn"
-                    (click)="cartService.removeItem(item.productId)"
+                    (click)="cartService.removeItem(item.id || item.productId)"
                     aria-label="Remove item">
                     <mat-icon>delete</mat-icon>
                   </button>
@@ -65,7 +65,7 @@
               <span>${{ cart.subtotal.toFixed(2) }}</span>
             </div>
             <div class="summary-row">
-              <span>Tax (8%):</span>
+              <span>Tax (6%):</span>
               <span>${{ cart.tax.toFixed(2) }}</span>
             </div>
             <div class="summary-row">
@@ -99,7 +99,7 @@
           <div class="cart-actions">
             <button mat-stroked-button routerLink="/">
               <mat-icon>arrow_back</mat-icon>
-              Continue Shopping
+              Add More!
             </button>
             <button mat-raised-button color="primary" routerLink="/checkout">
               Proceed to Checkout
