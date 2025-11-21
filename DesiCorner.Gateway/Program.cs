@@ -162,10 +162,12 @@ app.Use(async (ctx, next) =>
     // Allow public READ access to products and categories (e-commerce browsing)
     var isPublicProductBrowsing = method.Equals("GET", StringComparison.OrdinalIgnoreCase) &&
                                    (path.StartsWith("/api/products", StringComparison.OrdinalIgnoreCase) ||
-                                    path.StartsWith("/api/categories", StringComparison.OrdinalIgnoreCase) ||
-                                    path.StartsWith("/api/cart", StringComparison.OrdinalIgnoreCase));
+                                    path.StartsWith("/api/categories", StringComparison.OrdinalIgnoreCase));
 
-    if (isPublicPath || isPublicProductBrowsing)
+    // Allow ALL cart operations for guest checkout (uses X-Session-Id header)
+    var isCartOperation = path.StartsWith("/api/cart", StringComparison.OrdinalIgnoreCase);
+
+    if (isPublicPath || isPublicProductBrowsing || isCartOperation)
     {
         await next();
         return;

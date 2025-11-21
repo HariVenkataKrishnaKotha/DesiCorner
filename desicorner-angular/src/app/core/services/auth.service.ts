@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, tap, catchError, throwError, switchMap, delay, map } from 'rxjs';
 import { environment } from '@env/environment';
+import { GuestSessionService} from './guest-session.service';
 import { 
   LoginRequest, 
   RegisterRequest, 
@@ -20,6 +21,7 @@ import { ApiResponse } from '../models/response.models';
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private guestSessionService = inject(GuestSessionService);
 
   private authStateSubject = new BehaviorSubject<AuthState>({
     isAuthenticated: false,
@@ -233,6 +235,9 @@ export class AuthService {
     localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
     this.removeStoredUser();
     
+    // Clear guest session
+    this.guestSessionService.clearSession();
+    
     // Update auth state
     this.authStateSubject.next({
       isAuthenticated: false,
@@ -287,5 +292,17 @@ export class AuthService {
 
   isAdmin(): boolean {
     return this.hasRole('Admin');
+  }
+
+  get guestSessionId(): string {
+    return this.guestSessionService.getSessionId();
+  }
+
+  get isGuest(): boolean {
+    return !this.isAuthenticated && this.guestSessionService.hasSession();
+  }
+
+  clearGuestSession(): void {
+    this.guestSessionService.clearSession();
   }
 }

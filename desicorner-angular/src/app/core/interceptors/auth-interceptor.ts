@@ -15,6 +15,16 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         Authorization: `Bearer ${token}`
       }
     });
+  } else {
+    // For guest users, send session ID
+    const sessionId = authService.guestSessionId;
+    if (sessionId) {
+      req = req.clone({
+        setHeaders: {
+          'X-Session-Id': sessionId
+        }
+      });
+    }
   }
   
   return next(req);
