@@ -12,7 +12,7 @@ public class CartService : ICartService
     private readonly ICouponService _couponService;
     private readonly ILogger<CartService> _logger;
 
-    private const decimal TAX_RATE = 0.08m; // 8% tax
+    private const decimal TAX_RATE = 0.06m; // 6% tax
     private const decimal DELIVERY_FEE = 5.00m;
     private const decimal FREE_DELIVERY_THRESHOLD = 50.00m;
 
