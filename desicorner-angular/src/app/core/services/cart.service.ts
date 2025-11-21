@@ -128,10 +128,11 @@ export class CartService {
    * Apply coupon code via backend API
    */
   applyCoupon(couponCode: string): Observable<ApiResponse<Cart>> {
-    return this.http.post<ApiResponse<Cart>>(
-      `${environment.gatewayUrl}/api/cart/apply-coupon`,
-      { couponCode }
-    ).pipe(
+  const cartId = this.cartSubject.value.id || '';
+  return this.http.post<ApiResponse<Cart>>(
+    `${environment.gatewayUrl}/api/cart/apply-coupon`,
+    { cartId, couponCode }
+  ).pipe(
       tap(response => {
         if (response.isSuccess && response.result) {
           const cart = this.mapBackendCart(response.result);

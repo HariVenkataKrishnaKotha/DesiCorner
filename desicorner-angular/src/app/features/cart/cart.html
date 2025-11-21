@@ -59,6 +59,51 @@
             }
           </div>
           
+          <div class="coupon-section">
+            @if (cart.couponCode) {
+              <div class="applied-coupon">
+                <div class="coupon-info">
+                  <mat-icon>local_offer</mat-icon>
+                  <span>{{ cart.couponCode }}</span>
+                  <span class="savings">-${{ cart.discount.toFixed(2) }}</span>
+                </div>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="removeCoupon()"
+                  [disabled]="couponLoading"
+                  aria-label="Remove coupon">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            } @else {
+              <div class="coupon-input">
+                <mat-form-field appearance="outline">
+                  <mat-label>Coupon Code</mat-label>
+                  <input
+                    matInput
+                    [(ngModel)]="couponCode"
+                    placeholder="Enter coupon code"
+                    [disabled]="couponLoading">
+                </mat-form-field>
+                <button
+                  mat-raised-button
+                  color="accent"
+                  (click)="applyCoupon()"
+                  [disabled]="!couponCode || couponLoading">
+                  @if (couponLoading) {
+                    <mat-spinner diameter="20"></mat-spinner>
+                  } @else {
+                    Apply
+                  }
+                </button>
+              </div>
+              @if (couponError) {
+                <p class="coupon-error">{{ couponError }}</p>
+              }
+            }
+          </div>
+
           <div class="cart-summary">
             <div class="summary-row">
               <span>Subtotal:</span>
@@ -88,7 +133,7 @@
               <span>Total:</span>
               <span>${{ cart.total.toFixed(2) }}</span>
             </div>
-            
+
             @if (cart.subtotal < 50) {
               <p class="free-delivery-notice">
                 Add ${{ (50 - cart.subtotal).toFixed(2) }} more for FREE delivery!
