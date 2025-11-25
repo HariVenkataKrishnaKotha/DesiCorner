@@ -1,0 +1,93 @@
+<div class="order-list-container">
+  <div class="page-header">
+    <h1>My Orders</h1>
+    <button mat-stroked-button routerLink="/">
+      <mat-icon>arrow_back</mat-icon>
+      Continue Shopping
+    </button>
+  </div>
+
+  @if (loading && orders.length === 0) {
+    <div class="loading">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading your orders...</p>
+    </div>
+  }
+
+  @if (error && orders.length === 0) {
+    <mat-card class="error-card">
+      <mat-card-content>
+        <mat-icon color="warn">error</mat-icon>
+        <h2>Error Loading Orders</h2>
+        <p>{{ error }}</p>
+        <button mat-raised-button color="primary" (click)="loadOrders()">
+          <mat-icon>refresh</mat-icon>
+          Try Again
+        </button>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (orders.length === 0 && !loading && !error) {
+    <mat-card class="empty-state">
+      <mat-card-content>
+        <mat-icon>shopping_bag</mat-icon>
+        <h2>No Orders Yet</h2>
+        <p>You haven't placed any orders yet. Start shopping to see your orders here!</p>
+        <button mat-raised-button color="primary" routerLink="/">
+          <mat-icon>restaurant_menu</mat-icon>
+          Browse Menu
+        </button>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (orders.length > 0) {
+    <div class="orders-grid">
+      @for (order of orders; track order.id) {
+        <mat-card class="order-card" [routerLink]="['/orders', order.id]">
+          <mat-card-content>
+            <div class="order-header">
+              <div class="order-info">
+                <h3>Order #{{ order.orderNumber }}</h3>
+                <p class="order-date">{{ formatDate(order.orderDate) }}</p>
+              </div>
+              <mat-chip [class]="getStatusColor(order.status)">
+                {{ getStatusDisplay(order.status) }}
+              </mat-chip>
+            </div>
+
+            <div class="order-details">
+              <div class="detail-item">
+                <mat-icon>shopping_cart</mat-icon>
+                <span>{{ order.itemCount }} {{ order.itemCount === 1 ? 'item' : 'items' }}</span>
+              </div>
+              <div class="detail-item total">
+                <mat-icon>attach_money</mat-icon>
+                <span class="amount">${{ order.total.toFixed(2) }}</span>
+              </div>
+            </div>
+
+            <div class="order-actions">
+              <button mat-button color="primary">
+                View Details
+                <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+
+    @if (hasMore) {
+      <div class="load-more">
+        <button mat-stroked-button (click)="loadMore()" [disabled]="loading">
+          @if (loading) {
+            <mat-spinner diameter="20"></mat-spinner>
+          }
+          <span>Load More Orders</span>
+        </button>
+      </div>
+    }
+  }
+</div>
