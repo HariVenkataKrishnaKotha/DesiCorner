@@ -1,58 +1,81 @@
 import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ApiService } from './api.service';
+import { environment } from '@env/environment';
 import { ApiResponse } from '../models/response.models';
-
-export interface Order {
-  id: string;
-  orderNumber: string;
-  userId: string;
-  items: OrderItem[];
-  subtotal: number;
-  tax: number;
-  deliveryFee: number;
-  discount: number;
-  total: number;
-  status: 'Pending' | 'Confirmed' | 'Preparing' | 'OutForDelivery' | 'Delivered' | 'Cancelled';
-  deliveryAddress: string;
-  estimatedDeliveryTime?: Date;
-  createdAt: Date;
-  updatedAt?: Date;
-}
-
-export interface OrderItem {
-  productId: string;
-  productName: string;
-  quantity: number;
-  price: number;
-}
-
-export interface CreateOrderRequest {
-  items: OrderItem[];
-  deliveryAddressId: string;
-  couponCode?: string;
-  paymentIntentId?: string;
-}
+import { Order, OrderSummary, CreateOrderRequest } from '../models/order.models';
 
 @Injectable({
   providedIn: 'root'
 })
 export class OrderService {
-  private api = inject(ApiService);
+  private http = inject(HttpClient);
+  private readonly baseUrl = `${environment.gatewayUrl}/api/orders`;
 
+  /**
+   * Create a new order from the current cart
+   */
   createOrder(request: CreateOrderRequest): Observable<ApiResponse<Order>> {
-    return this.api.post<ApiResponse<Order>>('/api/orders', request);
+    return this.http.post<ApiResponse<Order>>(this.baseUrl, request);
   }
 
-  getOrders(): Observable<ApiResponse<Order[]>> {
-    return this.api.get<ApiResponse<Order[]>>('/api/orders');
+  /**
+   * Get order by ID
+   */
+  getOrderById(orderId: string): Observable<ApiResponse<Order>> {
+    return this.http.get<ApiResponse<Order>>(`${this.baseUrl}/${orderId}`);
   }
 
-  getOrderById(id: string): Observable<ApiResponse<Order>> {
-    return this.api.get<ApiResponse<Order>>(`/api/orders/${id}`);
+  /**
+   * Get order by order number
+   */
+  getOrderByNumber(orderNumber: string): Observable<ApiResponse<Order>> {
+    return this.http.get<ApiResponse<Order>>(`${this.baseUrl}/number/${orderNumber}`);
   }
 
-  cancelOrder(id: string): Observable<ApiResponse> {
-    return this.api.post<ApiResponse>(`/api/orders/${id}/cancel`, {});
+  /**
+   * Get current user's orders (paginated)
+   */
+  getMyOrders(page: number = 1, pageSize: number = 10): Observable<ApiResponse<OrderSummary[]>> {
+    return this.http.get<ApiResponse<OrderSummary[]>>(
+      `${this.baseUrl}/my-orders?page=${page}&pageSize=${pageSize}`
+    );
+  }
+
+  /**
+   * Cancel an order
+   */
+  cancelOrder(orderId: string): Observable<ApiResponse<Order>> {
+    return this.http.post<ApiResponse<Order>>(`${this.baseUrl}/${orderId}/cancel`, {});
+  }
+
+  /**
+   * Get status display text
+   */
+  getStatusDisplay(status: string): string {
+    const statusMap: Record<string, string> = {
+      'Pending': 'Order Placed',
+      'Confirmed': 'Confirmed',
+      'Preparing': 'Preparing',
+      'OutForDelivery': 'Out for Delivery',
+      'Delivered': 'Delivered',
+      'Cancelled': 'Cancelled'
+    };
+    return statusMap[status] || status;
+  }
+
+  /**
+   * Get status color class for styling
+   */
+  getStatusColor(status: string): string {
+    const colorMap: Record<string, string> = {
+      'Pending': 'status-pending',
+      'Confirmed': 'status-confirmed',
+      'Preparing': 'status-preparing',
+      'OutForDelivery': 'status-delivery',
+      'Delivered': 'status-delivered',
+      'Cancelled': 'status-cancelled'
+    };
+    return colorMap[status] || 'status-default';
   }
 }
