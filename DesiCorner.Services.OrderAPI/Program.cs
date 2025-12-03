@@ -24,6 +24,11 @@ builder.Services.AddHttpClient("CartAPI", client =>
     client.BaseAddress = new Uri(builder.Configuration["ServiceUrls:CartAPI"] ?? "http://localhost:5003");
 });
 
+builder.Services.AddHttpClient("AuthAPI", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ServiceUrls:AuthAPI"] ?? "https://localhost:7001");
+});
+
 // Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

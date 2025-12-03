@@ -167,7 +167,16 @@ app.Use(async (ctx, next) =>
     // Allow ALL cart operations for guest checkout (uses X-Session-Id header)
     var isCartOperation = path.StartsWith("/api/cart", StringComparison.OrdinalIgnoreCase);
 
-    if (isPublicPath || isPublicProductBrowsing || isCartOperation)
+    // Allow guest order creation (POST only)
+    var isGuestOrderCreation = method.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
+                               path.Equals("/api/orders", StringComparison.OrdinalIgnoreCase);
+
+    // Allow viewing specific orders (GET /api/orders/{guid})
+    var isOrderView = method.Equals("GET", StringComparison.OrdinalIgnoreCase) &&
+                      path.StartsWith("/api/orders/", StringComparison.OrdinalIgnoreCase) &&
+                      Guid.TryParse(path.Split('/').LastOrDefault(), out _);
+
+    if (isPublicPath || isPublicProductBrowsing || isCartOperation || isGuestOrderCreation || isOrderView)
     {
         await next();
         return;

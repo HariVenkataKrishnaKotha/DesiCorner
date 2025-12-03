@@ -67,6 +67,9 @@ namespace DesiCorner.Services.OrderAPI.Migrations
                     b.Property<DateTime?>("EstimatedDeliveryTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsGuestOrder")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
 
@@ -115,7 +118,7 @@ namespace DesiCorner.Services.OrderAPI.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("UserPhone")

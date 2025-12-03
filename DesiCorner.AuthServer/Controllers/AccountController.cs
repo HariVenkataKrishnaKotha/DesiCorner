@@ -309,6 +309,47 @@ public class AccountController : ControllerBase
     }
 
     /// <summary>
+    /// Check if user exists by email or phone (for guest checkout user linking)
+    /// </summary>
+    [HttpGet("user-lookup")]
+    [AllowAnonymous]
+    public async Task<IActionResult> UserLookup([FromQuery] string? email, [FromQuery] string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(phone))
+        {
+            return BadRequest(new ResponseDto
+            {
+                IsSuccess = false,
+                Message = "Either email or phone is required"
+            });
+        }
+
+        ApplicationUser? user = null;
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            user = await _userManager.FindByEmailAsync(email);
+        }
+        else if (!string.IsNullOrWhiteSpace(phone))
+        {
+            user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumber == phone);
+        }
+
+        return Ok(new ResponseDto
+        {
+            IsSuccess = true,
+            Result = new
+            {
+                UserId = user?.Id,
+                Email = user?.Email,
+                PhoneNumber = user?.PhoneNumber,
+                Exists = user != null
+            }
+        });
+    }
+
+    /// <summary>
     /// Logout - Clears authentication cookie
     /// </summary>
     [Authorize]
