@@ -377,8 +377,16 @@ public class CartController : ControllerBase
 
     private Guid? GetUserId()
     {
+        // First, try to get userId from forwarded header (from Gateway)
+        var forwardedUserId = Request.Headers["X-Forwarded-UserId"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(forwardedUserId) && Guid.TryParse(forwardedUserId, out var userId))
+        {
+            return userId;
+        }
+
+        // Fallback: try to get from JWT claims (direct access without Gateway)
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        return Guid.TryParse(userIdClaim, out var userId) ? userId : null;
+        return Guid.TryParse(userIdClaim, out var fallbackUserId) ? fallbackUserId : null;
     }
 
     private string? GetSessionId()

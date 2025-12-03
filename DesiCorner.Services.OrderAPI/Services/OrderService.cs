@@ -2,6 +2,7 @@
 using DesiCorner.Services.OrderAPI.Data;
 using DesiCorner.Services.OrderAPI.Models;
 using Microsoft.EntityFrameworkCore;
+using DesiCorner.Contracts.Common;
 
 namespace DesiCorner.Services.OrderAPI.Services;
 
@@ -9,120 +10,95 @@ public class OrderService : IOrderService
 {
     private readonly OrderDbContext _context;
     private readonly ILogger<OrderService> _logger;
-    private readonly HttpClient _httpClient;
     private readonly IHttpClientFactory _httpClientFactory;
 
     public OrderService(
-    OrderDbContext context,
-    ILogger<OrderService> logger,
-    IHttpClientFactory httpClientFactory)
+        OrderDbContext context,
+        ILogger<OrderService> logger,
+        IHttpClientFactory httpClientFactory)
     {
         _context = context;
         _logger = logger;
         _httpClientFactory = httpClientFactory;
     }
 
-    public async Task<Order> CreateOrderAsync(
-    string? authenticatedUserId,
-    CreateOrderDto request,
-    CancellationToken ct = default)
+    public async Task<Order> CreateOrderAsync(string? authenticatedUserId, CreateOrderDto request, string? email, string? phone, CancellationToken ct)
     {
+        // Determine if this is a guest or authenticated user checkout
         bool isGuestCheckout = string.IsNullOrWhiteSpace(authenticatedUserId);
         Guid? finalUserId = null;
-        string email;
-        string phone;
         bool isGuestOrder = true;
 
         if (isGuestCheckout)
         {
             // === GUEST CHECKOUT FLOW ===
-
-            // Validate guest required fields
-            if (string.IsNullOrWhiteSpace(request.Email) ||
-                string.IsNullOrWhiteSpace(request.Phone))
+            // Validate guest fields
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Phone))
             {
-                throw new InvalidOperationException("Email and phone are required for guest checkout");
-            }
-
-            if (string.IsNullOrWhiteSpace(request.OtpCode))
-            {
-                throw new InvalidOperationException("OTP verification is required for guest checkout");
-            }
-
-            // Step 1: Verify OTP with AuthServer
-            // REMOVED: OTP already verified in frontend, no need to verify again
-            // The frontend already called verify-otp and confirmed it was valid
-            /*var authClient = _httpClientFactory.CreateClient("AuthAPI");
-
-            var otpVerifyResponse = await authClient.PostAsJsonAsync("/api/account/verify-otp",
-                new
-                {
-                    Identifier = request.Email,
-                    Otp = request.OtpCode
-                }, ct);
-
-            if (!otpVerifyResponse.IsSuccessStatusCode)
-            {
-                var errorContent = await otpVerifyResponse.Content.ReadAsStringAsync(ct);
-                _logger.LogWarning("OTP verification failed: {Error}", errorContent);
-                throw new InvalidOperationException("Invalid or expired OTP. Please verify your email again.");
-            }
-
-            var otpResult = await otpVerifyResponse.Content.ReadFromJsonAsync<dynamic>(ct);
-            if (otpResult?.isSuccess != true)
-            {
-                throw new InvalidOperationException("Invalid or expired OTP. Please verify your email again.");
-            }*/
-
-            // Step 2: Check if email/phone matches an existing user
-            var authClient = _httpClientFactory.CreateClient("AuthAPI");
-            var lookupResponse = await authClient.GetAsync(
-                $"/api/account/user-lookup?email={Uri.EscapeDataString(request.Email)}&phone={Uri.EscapeDataString(request.Phone)}",
-                ct);
-
-            if (lookupResponse.IsSuccessStatusCode)
-            {
-                var lookupResult = await lookupResponse.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(ct);
-
-                if (lookupResult.TryGetProperty("result", out var resultElement))
-                {
-                    if (resultElement.TryGetProperty("exists", out var existsElement) &&
-                        existsElement.GetBoolean())
-                    {
-                        // User exists - link order to them
-                        if (resultElement.TryGetProperty("userId", out var userIdElement) &&
-                            userIdElement.GetString() is string userIdStr &&
-                            Guid.TryParse(userIdStr, out var matchedId))
-                        {
-                            finalUserId = matchedId;
-                            isGuestOrder = false;
-                            _logger.LogInformation(
-                                "Guest checkout matched existing user {UserId}. Linking order to user account.",
-                                finalUserId);
-                        }
-                    }
-                }
+                throw new ArgumentException("Email and Phone are required for guest checkout");
             }
 
             email = request.Email;
             phone = request.Phone;
+
+            // Check if this email/phone matches an existing registered user
+            try
+            {
+                var authClient = _httpClientFactory.CreateClient("AuthServer");
+                var lookupResponse = await authClient.GetAsync(
+                    $"/api/account/user-lookup?email={Uri.EscapeDataString(request.Email)}&phone={Uri.EscapeDataString(request.Phone)}",
+                    ct);
+
+                if (lookupResponse.IsSuccessStatusCode)
+                {
+                    var lookupData = await lookupResponse.Content.ReadFromJsonAsync<ResponseDto>(cancellationToken: ct);
+                    if (lookupData?.IsSuccess == true && lookupData.Result != null)
+                    {
+                        // Extract UserId from anonymous object
+                        var resultJson = System.Text.Json.JsonSerializer.Serialize(lookupData.Result);
+                        var resultDict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(resultJson);
+
+                        if (resultDict != null && resultDict.ContainsKey("UserId"))
+                        {
+                            var userIdValue = resultDict["UserId"]?.ToString();
+                            if (!string.IsNullOrEmpty(userIdValue) && Guid.TryParse(userIdValue, out var parsedUserId))
+                            {
+                                // Link this order to the existing user
+                                finalUserId = parsedUserId;
+                                isGuestOrder = false;
+                                _logger.LogInformation("Linking guest order to existing user: {UserId}", finalUserId);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not verify user lookup, treating as guest order");
+            }
         }
         else
         {
             // === AUTHENTICATED USER FLOW ===
-
-            if (!Guid.TryParse(authenticatedUserId, out var userId))
+            if (!string.IsNullOrWhiteSpace(authenticatedUserId))
             {
-                throw new InvalidOperationException("Invalid user ID");
+                finalUserId = Guid.Parse(authenticatedUserId);
+                isGuestOrder = false;
             }
 
-            finalUserId = userId;
-            isGuestOrder = false;
+            // Use email and phone passed from controller (from forwarded headers)
+            // These should now have real values from JWT claims
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                _logger.LogWarning("No email forwarded for authenticated user {UserId}", finalUserId);
+                email = "user@example.com";
+            }
 
-            // Email and phone will come from JWT claims (passed via controller)
-            // For now, use request fields if provided, otherwise defaults
-            email = request.Email ?? "user@example.com";  // TODO: Get from claims
-            phone = request.Phone ?? "0000000000";  // TODO: Get from claims
+            if (string.IsNullOrWhiteSpace(phone))
+            {
+                _logger.LogWarning("No phone forwarded for authenticated user {UserId}", finalUserId);
+                phone = "0000000000";
+            }
         }
 
         // === CREATE ORDER ===

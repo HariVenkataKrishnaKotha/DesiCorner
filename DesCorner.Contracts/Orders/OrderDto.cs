@@ -29,7 +29,7 @@ public class OrderDto
 
     public string? CouponCode { get; set; }
 
-    public string Status { get; set; } = "Pending"; // Pending, Confirmed, Preparing, OutForDelivery, Delivered, Cancelled
+    public string Status { get; set; } = "Pending";
 
     public string? PaymentIntentId { get; set; }
     public string PaymentStatus { get; set; } = "Pending";
@@ -39,6 +39,9 @@ public class OrderDto
     public DateTime? DeliveredAt { get; set; }
 
     public string? SpecialInstructions { get; set; }
+
+    // Add this property
+    public DateTime CreatedAt { get; set; }
 }
 
 public class OrderItemDto

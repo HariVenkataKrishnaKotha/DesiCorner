@@ -164,51 +164,54 @@ app.Use(async (ctx, next) =>
                                    (path.StartsWith("/api/products", StringComparison.OrdinalIgnoreCase) ||
                                     path.StartsWith("/api/categories", StringComparison.OrdinalIgnoreCase));
 
-    // Allow ALL cart operations for guest checkout (uses X-Session-Id header)
-    var isCartOperation = path.StartsWith("/api/cart", StringComparison.OrdinalIgnoreCase);
+    // Cart and guest order operations - OPTIONAL auth (allow both authenticated and guest)
+    var isOptionalAuthOperation = path.StartsWith("/api/cart", StringComparison.OrdinalIgnoreCase) ||
+                                   (method.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
+                                    path.Equals("/api/orders", StringComparison.OrdinalIgnoreCase)) ||
+                                   (method.Equals("GET", StringComparison.OrdinalIgnoreCase) &&
+                                    path.StartsWith("/api/orders/", StringComparison.OrdinalIgnoreCase) &&
+                                    Guid.TryParse(path.Split('/').LastOrDefault(), out _));
 
-    // Allow guest order creation (POST only)
-    var isGuestOrderCreation = method.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
-                               path.Equals("/api/orders", StringComparison.OrdinalIgnoreCase);
-
-    // Allow viewing specific orders (GET /api/orders/{guid})
-    var isOrderView = method.Equals("GET", StringComparison.OrdinalIgnoreCase) &&
-                      path.StartsWith("/api/orders/", StringComparison.OrdinalIgnoreCase) &&
-                      Guid.TryParse(path.Split('/').LastOrDefault(), out _);
-
-    if (isPublicPath || isPublicProductBrowsing || isCartOperation || isGuestOrderCreation || isOrderView)
+    if (isPublicPath || isPublicProductBrowsing)
     {
         await next();
         return;
     }
 
-    // For /api/** routes, require Bearer token
+    // For /api/** routes, check for Bearer token
     var authz = ctx.Request.Headers.Authorization.ToString();
     var token = authz.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
         ? authz.Substring("Bearer ".Length).Trim()
         : null;
 
-    if (string.IsNullOrEmpty(token))
+    // If token exists, validate it
+    if (!string.IsNullOrEmpty(token))
     {
+        var authenticator = ctx.RequestServices.GetRequiredService<ITokenAuthenticator>();
+        var (ok, principal, source, err) = await authenticator.AuthenticateAsync(token, ctx.RequestAborted);
+
+        if (ok && principal is not null)
+        {
+            // Set user and mark source
+            ctx.User = principal;
+            ctx.Request.Headers["X-Auth-Source"] = source;
+            ForwardingTransforms.AddForwardedIdentityHeaders(ctx);
+        }
+        else if (!isOptionalAuthOperation)
+        {
+            // Invalid token and not an optional-auth operation
+            ctx.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+            await ctx.Response.WriteAsJsonAsync(new { error = "invalid_token", reason = err });
+            return;
+        }
+    }
+    else if (!isOptionalAuthOperation)
+    {
+        // No token and not an optional-auth operation
         ctx.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
         await ctx.Response.WriteAsJsonAsync(new { error = "missing_bearer" });
         return;
     }
-
-    var authenticator = ctx.RequestServices.GetRequiredService<ITokenAuthenticator>();
-    var (ok, principal, source, err) = await authenticator.AuthenticateAsync(token, ctx.RequestAborted);
-
-    if (!ok || principal is null)
-    {
-        ctx.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-        await ctx.Response.WriteAsJsonAsync(new { error = "invalid_token", reason = err });
-        return;
-    }
-
-    // Set user and mark source
-    ctx.User = principal;
-    ctx.Request.Headers["X-Auth-Source"] = source;
-    ForwardingTransforms.AddForwardedIdentityHeaders(ctx);
 
     await next();
 });
