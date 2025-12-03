@@ -26,47 +26,60 @@ public class OrdersController : ControllerBase
     /// Create a new order (supports both authenticated and guest checkout)
     /// </summary>
     [HttpPost]
-    [AllowAnonymous]  // Allow both authenticated and guest users
+    [AllowAnonymous]
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto request, CancellationToken ct)
     {
         try
         {
-            // Check if user is authenticated
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var isAuthenticated = !string.IsNullOrWhiteSpace(userIdClaim);
+            var userId = GetUserId();
 
-            // Validate guest checkout requirements
-            if (!isAuthenticated)
+            // For authenticated users, get email and phone from forwarded headers
+            string? email = request.Email;
+            string? phone = request.Phone;
+
+            if (userId.HasValue)
             {
-                if (string.IsNullOrWhiteSpace(request.Email) ||
-                    string.IsNullOrWhiteSpace(request.Phone) ||
-                    string.IsNullOrWhiteSpace(request.OtpCode))
-                {
-                    return BadRequest(new ResponseDto
-                    {
-                        IsSuccess = false,
-                        Message = "Email, phone, and OTP verification are required for guest checkout"
-                    });
-                }
+                // Override with forwarded headers for authenticated users
+                email = Request.Headers["X-Forwarded-Email"].FirstOrDefault() ?? email;
+                phone = Request.Headers["X-Forwarded-Phone"].FirstOrDefault() ?? phone;
             }
 
-            // Create order (works for both authenticated and guest)
-            var order = await _orderService.CreateOrderAsync(userIdClaim, request, ct);
-            var orderDto = MapToDto(order);
+            var order = await _orderService.CreateOrderAsync(userId?.ToString(), request, email, phone, ct);
 
-            return CreatedAtAction(
-                nameof(GetOrder),
-                new { orderId = order.Id },
-                new ResponseDto
+            return Ok(new ResponseDto
+            {
+                IsSuccess = true,
+                Message = "Order placed successfully",
+                Result = new OrderDto
                 {
-                    IsSuccess = true,
-                    Message = "Order created successfully",
-                    Result = orderDto
-                });
+                    Id = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    UserId = order.UserId,
+                    UserEmail = order.UserEmail,
+                    UserPhone = order.UserPhone,
+                    Status = order.Status.ToString(),
+                    SubTotal = order.SubTotal,
+                    TaxAmount = order.TaxAmount,
+                    DeliveryFee = order.DeliveryFee,
+                    Total = order.Total,
+                    DeliveryAddress = order.DeliveryAddress,
+                    DeliveryCity = order.DeliveryCity,
+                    DeliveryState = order.DeliveryState,
+                    DeliveryZipCode = order.DeliveryZipCode,
+                    Items = order.Items.Select(i => new OrderItemDto
+                    {
+                        Id = i.Id,
+                        ProductId = i.ProductId,
+                        ProductName = i.ProductName,
+                        Price = i.Price,
+                        Quantity = i.Quantity
+                    }).ToList(),
+                    CreatedAt = order.CreatedAt
+                }
+            });
         }
-        catch (InvalidOperationException ex)
+        catch (ArgumentException ex)
         {
-            _logger.LogError(ex, "Invalid operation while creating order");
             return BadRequest(new ResponseDto
             {
                 IsSuccess = false,
@@ -75,11 +88,11 @@ public class OrdersController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error creating order");
+            _logger.LogError(ex, "Error creating order");
             return StatusCode(500, new ResponseDto
             {
                 IsSuccess = false,
-                Message = "An error occurred while creating the order. Please try again."
+                Message = "Error creating order"
             });
         }
     }

@@ -78,13 +78,22 @@ export class AuthService {
       }
     ).pipe(
       tap(tokenResponse => {
-        console.log('✅ Token received from OpenIddict');
-        
-        // Store tokens
-        localStorage.setItem(this.TOKEN_KEY, tokenResponse.access_token);
-        localStorage.setItem(this.REFRESH_TOKEN_KEY, tokenResponse.refresh_token);
-        localStorage.setItem(this.TOKEN_EXPIRY_KEY, (Date.now() + tokenResponse.expires_in * 1000).toString());
-      }),
+    console.log('✅ Token received from OpenIddict:', {
+        hasAccessToken: !!tokenResponse.access_token,
+        hasRefreshToken: !!tokenResponse.refresh_token,
+        expiresIn: tokenResponse.expires_in
+    });
+    
+    // Store tokens
+    localStorage.setItem(this.TOKEN_KEY, tokenResponse.access_token);
+    localStorage.setItem(this.REFRESH_TOKEN_KEY, tokenResponse.refresh_token);
+    localStorage.setItem(this.TOKEN_EXPIRY_KEY, (Date.now() + tokenResponse.expires_in * 1000).toString());
+    
+    // Verify it was saved
+    console.log('💾 Token saved to localStorage:', {
+        saved: !!localStorage.getItem(this.TOKEN_KEY)
+    });
+}),
       // Add delay to ensure localStorage is written
       delay(100),
       // Load profile after token is stored
@@ -229,24 +238,25 @@ export class AuthService {
    * Logout
    */
   logout(): void {
-    // Clear local storage
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
-    localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
-    this.removeStoredUser();
-    
-    // Clear guest session
-    this.guestSessionService.clearSession();
-    
-    // Update auth state
-    this.authStateSubject.next({
-      isAuthenticated: false,
-      loading: false
-    });
-    
-    // Navigate to home
-    this.router.navigate(['/']);
-  }
+  // Clear auth tokens
+  localStorage.removeItem(this.TOKEN_KEY);
+  localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+  localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
+  this.removeStoredUser();
+  
+  // Clear guest session (so interceptor will create a new one)
+  localStorage.removeItem('guest_session_id');
+  this.guestSessionService.clearSession();
+  
+  // Update auth state
+  this.authStateSubject.next({
+    isAuthenticated: false,
+    loading: false
+  });
+  
+  // Navigate to home
+  this.router.navigate(['/']);
+}
 
   // Token management
   getToken(): string | null {

@@ -70,3 +70,10 @@ export type PaymentStatus =
   | 'Pending'
   | 'Completed'
   | 'Failed';
+
+export interface PaginatedOrderResponse {
+  items: OrderSummary[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}

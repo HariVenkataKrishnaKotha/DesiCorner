@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@env/environment';
 import { ApiResponse } from '../models/response.models';
-import { Order, OrderSummary, CreateOrderRequest } from '../models/order.models';
+import { Order, OrderSummary, CreateOrderRequest, PaginatedOrderResponse } from '../models/order.models';
 
 @Injectable({
   providedIn: 'root'
@@ -36,11 +36,11 @@ export class OrderService {
   /**
    * Get current user's orders (paginated)
    */
-  getMyOrders(page: number = 1, pageSize: number = 10): Observable<ApiResponse<OrderSummary[]>> {
-    return this.http.get<ApiResponse<OrderSummary[]>>(
-      `${this.baseUrl}/my-orders?page=${page}&pageSize=${pageSize}`
-    );
-  }
+  getMyOrders(page: number = 1, pageSize: number = 10): Observable<ApiResponse<PaginatedOrderResponse>> {
+  return this.http.get<ApiResponse<PaginatedOrderResponse>>(
+    `${this.baseUrl}/my-orders?page=${page}&pageSize=${pageSize}`
+  );
+}
 
   /**
    * Cancel an order

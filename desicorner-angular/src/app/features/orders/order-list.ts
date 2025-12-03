@@ -54,44 +54,45 @@ export class OrderListComponent implements OnInit {
   }
 
   loadOrders(): void {
-    this.loading = true;
-    this.error = '';
+  this.loading = true;
+  this.error = '';
 
-    this.orderService.getMyOrders(this.currentPage, this.pageSize).subscribe({
-      next: (response) => {
-        this.loading = false;
-        if (response.isSuccess && response.result) {
-          this.orders = response.result;
-          this.hasMore = response.result.length === this.pageSize;
-        } else {
-          this.error = response.message || 'Failed to load orders';
-        }
-      },
-      error: (err) => {
-        this.loading = false;
-        this.error = err.error?.message || 'Failed to load orders';
+  this.orderService.getMyOrders(this.currentPage, this.pageSize).subscribe({
+    next: (response) => {
+      this.loading = false;
+      if (response.isSuccess && response.result) {
+        this.orders = response.result.items;
+        this.hasMore = response.result.items.length === this.pageSize;
+      } else {
+        this.error = response.message || 'Failed to load orders';
       }
-    });
-  }
+    },
+    error: (err) => {
+      this.loading = false;
+      this.error = err.error?.message || 'Failed to load orders';
+    }
+  });
+}
 
   loadMore(): void {
-    this.currentPage++;
-    this.loading = true;
+  this.currentPage++;
+  this.loading = true;
 
-    this.orderService.getMyOrders(this.currentPage, this.pageSize).subscribe({
-      next: (response) => {
-        this.loading = false;
-        if (response.isSuccess && response.result) {
-          this.orders = [...this.orders, ...response.result];
-          this.hasMore = response.result.length === this.pageSize;
-        }
-      },
-      error: (err) => {
-        this.loading = false;
-        this.currentPage--; // Revert page increment on error
-      }
-    });
-  }
+  this.orderService.getMyOrders(this.currentPage, this.pageSize).subscribe({
+    next: (response) => {
+      this.loading = false;
+      if (response.isSuccess && response.result) {
+  const newOrders = response.result.items;
+  this.orders = [...this.orders, ...newOrders];
+  this.hasMore = newOrders.length === this.pageSize;
+}
+    },
+    error: (err) => {
+      this.loading = false;
+      this.currentPage--; // Revert page increment on error
+    }
+  });
+}
 
   getStatusDisplay(status: string): string {
     return this.orderService.getStatusDisplay(status);
