@@ -5,10 +5,12 @@ import { adminGuard } from './core/guards/admin-guard';
 export const routes: Routes = [
   {
   path: 'orders',
+  canActivate: [authGuard],
   loadComponent: () => import('./features/orders/order-list').then(m => m.OrderListComponent)
 },
-  {
+{
   path: 'orders/:id',
+  canActivate: [authGuard],
   loadComponent: () => import('./features/orders/order-detail').then(m => m.OrderDetailComponent)
 },
   {
