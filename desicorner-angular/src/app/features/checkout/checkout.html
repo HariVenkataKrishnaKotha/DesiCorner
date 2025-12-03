@@ -69,37 +69,137 @@
           <mat-card-title>Delivery Information</mat-card-title>
           @if (!isAuthenticated) {
             <mat-card-subtitle>
-              Please <a routerLink="/auth/login" [queryParams]="{returnUrl: '/checkout'}">login</a> to place an order
-            </mat-card-subtitle>
+  @if (!isAuthenticated) {
+    <span>Checkout as guest or <a routerLink="/auth/login" [queryParams]="{returnUrl: '/checkout'}">login</a> for faster checkout next time</span>
+  } @else {
+    <span>Complete your order details below</span>
+  }
+</mat-card-subtitle>
           }
         </mat-card-header>
         
         <mat-card-content>
           <form [formGroup]="checkoutForm" (ngSubmit)="onSubmit()">
-            <!-- Contact Info (for guests - display only) -->
-            @if (!isAuthenticated) {
-              <div class="form-section">
-                <h3>Contact Information</h3>
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Email</mat-label>
-                  <input matInput formControlName="email" type="email" placeholder="your@email.com">
-                  @if (checkoutForm.get('email')?.hasError('required')) {
-                    <mat-error>Email is required</mat-error>
-                  }
-                  @if (checkoutForm.get('email')?.hasError('email')) {
-                    <mat-error>Invalid email format</mat-error>
-                  }
-                </mat-form-field>
+            <!-- Contact Information Section (for guests only) -->
+@if (!isAuthenticated) {
+  <div class="form-section">
+    <h3>Contact Information</h3>
+    
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Email Address</mat-label>
+      <input matInput formControlName="email" type="email" placeholder="your@email.com">
+      <mat-icon matPrefix>email</mat-icon>
+      @if (checkoutForm.get('email')?.hasError('required')) {
+        <mat-error>Email is required</mat-error>
+      }
+      @if (checkoutForm.get('email')?.hasError('email')) {
+        <mat-error>Please enter a valid email</mat-error>
+      }
+    </mat-form-field>
+
                 
                 <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Phone</mat-label>
-                  <input matInput formControlName="phone" type="tel" placeholder="(555) 123-4567">
-                  @if (checkoutForm.get('phone')?.hasError('required')) {
-                    <mat-error>Phone is required</mat-error>
-                  }
-                </mat-form-field>
-              </div>
-            }
+      <mat-label>Phone Number</mat-label>
+      <input matInput formControlName="phone" type="tel" placeholder="(555) 123-4567">
+      <mat-icon matPrefix>phone</mat-icon>
+      @if (checkoutForm.get('phone')?.hasError('required')) {
+        <mat-error>Phone number is required</mat-error>
+      }
+    </mat-form-field><!-- OTP Verification Section -->
+    <div class="otp-verification-section">
+      <h4>
+        <mat-icon>verified_user</mat-icon>
+        Email Verification
+      </h4>
+      <p class="otp-description">We'll send a 6-digit code to verify your email address</p>
+      
+      @if (!otpSent) {
+        <!-- Send OTP Button -->
+        <button mat-raised-button color="accent" type="button" 
+          class="send-otp-button"
+          (click)="sendOtp()" 
+          [disabled]="otpSending || checkoutForm.get('email')?.invalid">
+          @if (otpSending) {
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Sending code...</span>
+          } @else {
+            <mat-icon>send</mat-icon>
+            <span>Send Verification Code</span>
+          }
+        </button>
+      } @else {
+        <!-- OTP Input and Verification -->
+        <mat-form-field appearance="outline" class="full-width otp-input">
+          <mat-label>Enter 6-Digit Verification Code</mat-label>
+          <input matInput formControlName="otpCode" 
+            type="text"
+            maxlength="6" 
+            placeholder="123456"
+            [readonly]="otpVerified">
+          @if (otpVerified) {
+            <mat-icon matSuffix color="primary" class="verified-icon">check_circle</mat-icon>
+          }
+          @if (checkoutForm.get('otpCode')?.hasError('required')) {
+            <mat-error>Verification code is required</mat-error>
+          }
+          @if (checkoutForm.get('otpCode')?.hasError('minlength') || checkoutForm.get('otpCode')?.hasError('maxlength')) {
+            <mat-error>Code must be exactly 6 digits</mat-error>
+          }
+          <mat-hint>Check your email for the verification code</mat-hint>
+        </mat-form-field>
+
+        @if (!otpVerified) {
+          <!-- Verify Button and Resend -->
+          <div class="otp-actions">
+            <button mat-raised-button color="primary" type="button"
+              class="verify-button"
+              (click)="verifyOtp()"
+              [disabled]="otpVerifying || checkoutForm.get('otpCode')?.invalid">
+              @if (otpVerifying) {
+                <mat-spinner diameter="20"></mat-spinner>
+                <span>Verifying...</span>
+              } @else {
+                <mat-icon>check</mat-icon>
+                <span>Verify Code</span>
+              }
+            </button>
+
+            <div class="resend-section">
+              @if (countdown > 0) {
+                <span class="countdown-text">
+                  <mat-icon>schedule</mat-icon>
+                  Resend in {{ countdownDisplay }}
+                </span>
+              } @else {
+                <button mat-button type="button" color="accent" (click)="resendOtp()">
+                  <mat-icon>refresh</mat-icon>
+                  Resend Code
+                </button>
+              }
+            </div>
+          </div>
+        } @else {
+          <!-- Success Message -->
+          <div class="otp-success-message">
+            <mat-icon>check_circle</mat-icon>
+            <div class="success-content">
+              <strong>Email Verified!</strong>
+              <span>You can now proceed with your order</span>
+            </div>
+          </div>
+        }
+
+        <!-- Error Message -->
+        @if (otpError) {
+          <div class="otp-error-message">
+            <mat-icon>error</mat-icon>
+            <span>{{ otpError }}</span>
+          </div>
+        }
+      }
+    </div>
+  </div>
+}
 
             <!-- Delivery Address -->
             <div class="form-section">
@@ -202,8 +302,8 @@
                 <mat-icon>arrow_back</mat-icon>
                 Back to Cart
               </a>
-              <button mat-raised-button color="primary" type="submit" 
-                [disabled]="checkoutForm.invalid || isSubmitting || !isAuthenticated">
+              <button mat-raised-button color="primary" type="submit" class="submit-button"
+  [disabled]="!canPlaceOrder">
                 @if (isSubmitting) {
                   <mat-spinner diameter="20"></mat-spinner>
                   <span>Processing...</span>

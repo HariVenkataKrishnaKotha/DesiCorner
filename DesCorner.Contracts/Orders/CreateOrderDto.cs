@@ -1,22 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace DesiCorner.Contracts.Orders;
 
 public class CreateOrderDto
 {
+    // Guest checkout fields (optional - for non-authenticated users)
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
+    public string? OtpCode { get; set; }
+
+    // Delivery address fields (required)
     [Required]
-    public Guid CartId { get; set; }
+    public string DeliveryAddress { get; set; } = string.Empty;
 
     [Required]
-    public Guid DeliveryAddressId { get; set; }
+    public string DeliveryCity { get; set; } = string.Empty;
 
-    public string? SpecialInstructions { get; set; }
+    [Required]
+    public string DeliveryState { get; set; } = string.Empty;
 
-    // Payment will be handled separately
-    public string? PaymentMethod { get; set; } = "Stripe";
+    [Required]
+    public string DeliveryZipCode { get; set; } = string.Empty;
+
+    public string? DeliveryInstructions { get; set; }
+
+    // Payment
+    public string PaymentMethod { get; set; } = "CashOnDelivery";
+    public string? PaymentIntentId { get; set; }
 }
