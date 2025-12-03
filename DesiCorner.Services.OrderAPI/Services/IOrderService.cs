@@ -5,7 +5,7 @@ namespace DesiCorner.Services.OrderAPI.Services;
 
 public interface IOrderService
 {
-    Task<Order> CreateOrderAsync(Guid userId, string userEmail, string userPhone, CreateOrderDto request, CancellationToken ct = default);
+    Task<Order> CreateOrderAsync(string? authenticatedUserId, CreateOrderDto request, CancellationToken ct = default);
     Task<Order?> GetOrderByIdAsync(Guid orderId, CancellationToken ct = default);
     Task<Order?> GetOrderByNumberAsync(string orderNumber, CancellationToken ct = default);
     Task<List<Order>> GetUserOrdersAsync(Guid userId, int page = 1, int pageSize = 10, CancellationToken ct = default);

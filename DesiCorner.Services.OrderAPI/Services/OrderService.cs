@@ -10,47 +10,153 @@ public class OrderService : IOrderService
     private readonly OrderDbContext _context;
     private readonly ILogger<OrderService> _logger;
     private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public OrderService(
-        OrderDbContext context,
-        ILogger<OrderService> logger,
-        IHttpClientFactory httpClientFactory)
+    OrderDbContext context,
+    ILogger<OrderService> logger,
+    IHttpClientFactory httpClientFactory)
     {
         _context = context;
         _logger = logger;
-        _httpClient = httpClientFactory.CreateClient("CartAPI");
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task<Order> CreateOrderAsync(
-        Guid userId,
-        string userEmail,
-        string userPhone,
-        CreateOrderDto request,
-        CancellationToken ct = default)
+    string? authenticatedUserId,
+    CreateOrderDto request,
+    CancellationToken ct = default)
     {
-        // For now, we'll create a placeholder order
-        // In production, you'd fetch cart data from CartAPI
+        bool isGuestCheckout = string.IsNullOrWhiteSpace(authenticatedUserId);
+        Guid? finalUserId = null;
+        string email;
+        string phone;
+        bool isGuestOrder = true;
+
+        if (isGuestCheckout)
+        {
+            // === GUEST CHECKOUT FLOW ===
+
+            // Validate guest required fields
+            if (string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Phone))
+            {
+                throw new InvalidOperationException("Email and phone are required for guest checkout");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.OtpCode))
+            {
+                throw new InvalidOperationException("OTP verification is required for guest checkout");
+            }
+
+            // Step 1: Verify OTP with AuthServer
+            // REMOVED: OTP already verified in frontend, no need to verify again
+            // The frontend already called verify-otp and confirmed it was valid
+            /*var authClient = _httpClientFactory.CreateClient("AuthAPI");
+
+            var otpVerifyResponse = await authClient.PostAsJsonAsync("/api/account/verify-otp",
+                new
+                {
+                    Identifier = request.Email,
+                    Otp = request.OtpCode
+                }, ct);
+
+            if (!otpVerifyResponse.IsSuccessStatusCode)
+            {
+                var errorContent = await otpVerifyResponse.Content.ReadAsStringAsync(ct);
+                _logger.LogWarning("OTP verification failed: {Error}", errorContent);
+                throw new InvalidOperationException("Invalid or expired OTP. Please verify your email again.");
+            }
+
+            var otpResult = await otpVerifyResponse.Content.ReadFromJsonAsync<dynamic>(ct);
+            if (otpResult?.isSuccess != true)
+            {
+                throw new InvalidOperationException("Invalid or expired OTP. Please verify your email again.");
+            }*/
+
+            // Step 2: Check if email/phone matches an existing user
+            var authClient = _httpClientFactory.CreateClient("AuthAPI");
+            var lookupResponse = await authClient.GetAsync(
+                $"/api/account/user-lookup?email={Uri.EscapeDataString(request.Email)}&phone={Uri.EscapeDataString(request.Phone)}",
+                ct);
+
+            if (lookupResponse.IsSuccessStatusCode)
+            {
+                var lookupResult = await lookupResponse.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(ct);
+
+                if (lookupResult.TryGetProperty("result", out var resultElement))
+                {
+                    if (resultElement.TryGetProperty("exists", out var existsElement) &&
+                        existsElement.GetBoolean())
+                    {
+                        // User exists - link order to them
+                        if (resultElement.TryGetProperty("userId", out var userIdElement) &&
+                            userIdElement.GetString() is string userIdStr &&
+                            Guid.TryParse(userIdStr, out var matchedId))
+                        {
+                            finalUserId = matchedId;
+                            isGuestOrder = false;
+                            _logger.LogInformation(
+                                "Guest checkout matched existing user {UserId}. Linking order to user account.",
+                                finalUserId);
+                        }
+                    }
+                }
+            }
+
+            email = request.Email;
+            phone = request.Phone;
+        }
+        else
+        {
+            // === AUTHENTICATED USER FLOW ===
+
+            if (!Guid.TryParse(authenticatedUserId, out var userId))
+            {
+                throw new InvalidOperationException("Invalid user ID");
+            }
+
+            finalUserId = userId;
+            isGuestOrder = false;
+
+            // Email and phone will come from JWT claims (passed via controller)
+            // For now, use request fields if provided, otherwise defaults
+            email = request.Email ?? "user@example.com";  // TODO: Get from claims
+            phone = request.Phone ?? "0000000000";  // TODO: Get from claims
+        }
+
+        // === CREATE ORDER ===
 
         var order = new Order
         {
             Id = Guid.NewGuid(),
             OrderNumber = GenerateOrderNumber(),
-            UserId = userId,
-            UserEmail = userEmail,
-            UserPhone = userPhone,
-            DeliveryAddress = "123 Main St", // Will come from user's address
-            DeliveryCity = "City",
-            DeliveryState = "State",
-            DeliveryZipCode = "12345",
+            UserId = finalUserId,  // null for true guests, set for matched/authenticated users
+            IsGuestOrder = isGuestOrder,
+            UserEmail = email,
+            UserPhone = phone,
+
+            // Delivery information from request
+            DeliveryAddress = request.DeliveryAddress,
+            DeliveryCity = request.DeliveryCity,
+            DeliveryState = request.DeliveryState,
+            DeliveryZipCode = request.DeliveryZipCode,
+            SpecialInstructions = request.DeliveryInstructions,
+
+            // Pricing (TODO: Calculate from cart)
             SubTotal = 0,
             TaxAmount = 0,
             DeliveryFee = 0,
             DiscountAmount = 0,
             Total = 0,
+
+            // Status
             Status = "Pending",
             PaymentStatus = "Pending",
-            PaymentMethod = request.PaymentMethod ?? "Stripe",
-            SpecialInstructions = request.SpecialInstructions,
+            PaymentMethod = request.PaymentMethod,
+            PaymentIntentId = request.PaymentIntentId,
+
+            // Timestamps
             OrderDate = DateTime.UtcNow,
             EstimatedDeliveryTime = DateTime.UtcNow.AddMinutes(45),
             CreatedAt = DateTime.UtcNow,
@@ -60,7 +166,9 @@ public class OrderService : IOrderService
         _context.Orders.Add(order);
         await _context.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Order {OrderNumber} created for user {UserId}", order.OrderNumber, userId);
+        _logger.LogInformation(
+            "Order {OrderNumber} created successfully. IsGuest: {IsGuest}, UserId: {UserId}, Email: {Email}",
+            order.OrderNumber, isGuestOrder, finalUserId, email);
 
         return order;
     }

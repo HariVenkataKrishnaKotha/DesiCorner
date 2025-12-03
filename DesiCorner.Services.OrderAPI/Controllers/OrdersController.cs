@@ -10,7 +10,7 @@ namespace DesiCorner.Services.OrderAPI.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+//[Authorize]
 public class OrdersController : ControllerBase
 {
     private readonly IOrderService _orderService;
@@ -23,43 +23,63 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new order
+    /// Create a new order (supports both authenticated and guest checkout)
     /// </summary>
     [HttpPost]
+    [AllowAnonymous]  // Allow both authenticated and guest users
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto request, CancellationToken ct)
     {
         try
         {
-            var userId = GetUserId();
-            if (!userId.HasValue)
+            // Check if user is authenticated
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var isAuthenticated = !string.IsNullOrWhiteSpace(userIdClaim);
+
+            // Validate guest checkout requirements
+            if (!isAuthenticated)
             {
-                return Unauthorized(new ResponseDto
+                if (string.IsNullOrWhiteSpace(request.Email) ||
+                    string.IsNullOrWhiteSpace(request.Phone) ||
+                    string.IsNullOrWhiteSpace(request.OtpCode))
                 {
-                    IsSuccess = false,
-                    Message = "User must be authenticated to create an order"
-                });
+                    return BadRequest(new ResponseDto
+                    {
+                        IsSuccess = false,
+                        Message = "Email, phone, and OTP verification are required for guest checkout"
+                    });
+                }
             }
 
-            var userEmail = GetUserEmail() ?? "";
-            var userPhone = GetUserPhone() ?? "";
-
-            var order = await _orderService.CreateOrderAsync(userId.Value, userEmail, userPhone, request, ct);
+            // Create order (works for both authenticated and guest)
+            var order = await _orderService.CreateOrderAsync(userIdClaim, request, ct);
             var orderDto = MapToDto(order);
 
-            return Ok(new ResponseDto
+            return CreatedAtAction(
+                nameof(GetOrder),
+                new { orderId = order.Id },
+                new ResponseDto
+                {
+                    IsSuccess = true,
+                    Message = "Order created successfully",
+                    Result = orderDto
+                });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation while creating order");
+            return BadRequest(new ResponseDto
             {
-                IsSuccess = true,
-                Message = "Order created successfully",
-                Result = orderDto
+                IsSuccess = false,
+                Message = ex.Message
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating order");
+            _logger.LogError(ex, "Unexpected error creating order");
             return StatusCode(500, new ResponseDto
             {
                 IsSuccess = false,
-                Message = "An error occurred while creating the order"
+                Message = "An error occurred while creating the order. Please try again."
             });
         }
     }
@@ -68,11 +88,11 @@ public class OrdersController : ControllerBase
     /// Get order by ID
     /// </summary>
     [HttpGet("{orderId:guid}")]
+    [AllowAnonymous]  // Allow guests to view their order briefly after creation
     public async Task<IActionResult> GetOrder(Guid orderId, CancellationToken ct)
     {
         try
         {
-            var userId = GetUserId();
             var order = await _orderService.GetOrderByIdAsync(orderId, ct);
 
             if (order == null)
@@ -84,10 +104,30 @@ public class OrdersController : ControllerBase
                 });
             }
 
-            // Check if user owns this order (unless admin)
-            if (!IsAdmin() && order.UserId != userId)
+            var userId = GetUserId();
+
+            // Authorization logic
+            if (userId.HasValue)
             {
-                return Forbid();
+                // Authenticated user - check ownership (unless admin)
+                if (!IsAdmin() && order.UserId != userId)
+                {
+                    return Forbid();
+                }
+            }
+            else
+            {
+                // Guest user - only allow viewing within 5 minutes of order creation
+                // This allows guests to see their confirmation page immediately
+                var orderAge = DateTime.UtcNow - order.OrderDate;
+                if (orderAge > TimeSpan.FromMinutes(5))
+                {
+                    return Unauthorized(new ResponseDto
+                    {
+                        IsSuccess = false,
+                        Message = "Please login to view order history. Guest orders are only viewable for 5 minutes after creation."
+                    });
+                }
             }
 
             var orderDto = MapToDto(order);
@@ -112,6 +152,7 @@ public class OrdersController : ControllerBase
     /// <summary>
     /// Get order by order number
     /// </summary>
+    [Authorize]
     [HttpGet("number/{orderNumber}")]
     public async Task<IActionResult> GetOrderByNumber(string orderNumber, CancellationToken ct)
     {
@@ -157,6 +198,7 @@ public class OrdersController : ControllerBase
     /// <summary>
     /// Get current user's orders
     /// </summary>
+    [Authorize]
     [HttpGet("my-orders")]
     public async Task<IActionResult> GetMyOrders([FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken ct = default)
     {
@@ -241,6 +283,7 @@ public class OrdersController : ControllerBase
     /// <summary>
     /// Cancel an order
     /// </summary>
+    [Authorize]
     [HttpPost("{orderId:guid}/cancel")]
     public async Task<IActionResult> CancelOrder(Guid orderId, CancellationToken ct)
     {
