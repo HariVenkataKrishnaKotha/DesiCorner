@@ -10,7 +10,7 @@ public class OrderDto
 {
     public Guid Id { get; set; }
     public string OrderNumber { get; set; } = string.Empty;
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
     public string UserEmail { get; set; } = string.Empty;
     public string UserPhone { get; set; } = string.Empty;
 

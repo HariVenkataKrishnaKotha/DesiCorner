@@ -12,8 +12,9 @@ public class Order
     [MaxLength(20)]
     public string OrderNumber { get; set; } = string.Empty;
 
-    [Required]
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
+
+    public bool IsGuestOrder { get; set; }
 
     [Required]
     [MaxLength(255)]

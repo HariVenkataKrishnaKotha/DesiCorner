@@ -4,6 +4,14 @@ import { adminGuard } from './core/guards/admin-guard';
 
 export const routes: Routes = [
   {
+  path: 'orders',
+  loadComponent: () => import('./features/orders/order-list').then(m => m.OrderListComponent)
+},
+  {
+  path: 'orders/:id',
+  loadComponent: () => import('./features/orders/order-detail').then(m => m.OrderDetailComponent)
+},
+  {
     path: '',
     loadComponent: () => import('./features/home/home').then(m => m.HomeComponent)
   },

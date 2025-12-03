@@ -1,0 +1,325 @@
+.order-detail-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
+
+  p {
+    color: #666;
+    font-size: 1.1rem;
+  }
+}
+
+.error-card {
+  text-align: center;
+  padding: 40px 20px;
+
+  mat-card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+
+    mat-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+    }
+
+    h2 {
+      margin: 0;
+      color: #333;
+    }
+  }
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  .header-info {
+    flex: 1;
+
+    h1 {
+      margin: 0 0 8px 0;
+    }
+
+    .order-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+
+      .order-number {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #666;
+      }
+    }
+
+    .order-date {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #666;
+      margin: 0;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      mat-spinner {
+        margin-right: 4px;
+      }
+    }
+  }
+}
+
+.order-content {
+  display: grid;
+  gap: 24px;
+}
+
+.order-items-card {
+  .items-list {
+    margin-bottom: 16px;
+  }
+
+  .order-item {
+    display: grid;
+    grid-template-columns: 80px 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .item-image {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #f5f5f5;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      &-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        background: linear-gradient(135deg, #ffe0b2 0%, #ffcc80 100%);
+      }
+    }
+
+    .item-details {
+      h3 {
+        margin: 0 0 4px 0;
+        font-size: 1.1rem;
+        color: #333;
+      }
+
+      .item-price {
+        margin: 0;
+        color: #666;
+      }
+    }
+
+    .item-total {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #ff9800;
+    }
+  }
+
+  .order-totals {
+    margin-top: 16px;
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 1rem;
+
+      &.discount {
+        color: #4caf50;
+      }
+
+      &.grand-total {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #ff9800;
+        padding-top: 16px;
+        margin-top: 8px;
+      }
+    }
+  }
+}
+
+.info-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+
+  .info-card {
+    mat-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+
+      mat-icon {
+        color: #ff9800;
+      }
+    }
+
+    .info-item {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      mat-icon {
+        color: #666;
+        margin-top: 2px;
+      }
+
+      .info-content {
+        flex: 1;
+
+        strong {
+          display: block;
+          margin-bottom: 4px;
+          color: #333;
+        }
+
+        p {
+          margin: 0;
+          color: #666;
+          line-height: 1.4;
+        }
+      }
+    }
+  }
+}
+
+.success-message {
+  margin-top: 24px;
+  background: #e8f5e9;
+  border: 1px solid #4caf50;
+
+  mat-card-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+
+    mat-icon {
+      color: #4caf50;
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+    }
+
+    h3 {
+      margin: 0 0 8px 0;
+      color: #2e7d32;
+    }
+
+    p {
+      margin: 0;
+      color: #1b5e20;
+    }
+  }
+}
+
+// Status chip colors
+.status-pending {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.status-confirmed {
+  background-color: #e3f2fd;
+  color: #0277bd;
+}
+
+.status-preparing {
+  background-color: #f3e5f5;
+  color: #6a1b9a;
+}
+
+.status-delivery {
+  background-color: #e1f5fe;
+  color: #01579b;
+}
+
+.status-delivered {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-cancelled {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+@media (max-width: 768px) {
+  .order-header {
+    flex-direction: column;
+
+    .header-actions {
+      width: 100%;
+
+      button {
+        flex: 1;
+      }
+    }
+  }
+
+  .order-item {
+    grid-template-columns: 60px 1fr;
+
+    .item-total {
+      grid-column: 2;
+      text-align: right;
+    }
+  }
+}

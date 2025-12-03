@@ -1,0 +1,208 @@
+<div class="order-detail-container">
+  @if (loading) {
+    <div class="loading">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading order details...</p>
+    </div>
+  }
+
+  @if (error && !loading) {
+    <mat-card class="error-card">
+      <mat-card-content>
+        <mat-icon color="warn">error</mat-icon>
+        <h2>Error Loading Order</h2>
+        <p>{{ error }}</p>
+        <button mat-raised-button color="primary" routerLink="/orders">
+          <mat-icon>arrow_back</mat-icon>
+          View All Orders
+        </button>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (order && !loading) {
+    <div class="order-header">
+      <div class="header-info">
+        <h1>Order Details</h1>
+        <div class="order-meta">
+          <span class="order-number">Order #{{ order.orderNumber }}</span>
+          <mat-chip [class]="getStatusColor(order.status)">
+            {{ getStatusDisplay(order.status) }}
+          </mat-chip>
+        </div>
+        <p class="order-date">
+          <mat-icon>schedule</mat-icon>
+          {{ formatDate(order.orderDate) }}
+        </p>
+      </div>
+      <div class="header-actions">
+        @if (canCancelOrder()) {
+          <button mat-stroked-button color="warn" (click)="cancelOrder()" [disabled]="cancelling">
+            @if (cancelling) {
+              <mat-spinner diameter="20"></mat-spinner>
+            }
+            <mat-icon>cancel</mat-icon>
+            Cancel Order
+          </button>
+        }
+        <button mat-stroked-button routerLink="/orders">
+          <mat-icon>list</mat-icon>
+          View All Orders
+        </button>
+      </div>
+    </div>
+
+    <div class="order-content">
+      <!-- Order Items -->
+      <mat-card class="order-items-card">
+        <mat-card-header>
+          <mat-card-title>Order Items</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="items-list">
+            @for (item of order.items; track item.id) {
+              <div class="order-item">
+                <div class="item-image">
+                  @if (item.productImage) {
+                    <img [src]="item.productImage" [alt]="item.productName">
+                  } @else {
+                    <div class="item-image-placeholder">🍽️</div>
+                  }
+                </div>
+                <div class="item-details">
+                  <h3>{{ item.productName }}</h3>
+                  <p class="item-price">${{ item.price.toFixed(2) }} × {{ item.quantity }}</p>
+                </div>
+                <div class="item-total">
+                  <span>${{ (item.price * item.quantity).toFixed(2) }}</span>
+                </div>
+              </div>
+            }
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <div class="order-totals">
+            <div class="total-row">
+              <span>Subtotal</span>
+              <span>${{ order.subTotal.toFixed(2) }}</span>
+            </div>
+            <div class="total-row">
+              <span>Tax</span>
+              <span>${{ order.taxAmount.toFixed(2) }}</span>
+            </div>
+            <div class="total-row">
+              <span>Delivery Fee</span>
+              <span>${{ order.deliveryFee.toFixed(2) }}</span>
+            </div>
+            @if (order.discountAmount > 0) {
+              <div class="total-row discount">
+                <span>Discount</span>
+                <span>-${{ order.discountAmount.toFixed(2) }}</span>
+              </div>
+            }
+            <mat-divider></mat-divider>
+            <div class="total-row grand-total">
+              <span>Total</span>
+              <span>${{ order.total.toFixed(2) }}</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Delivery & Payment Info -->
+      <div class="info-cards">
+        <!-- Delivery Information -->
+        <mat-card class="info-card">
+          <mat-card-header>
+            <mat-icon>local_shipping</mat-icon>
+            <mat-card-title>Delivery Information</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="info-item">
+              <mat-icon>location_on</mat-icon>
+              <div class="info-content">
+                <strong>Delivery Address</strong>
+                <p>{{ order.deliveryAddress }}</p>
+                <p>{{ order.deliveryCity }}, {{ order.deliveryState }} {{ order.deliveryZipCode }}</p>
+              </div>
+            </div>
+
+            @if (order.deliveryInstructions) {
+              <div class="info-item">
+                <mat-icon>notes</mat-icon>
+                <div class="info-content">
+                  <strong>Special Instructions</strong>
+                  <p>{{ order.deliveryInstructions }}</p>
+                </div>
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Contact Information -->
+        <mat-card class="info-card">
+          <mat-card-header>
+            <mat-icon>person</mat-icon>
+            <mat-card-title>Contact Information</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="info-item">
+              <mat-icon>email</mat-icon>
+              <div class="info-content">
+                <strong>Email</strong>
+                <p>{{ order.userEmail }}</p>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <mat-icon>phone</mat-icon>
+              <div class="info-content">
+                <strong>Phone</strong>
+                <p>{{ order.userPhone }}</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Payment Information -->
+        <mat-card class="info-card">
+          <mat-card-header>
+            <mat-icon>payment</mat-icon>
+            <mat-card-title>Payment Information</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="info-item">
+              <mat-icon>credit_card</mat-icon>
+              <div class="info-content">
+                <strong>Payment Method</strong>
+                <p>{{ order.paymentMethod }}</p>
+              </div>
+            </div>
+
+            <div class="info-item">
+              <mat-icon>{{ order.paymentStatus === 'Completed' ? 'check_circle' : 'pending' }}</mat-icon>
+              <div class="info-content">
+                <strong>Payment Status</strong>
+                <p>{{ order.paymentStatus }}</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+
+    <!-- Success Message for New Orders -->
+    @if (route.snapshot.queryParamMap.get('new') === 'true') {
+      <mat-card class="success-message">
+        <mat-card-content>
+          <mat-icon>check_circle</mat-icon>
+          <div>
+            <h3>Order Placed Successfully!</h3>
+            <p>We've received your order and will start preparing it soon. You'll receive updates via email.</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+</div>
