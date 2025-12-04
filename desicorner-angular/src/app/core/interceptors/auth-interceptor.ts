@@ -40,12 +40,18 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 /**
  * Get or create guest session ID
  * This is a standalone function to avoid circular dependencies
+ * IMPORTANT: Uses the same key as GuestSessionService to maintain consistency
  */
 function getOrCreateGuestSession(): string {
-  let sessionId = localStorage.getItem('guest_session_id');
+  const SESSION_KEY = 'desicorner_guest_session';
+  let sessionId = localStorage.getItem(SESSION_KEY);
   if (!sessionId) {
-    sessionId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
-    localStorage.setItem('guest_session_id', sessionId);
+    // Generate a UUID v4-like session ID (same format as GuestSessionService)
+    sessionId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+    localStorage.setItem(SESSION_KEY, sessionId);
     console.log('🆕 Created new guest session:', sessionId);
   }
   return sessionId;

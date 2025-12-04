@@ -41,21 +41,19 @@ export interface OrderSummary {
 }
 
 export interface CreateOrderRequest {
-  // Guest checkout fields (optional - only for non-authenticated users)
-  email?: string;
-  phone?: string;
-  otpCode?: string;
-  
-  // Delivery address (required)
   deliveryAddress: string;
   deliveryCity: string;
   deliveryState: string;
   deliveryZipCode: string;
   deliveryInstructions?: string;
-  
-  // Payment
   paymentMethod: string;
   paymentIntentId?: string;
+  
+  // Guest checkout fields
+  email?: string;
+  phone?: string;
+  otpCode?: string;
+  sessionId?: string;  // Add this line
 }
 
 export type OrderStatus = 

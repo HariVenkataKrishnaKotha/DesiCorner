@@ -307,13 +307,21 @@ resendOtp(): void {
 
   // Build order request
   const orderRequest: CreateOrderRequest = {
-    deliveryAddress: address,
-    deliveryCity: formValue.city,
-    deliveryState: formValue.state,
-    deliveryZipCode: formValue.zipCode,
-    deliveryInstructions: formValue.instructions || undefined,
-    paymentMethod: formValue.paymentMethod
-  };
+  deliveryAddress: address,
+  deliveryCity: formValue.city,
+  deliveryState: formValue.state,
+  deliveryZipCode: formValue.zipCode,
+  deliveryInstructions: formValue.instructions || undefined,
+  paymentMethod: formValue.paymentMethod,
+  
+  // Add session ID for guest users
+  sessionId: this.authService.isAuthenticated ? undefined : this.authService.guestSessionId,
+  
+  // For guest checkout
+  email: this.isAuthenticated ? undefined : formValue.email,
+  phone: this.isAuthenticated ? undefined : formValue.phone,
+  otpCode: this.isAuthenticated ? undefined : formValue.otpCode
+};
 
   // Add guest checkout fields if not authenticated
   if (!this.isAuthenticated) {
