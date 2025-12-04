@@ -8,6 +8,7 @@ public class CreateOrderDto
     public string? Email { get; set; }
     public string? Phone { get; set; }
     public string? OtpCode { get; set; }
+    public string? SessionId { get; set; }
 
     // Delivery address fields (required)
     [Required]

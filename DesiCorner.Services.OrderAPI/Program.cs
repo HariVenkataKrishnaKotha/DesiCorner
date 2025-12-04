@@ -21,7 +21,8 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 // HttpClient for inter-service communication
 builder.Services.AddHttpClient("CartAPI", client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["ServiceUrls:CartAPI"] ?? "http://localhost:5003");
+    client.BaseAddress = new Uri(builder.Configuration["ServiceUrls:Gateway"]
+        ?? "https://localhost:5000");
 });
 
 builder.Services.AddHttpClient("AuthAPI", client =>
