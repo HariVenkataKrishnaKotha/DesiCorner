@@ -3,6 +3,7 @@ using DesiCorner.Services.OrderAPI.Data;
 using DesiCorner.Services.OrderAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using DesiCorner.Contracts.Common;
+using DesiCorner.Contracts.Cart;
 
 namespace DesiCorner.Services.OrderAPI.Services;
 
@@ -101,13 +102,84 @@ public class OrderService : IOrderService
             }
         }
 
-        // === CREATE ORDER ===
+        // === FETCH CART FROM CARTAPI ===
+        _logger.LogInformation("Fetching cart for user {UserId} or session {SessionId}", finalUserId, request.SessionId);
+
+        var cartClient = _httpClientFactory.CreateClient("CartAPI");
+        HttpResponseMessage cartResponse;
+
+        // Build cart request URL based on user type
+        if (finalUserId.HasValue)
+        {
+            // Authenticated user - fetch by userId via X-Forwarded-UserId header
+            var cartRequest = new HttpRequestMessage(HttpMethod.Get, "/api/cart");
+            cartRequest.Headers.Add("X-Forwarded-UserId", finalUserId.Value.ToString());
+            cartResponse = await cartClient.SendAsync(cartRequest, ct);
+
+            _logger.LogInformation("Cart API response status: {StatusCode}", cartResponse.StatusCode);
+
+            var responseBody = await cartResponse.Content.ReadAsStringAsync(ct);
+            _logger.LogInformation("Cart API raw response: {Response}", responseBody);
+        }
+        else
+        {
+            // Guest user - fetch by sessionId via X-Session-Id header
+            var cartRequest = new HttpRequestMessage(HttpMethod.Get, "/api/cart");
+            cartRequest.Headers.Add("X-Session-Id", request.SessionId);
+            cartResponse = await cartClient.SendAsync(cartRequest, ct);
+
+            _logger.LogInformation("Cart API response status: {StatusCode}", cartResponse.StatusCode);
+
+            var responseBody = await cartResponse.Content.ReadAsStringAsync(ct);
+            _logger.LogInformation("Cart API raw response: {Response}", responseBody);
+        }
+
+        if (!cartResponse.IsSuccessStatusCode)
+        {
+            _logger.LogError("Failed to fetch cart from CartAPI: {StatusCode}", cartResponse.StatusCode);
+            throw new InvalidOperationException("Unable to fetch cart. Please try again.");
+        }
+
+        var cartData = await cartResponse.Content.ReadFromJsonAsync<ResponseDto>(cancellationToken: ct);
+        if (cartData?.IsSuccess != true || cartData.Result == null)
+        {
+            throw new InvalidOperationException("Cart is empty or unavailable. Please add items to cart before checkout.");
+        }
+
+        // Deserialize cart from anonymous Result object
+        var cartJson = System.Text.Json.JsonSerializer.Serialize(cartData.Result);
+        _logger.LogInformation("Serialized cart JSON: {CartJson}", cartJson);
+
+        var deserializeOptions = new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        var cart = System.Text.Json.JsonSerializer.Deserialize<CartDto>(cartJson, deserializeOptions);
+
+        _logger.LogInformation("Deserialized cart: IsNull={IsNull}, ItemsCount={Count}",
+            cart == null, cart?.Items?.Count ?? -1);
+
+        if (cart?.Items != null)
+        {
+            _logger.LogInformation("Cart items details: {@Items}", cart.Items);
+        }
+
+        if (cart == null || cart.Items == null || cart.Items.Count == 0)
+        {
+            _logger.LogError("Cart deserialization failed or items are empty");
+            throw new InvalidOperationException("Cart is empty. Please add items before placing an order.");
+        }
+
+        _logger.LogInformation("Cart fetched successfully with {ItemCount} items, Total: {Total}",
+            cart.Items.Count, cart.Total);
+
+        // === CREATE ORDER FROM CART ===
 
         var order = new Order
         {
             Id = Guid.NewGuid(),
             OrderNumber = GenerateOrderNumber(),
-            UserId = finalUserId,  // null for true guests, set for matched/authenticated users
+            UserId = finalUserId,
             IsGuestOrder = isGuestOrder,
             UserEmail = email,
             UserPhone = phone,
@@ -119,12 +191,13 @@ public class OrderService : IOrderService
             DeliveryZipCode = request.DeliveryZipCode,
             SpecialInstructions = request.DeliveryInstructions,
 
-            // Pricing (TODO: Calculate from cart)
-            SubTotal = 0,
-            TaxAmount = 0,
-            DeliveryFee = 0,
-            DiscountAmount = 0,
-            Total = 0,
+            // Pricing from cart
+            SubTotal = cart.SubTotal,
+            TaxAmount = cart.TaxAmount,
+            DeliveryFee = cart.DeliveryFee,
+            DiscountAmount = cart.DiscountAmount,
+            Total = cart.Total,
+            CouponCode = cart.CouponCode,
 
             // Status
             Status = "Pending",
@@ -139,8 +212,64 @@ public class OrderService : IOrderService
             UpdatedAt = DateTime.UtcNow
         };
 
+        // Convert CartItems to OrderItems
+        foreach (var cartItem in cart.Items)
+        {
+            var orderItem = new OrderItem
+            {
+                Id = Guid.NewGuid(),
+                OrderId = order.Id,
+                ProductId = cartItem.ProductId,
+                ProductName = cartItem.ProductName,
+                ProductImage = cartItem.ProductImage,
+                Price = cartItem.Price,
+                Quantity = cartItem.Quantity
+            };
+            order.Items.Add(orderItem);
+        }
+
+        _logger.LogInformation("Created order with {ItemCount} items from cart", order.Items.Count);
+
         _context.Orders.Add(order);
         await _context.SaveChangesAsync(ct);
+
+        // === CLEAR CART AFTER SUCCESSFUL ORDER ===
+        try
+        {
+            _logger.LogInformation("Clearing cart for user {UserId} or session {SessionId}", finalUserId, request.SessionId);
+
+            HttpResponseMessage clearResponse;
+
+            if (finalUserId.HasValue)
+            {
+                // Authenticated user - clear by userId
+                var clearRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/cart/clear");
+                clearRequest.Headers.Add("X-Forwarded-UserId", finalUserId.Value.ToString());
+                clearResponse = await cartClient.SendAsync(clearRequest, ct);
+            }
+            else
+            {
+                // Guest user - clear by sessionId
+                var clearRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/cart/clear");
+                clearRequest.Headers.Add("X-Session-Id", request.SessionId);
+                clearResponse = await cartClient.SendAsync(clearRequest, ct);
+            }
+
+            if (clearResponse.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Cart cleared successfully after order creation");
+            }
+            else
+            {
+                _logger.LogWarning("Failed to clear cart after order creation: {StatusCode}", clearResponse.StatusCode);
+                // Don't throw - order was already created successfully
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error clearing cart after order creation - non-critical");
+            // Don't throw - order was already created successfully
+        }
 
         _logger.LogInformation(
             "Order {OrderNumber} created successfully. IsGuest: {IsGuest}, UserId: {UserId}, Email: {Email}",
