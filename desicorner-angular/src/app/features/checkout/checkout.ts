@@ -20,6 +20,7 @@ import { Cart } from '../../core/models/cart.models';
 import { CreateOrderRequest } from '../../core/models/order.models';
 import { OtpService } from '@core/services/otp.service';
 import { OnDestroy } from '@angular/core';
+import { PaymentService } from '@core/services/payment.service';
 
 @Component({
   selector: 'app-checkout',
@@ -49,6 +50,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private toastr = inject(ToastrService);
   private otpService = inject(OtpService);
+  private paymentService = inject(PaymentService);
 
   cart: Cart = { items: [], subtotal: 0, tax: 0, deliveryFee: 0, discount: 0, total: 0 };
   checkoutForm!: FormGroup;
@@ -63,6 +65,12 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   otpError = '';
   countdown = 0;
   private countdownInterval?: any;
+  // Payment state
+  paymentIntentId: string | null = null;
+  clientSecret: string | null = null;
+  showPaymentForm = false;
+  isProcessingPayment = false;
+  paymentError = '';
 
   // US States for dropdown
   states = [
@@ -85,6 +93,12 @@ export class CheckoutComponent implements OnInit, OnDestroy {
       this.updateFormValidation();
     });
 
+    // Initialize Stripe
+this.paymentService.initializeStripe().catch(error => {
+  console.error('Failed to initialize Stripe:', error);
+  this.toastr.error('Payment system unavailable', 'Error');
+});
+
     // Initialize form
     this.initForm();
   }
@@ -93,6 +107,8 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   if (this.countdownInterval) {
     clearInterval(this.countdownInterval);
   }
+  // Cleanup Stripe card element
+  this.paymentService.destroyCardElement();
 }
 
   private initForm(): void {
@@ -114,7 +130,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
       instructions: [''],
       
       // Payment
-      paymentMethod: ['CashOnDelivery', Validators.required]
+      paymentMethod: ['Stripe', Validators.required],
     });
 
     this.updateFormValidation();
@@ -275,7 +291,7 @@ resendOtp(): void {
   this.sendOtp();
 }
 
-  onSubmit(): void {
+  async onSubmit(): Promise<void> {
   // Validate form
   if (this.checkoutForm.invalid || this.cart.items.length === 0) {
     Object.keys(this.checkoutForm.controls).forEach(key => {
@@ -292,50 +308,112 @@ resendOtp(): void {
 
   this.isSubmitting = true;
   this.orderError = '';
+  this.paymentError = '';
 
+  try {
+    // Step 1: Create Payment Intent
+    console.log('Creating payment intent for amount:', this.cart.total);
+    
+    const paymentIntent = await this.paymentService.createPaymentIntent({
+      orderId: '00000000-0000-0000-0000-000000000000', // Temporary, will be replaced with actual order ID
+      amount: this.cart.total,
+      currency: 'usd'
+    }).toPromise();
+
+    if (!paymentIntent) {
+      throw new Error('Failed to create payment intent');
+    }
+
+    this.paymentIntentId = paymentIntent.paymentIntentId;
+    this.clientSecret = paymentIntent.clientSecret;
+
+    console.log('Payment intent created:', this.paymentIntentId);
+
+    // Step 2: Show payment form and create card element
+    this.showPaymentForm = true;
+    this.isSubmitting = false;
+
+    // Wait for DOM to render the card-element container
+    setTimeout(() => {
+      this.paymentService.createCardElement('card-element');
+      this.toastr.info('Please enter your card details', 'Payment');
+    }, 100);
+
+  } catch (error: any) {
+    this.isSubmitting = false;
+    console.error('Error creating payment intent:', error);
+    this.paymentError = error.message || 'Failed to initialize payment';
+    this.toastr.error(this.paymentError, 'Payment Error');
+  }
+}
+
+async confirmPayment(): Promise<void> {
+  if (!this.clientSecret || !this.paymentIntentId) {
+    this.toastr.error('Payment not initialized', 'Error');
+    return;
+  }
+
+  this.isProcessingPayment = true;
+  this.paymentError = '';
+
+  try {
+    // Step 3: Confirm payment with Stripe
+    console.log('Confirming payment...');
+    const result = await this.paymentService.confirmPayment(this.clientSecret);
+
+    if (!result.success) {
+      throw new Error(result.error || 'Payment failed');
+    }
+
+    console.log('✅ Payment confirmed successfully');
+    this.toastr.success('Payment successful!', 'Success');
+
+    // Step 4: Create order with paymentIntentId
+    await this.createOrderWithPayment();
+
+  } catch (error: any) {
+    this.isProcessingPayment = false;
+    console.error('Payment confirmation error:', error);
+    this.paymentError = error.message || 'Payment failed';
+    this.toastr.error(this.paymentError, 'Payment Failed');
+  }
+}
+
+private async createOrderWithPayment(): Promise<void> {
   const formValue = this.checkoutForm.value;
 
-  console.log('Form raw value:', formValue);
-  console.log('Is authenticated:', this.isAuthenticated);
-  console.log('OTP verified:', this.otpVerified);
-
-  // Build full address string
+  // Build full address
   let address = formValue.street;
   if (formValue.apartment) {
     address += `, ${formValue.apartment}`;
   }
 
-  // Build order request
+  // Build order request with paymentIntentId
   const orderRequest: CreateOrderRequest = {
-  deliveryAddress: address,
-  deliveryCity: formValue.city,
-  deliveryState: formValue.state,
-  deliveryZipCode: formValue.zipCode,
-  deliveryInstructions: formValue.instructions || undefined,
-  paymentMethod: formValue.paymentMethod,
-  
-  // Add session ID for guest users
-  sessionId: this.authService.isAuthenticated ? undefined : this.authService.guestSessionId,
-  
-  // For guest checkout
-  email: this.isAuthenticated ? undefined : formValue.email,
-  phone: this.isAuthenticated ? undefined : formValue.phone,
-  otpCode: this.isAuthenticated ? undefined : formValue.otpCode
-};
+    deliveryAddress: address,
+    deliveryCity: formValue.city,
+    deliveryState: formValue.state,
+    deliveryZipCode: formValue.zipCode,
+    deliveryInstructions: formValue.instructions || undefined,
+    paymentMethod: 'Stripe',
+    paymentIntentId: this.paymentIntentId!,
+    
+    // Add session ID for guest users
+    sessionId: this.authService.isAuthenticated ? undefined : this.authService.guestSessionId,
+    
+    // For guest checkout
+    email: this.isAuthenticated ? undefined : formValue.email,
+    phone: this.isAuthenticated ? undefined : formValue.phone,
+    otpCode: this.isAuthenticated ? undefined : formValue.otpCode
+  };
 
-  // Add guest checkout fields if not authenticated
-  if (!this.isAuthenticated) {
-    orderRequest.email = formValue.email;
-    orderRequest.phone = formValue.phone;
-    orderRequest.otpCode = formValue.otpCode;
-  }
-
-  console.log('Order request being sent:', orderRequest);
+  console.log('Creating order with payment:', orderRequest);
 
   // Submit order
   this.orderService.createOrder(orderRequest).subscribe({
     next: (response) => {
-      this.isSubmitting = false;
+      this.isProcessingPayment = false;
+      
       if (response.isSuccess && response.result) {
         // Clear cart on success
         this.cartService.clearCart();
@@ -355,12 +433,21 @@ resendOtp(): void {
       }
     },
     error: (err) => {
-      this.isSubmitting = false;
+      this.isProcessingPayment = false;
       console.error('Order creation error:', err);
       
       this.orderError = err.error?.message || 'Failed to place order. Please try again.';
       this.toastr.error(this.orderError, 'Order Failed');
     }
   });
+}
+
+cancelPayment(): void {
+  this.showPaymentForm = false;
+  this.paymentIntentId = null;
+  this.clientSecret = null;
+  this.paymentError = '';
+  this.paymentService.destroyCardElement();
+  this.toastr.info('Payment cancelled', 'Info');
 }
 }

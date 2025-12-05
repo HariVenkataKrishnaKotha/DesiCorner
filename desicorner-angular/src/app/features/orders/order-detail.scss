@@ -13,7 +13,7 @@
   gap: 16px;
 
   p {
-    color: #666;
+    color: #bbb;
     font-size: 1.1rem;
   }
 }
@@ -36,7 +36,7 @@
 
     h2 {
       margin: 0;
-      color: #333;
+      color: #e0e0e0;
     }
   }
 }
@@ -65,7 +65,7 @@
       .order-number {
         font-size: 1.1rem;
         font-weight: 500;
-        color: #666;
+        color: #bbb;
       }
     }
 
@@ -73,7 +73,7 @@
       display: flex;
       align-items: center;
       gap: 4px;
-      color: #666;
+      color: #bbb;
       margin: 0;
 
       mat-icon {
@@ -151,12 +151,12 @@
       h3 {
         margin: 0 0 4px 0;
         font-size: 1.1rem;
-        color: #333;
+        color: #e0e0e0;
       }
 
       .item-price {
         margin: 0;
-        color: #666;
+        color: #bbb;
       }
     }
 
@@ -175,6 +175,7 @@
       justify-content: space-between;
       padding: 8px 0;
       font-size: 1rem;
+      color:#e0e0e0;
 
       &.discount {
         color: #4caf50;
@@ -218,7 +219,7 @@
       }
 
       mat-icon {
-        color: #666;
+        color: #bbb;
         margin-top: 2px;
       }
 
@@ -228,12 +229,12 @@
         strong {
           display: block;
           margin-bottom: 4px;
-          color: #333;
+          color: #e0e0e0;
         }
 
         p {
           margin: 0;
-          color: #666;
+          color: #bbb;
           line-height: 1.4;
         }
       }

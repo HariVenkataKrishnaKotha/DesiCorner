@@ -27,5 +27,7 @@ public class CreateOrderDto
 
     // Payment
     public string PaymentMethod { get; set; } = "CashOnDelivery";
+
+    [Required(ErrorMessage = "Payment Intent ID is required")]
     public string? PaymentIntentId { get; set; }
 }
