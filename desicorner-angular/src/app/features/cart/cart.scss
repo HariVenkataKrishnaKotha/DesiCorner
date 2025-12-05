@@ -5,7 +5,7 @@
   
   h1 {
     margin-bottom: 24px;
-    color: #333;
+    color: #e0e0e0;
   }
 }
 
@@ -58,6 +58,26 @@
     button {
       width: 100%;
       margin-top: 0;
+    }
+  }
+}
+
+// Force input text to be dark and visible
+.coupon-section {
+  mat-form-field {
+    input {
+      color: #333 !important;
+      caret-color: #333 !important;
+    }
+    
+    // Override Material theme for this specific input
+    .mat-mdc-input-element {
+      color: #333 !important;
+    }
+    
+    // Make label visible too
+    .mat-mdc-form-field-label {
+      color: #666 !important;
     }
   }
 }
@@ -136,7 +156,7 @@
   h3 {
     margin: 0 0 8px 0;
     font-size: 1.1rem;
-    color: #333;
+    color: #e0e0e0;
   }
   
   .item-badges {
@@ -148,7 +168,7 @@
   .item-price {
     margin: 0;
     font-size: 1rem;
-    color: #666;
+    color: #bbb;
   }
 }
 
@@ -202,6 +222,7 @@
   align-items: center;
   padding: 8px 0;
   font-size: 1rem;
+  color: #e0e0e0;
   
   &.discount {
     color: #4caf50;
@@ -263,13 +284,13 @@
     
     h2 {
       margin: 0 0 16px 0;
-      color: #333;
+      color: #e0e0e0;
       font-size: 1.8rem;
     }
     
     p {
       margin: 0 0 24px 0;
-      color: #666;
+      color: #bbb;
       font-size: 1.1rem;
     }
   }

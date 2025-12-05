@@ -1,0 +1,6 @@
+@DesiCorner.Services.PaymentAPI_HostAddress = http://localhost:5197
+
+GET {{DesiCorner.Services.PaymentAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

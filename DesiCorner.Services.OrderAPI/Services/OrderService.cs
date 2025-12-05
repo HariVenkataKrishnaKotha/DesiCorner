@@ -4,6 +4,7 @@ using DesiCorner.Services.OrderAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using DesiCorner.Contracts.Common;
 using DesiCorner.Contracts.Cart;
+using DesiCorner.Contracts.Payment;
 
 namespace DesiCorner.Services.OrderAPI.Services;
 
@@ -101,6 +102,57 @@ public class OrderService : IOrderService
                 phone = "0000000000";
             }
         }
+
+        // === VERIFY PAYMENT WITH PAYMENTAPI ===
+        if (string.IsNullOrWhiteSpace(request.PaymentIntentId))
+        {
+            throw new ArgumentException("PaymentIntentId is required");
+        }
+
+        _logger.LogInformation("Verifying payment: {PaymentIntentId}", request.PaymentIntentId);
+
+        var paymentClient = _httpClientFactory.CreateClient("PaymentAPI");
+        var verifyRequest = new VerifyPaymentRequest
+        {
+            PaymentIntentId = request.PaymentIntentId
+        };
+
+        var verifyResponse = await paymentClient.PostAsJsonAsync("/api/payment/verify", verifyRequest, ct);
+
+        if (!verifyResponse.IsSuccessStatusCode)
+        {
+            _logger.LogError("Payment verification failed with status: {StatusCode}", verifyResponse.StatusCode);
+            throw new InvalidOperationException("Payment verification failed. Please try again.");
+        }
+
+        var verifyData = await verifyResponse.Content.ReadFromJsonAsync<ResponseDto>(cancellationToken: ct);
+        if (verifyData?.IsSuccess != true || verifyData.Result == null)
+        {
+            throw new InvalidOperationException("Payment verification failed. Invalid response from payment service.");
+        }
+
+        // Deserialize verification result
+        var verifyJson = System.Text.Json.JsonSerializer.Serialize(verifyData.Result);
+        var verifyResult = System.Text.Json.JsonSerializer.Deserialize<VerifyPaymentResponse>(
+            verifyJson,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
+        if (verifyResult == null || !verifyResult.IsSuccess)
+        {
+            var errorMsg = verifyResult?.ErrorMessage ?? "Payment not confirmed";
+            _logger.LogWarning("Payment verification failed: {Error}", errorMsg);
+            throw new InvalidOperationException($"Payment failed: {errorMsg}");
+        }
+
+        if (verifyResult.Status != "succeeded")
+        {
+            _logger.LogWarning("Payment not succeeded. Status: {Status}", verifyResult.Status);
+            throw new InvalidOperationException($"Payment not completed. Status: {verifyResult.Status}");
+        }
+
+        _logger.LogInformation("Payment verified successfully: {PaymentIntentId}, Amount: {Amount}",
+            request.PaymentIntentId, verifyResult.Amount);
 
         // === FETCH CART FROM CARTAPI ===
         _logger.LogInformation("Fetching cart for user {UserId} or session {SessionId}", finalUserId, request.SessionId);
@@ -200,8 +252,8 @@ public class OrderService : IOrderService
             CouponCode = cart.CouponCode,
 
             // Status
-            Status = "Pending",
-            PaymentStatus = "Pending",
+            Status = "Confirmed",  // Change from "Pending" to "Confirmed" since payment succeeded
+            PaymentStatus = "Paid",  // Change from "Pending" to "Paid"
             PaymentMethod = request.PaymentMethod,
             PaymentIntentId = request.PaymentIntentId,
 

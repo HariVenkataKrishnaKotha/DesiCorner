@@ -30,6 +30,18 @@ builder.Services.AddHttpClient("AuthAPI", client =>
     client.BaseAddress = new Uri(builder.Configuration["ServiceUrls:AuthAPI"] ?? "https://localhost:7001");
 });
 
+// HttpClient for PaymentAPI
+builder.Services.AddHttpClient("PaymentAPI", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ServiceUrls:PaymentAPI"]
+        ?? "https://localhost:7501");
+    client.Timeout = TimeSpan.FromSeconds(30);
+})
+.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    ServerCertificateCustomValidationCallback = (_, _, _, _) => true
+});
+
 // Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
