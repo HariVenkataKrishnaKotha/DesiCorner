@@ -272,23 +272,15 @@
             <!-- Payment Method -->
             <div class="form-section">
               <h3>Payment Method</h3>
-              <mat-radio-group formControlName="paymentMethod" class="payment-options">
-                <mat-radio-button value="CashOnDelivery">
-                  <div class="payment-option">
-                    <mat-icon>payments</mat-icon>
-                    <span>Cash on Delivery</span>
-                  </div>
-                </mat-radio-button>
-                <mat-radio-button value="CreditCard" disabled>
-                  <div class="payment-option">
-                    <mat-icon>credit_card</mat-icon>
-                    <span>Credit Card (Coming Soon)</span>
-                  </div>
-                </mat-radio-button>
-              </mat-radio-group>
+              <mat-radio-group formControlName="paymentMethod">
+  <mat-radio-button value="Stripe" checked>
+    <mat-icon>credit_card</mat-icon>
+    <span>Credit/Debit Card (Stripe)</span>
+  </mat-radio-button>
+</mat-radio-group>
             </div>
 
-            <!-- Error Message -->
+            <!-- Error Display -->
             @if (orderError) {
               <div class="error-message">
                 <mat-icon>error</mat-icon>
@@ -296,23 +288,77 @@
               </div>
             }
 
-            <!-- Submit Button -->
-            <div class="form-actions">
-              <a mat-button routerLink="/cart">
-                <mat-icon>arrow_back</mat-icon>
-                Back to Cart
-              </a>
-              <button mat-raised-button color="primary" type="submit" class="submit-button"
-  [disabled]="!canPlaceOrder">
-                @if (isSubmitting) {
-                  <mat-spinner diameter="20"></mat-spinner>
-                  <span>Processing...</span>
-                } @else {
-                  <mat-icon>check_circle</mat-icon>
-                  <span>Place Order - ${{ cart.total.toFixed(2) }}</span>
-                }
-              </button>
-            </div>
+            @if (paymentError) {
+              <div class="error-message">
+                <mat-icon>error</mat-icon>
+                <span>{{ paymentError }}</span>
+              </div>
+            }
+
+            <!-- Payment Section (shown after clicking Place Order) -->
+            @if (showPaymentForm) {
+              <div class="payment-section">
+                <mat-divider></mat-divider>
+                <h3>
+                  <mat-icon>payment</mat-icon>
+                  Payment Information
+                </h3>
+                
+                <p class="payment-description">
+                  Enter your card details below. Your payment is secured by Stripe.
+                </p>
+
+                <!-- Stripe Card Element -->
+                <div class="card-element-container">
+                  <label class="card-label">Card Details</label>
+                  <div id="card-element" class="stripe-card-element">
+                    <!-- Stripe.js will inject card input here -->
+                  </div>
+                  <div class="card-helper-text">
+                    Test card: 4242 4242 4242 4242, any future date, any CVC
+                  </div>
+                </div>
+
+                <!-- Payment Actions -->
+                <div class="payment-actions">
+                  <button mat-button (click)="cancelPayment()" [disabled]="isProcessingPayment">
+                    <mat-icon>cancel</mat-icon>
+                    Cancel
+                  </button>
+                  
+                  <button mat-raised-button color="primary" 
+                          (click)="confirmPayment()"
+                          [disabled]="isProcessingPayment"
+                          class="pay-button">
+                    @if (isProcessingPayment) {
+                      <mat-spinner diameter="20"></mat-spinner>
+                      <span>Processing Payment...</span>
+                    } @else {
+                      <mat-icon>lock</mat-icon>
+                      <span>Pay ${{ cart.total.toFixed(2) }}</span>
+                    }
+                  </button>
+                </div>
+              </div>
+            } @else {
+              <!-- Submit Button (initial state) -->
+              <div class="form-actions">
+                <a mat-button routerLink="/cart">
+                  <mat-icon>arrow_back</mat-icon>
+                  Back to Cart
+                </a>
+                <button mat-raised-button color="primary" type="submit" class="submit-button"
+                        [disabled]="!canPlaceOrder">
+                  @if (isSubmitting) {
+                    <mat-spinner diameter="20"></mat-spinner>
+                    <span>Processing...</span>
+                  } @else {
+                    <mat-icon>shopping_cart</mat-icon>
+                    <span>Continue to Payment - ${{ cart.total.toFixed(2) }}</span>
+                  }
+                </button>
+              </div>
+            }
           </form>
         </mat-card-content>
       </mat-card>

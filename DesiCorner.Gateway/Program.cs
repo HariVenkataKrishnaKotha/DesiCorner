@@ -166,6 +166,7 @@ app.Use(async (ctx, next) =>
 
     // Cart and guest order operations - OPTIONAL auth (allow both authenticated and guest)
     var isOptionalAuthOperation = path.StartsWith("/api/cart", StringComparison.OrdinalIgnoreCase) ||
+                                   path.StartsWith("/api/payment", StringComparison.OrdinalIgnoreCase) ||
                                    (method.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
                                     path.Equals("/api/orders", StringComparison.OrdinalIgnoreCase)) ||
                                    (method.Equals("GET", StringComparison.OrdinalIgnoreCase) &&
