@@ -1,1 +1,167 @@
-<p>register works!</p>
+<div class="auth-container">
+  <mat-card class="auth-card">
+    <mat-card-header>
+      <div class="auth-header">
+        <div class="logo">🍛</div>
+        <h1>Create Account</h1>
+        <p>Join DesiCorner for delicious Indian cuisine</p>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+        <!-- Email -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Email</mat-label>
+          <input 
+            matInput 
+            type="email" 
+            formControlName="email"
+            placeholder="your@email.com"
+            autocomplete="email">
+          <mat-icon matPrefix>email</mat-icon>
+          @if (hasError('email', 'required')) {
+            <mat-error>Email is required</mat-error>
+          }
+          @if (hasError('email', 'email')) {
+            <mat-error>Please enter a valid email</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Phone Number -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Phone Number</mat-label>
+          <input 
+            matInput 
+            type="tel" 
+            formControlName="phoneNumber"
+            placeholder="+1234567890"
+            autocomplete="tel">
+          <mat-icon matPrefix>phone</mat-icon>
+          @if (hasError('phoneNumber', 'required')) {
+            <mat-error>Phone number is required</mat-error>
+          }
+          @if (hasError('phoneNumber', 'pattern')) {
+            <mat-error>Please enter a valid phone number (10-15 digits)</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Password -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Password</mat-label>
+          <input 
+            matInput 
+            [type]="hidePassword ? 'password' : 'text'" 
+            formControlName="password"
+            placeholder="Create a strong password"
+            autocomplete="new-password">
+          <mat-icon matPrefix>lock</mat-icon>
+          <button 
+            mat-icon-button 
+            matSuffix 
+            type="button"
+            (click)="hidePassword = !hidePassword"
+            [attr.aria-label]="'Toggle password visibility'">
+            <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (hasError('password', 'required')) {
+            <mat-error>Password is required</mat-error>
+          }
+          @if (hasError('password', 'minlength')) {
+            <mat-error>Password must be at least 8 characters</mat-error>
+          }
+          @if (hasError('password', 'passwordStrength')) {
+            <mat-error>Password must contain uppercase, lowercase, and a number</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Password Strength Indicator -->
+        @if (registerForm.get('password')?.value) {
+          <div class="password-strength">
+            <span class="strength-label">Password must contain:</span>
+            <div class="strength-checks">
+              <span [class.valid]="registerForm.get('password')?.value?.match('[A-Z]')">
+                <mat-icon>{{ registerForm.get('password')?.value?.match('[A-Z]') ? 'check_circle' : 'cancel' }}</mat-icon>
+                Uppercase
+              </span>
+              <span [class.valid]="registerForm.get('password')?.value?.match('[a-z]')">
+                <mat-icon>{{ registerForm.get('password')?.value?.match('[a-z]') ? 'check_circle' : 'cancel' }}</mat-icon>
+                Lowercase
+              </span>
+              <span [class.valid]="registerForm.get('password')?.value?.match('[0-9]')">
+                <mat-icon>{{ registerForm.get('password')?.value?.match('[0-9]') ? 'check_circle' : 'cancel' }}</mat-icon>
+                Number
+              </span>
+              <span [class.valid]="registerForm.get('password')?.value?.length >= 8">
+                <mat-icon>{{ registerForm.get('password')?.value?.length >= 8 ? 'check_circle' : 'cancel' }}</mat-icon>
+                8+ chars
+              </span>
+            </div>
+          </div>
+        }
+
+        <!-- Confirm Password -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Confirm Password</mat-label>
+          <input 
+            matInput 
+            [type]="hideConfirmPassword ? 'password' : 'text'" 
+            formControlName="confirmPassword"
+            placeholder="Confirm your password"
+            autocomplete="new-password">
+          <mat-icon matPrefix>lock_outline</mat-icon>
+          <button 
+            mat-icon-button 
+            matSuffix 
+            type="button"
+            (click)="hideConfirmPassword = !hideConfirmPassword"
+            [attr.aria-label]="'Toggle confirm password visibility'">
+            <mat-icon>{{ hideConfirmPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (hasError('confirmPassword', 'required')) {
+            <mat-error>Please confirm your password</mat-error>
+          }
+          @if (passwordMismatch) {
+            <mat-error>Passwords do not match</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Dietary Preference -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Dietary Preference</mat-label>
+          <mat-select formControlName="dietaryPreference">
+            @for (option of dietaryOptions; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+          <mat-icon matPrefix>restaurant</mat-icon>
+        </mat-form-field>
+
+        <!-- Submit Button -->
+        <button 
+          mat-raised-button 
+          color="primary" 
+          type="submit" 
+          class="full-width submit-btn"
+          [disabled]="registerForm.invalid || loading">
+          @if (loading) {
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Creating Account...</span>
+          } @else {
+            <span>Create Account</span>
+          }
+        </button>
+
+        <!-- Divider -->
+        <div class="divider">
+          <span>OR</span>
+        </div>
+
+        <!-- Login Link -->
+        <div class="login-link">
+          <p>Already have an account? <a routerLink="/auth/login" class="link">Sign In</a></p>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

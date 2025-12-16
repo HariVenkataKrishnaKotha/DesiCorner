@@ -187,6 +187,19 @@ public class AuthorizationController : ControllerBase
                     }));
             }
 
+            // Check if email is verified
+            if (!user.EmailConfirmed)
+            {
+                _logger.LogWarning("Password grant failed - email not confirmed for user: {Username}", request.Username);
+                return Forbid(
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                    properties: new AuthenticationProperties(new Dictionary<string, string?>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Please verify your email address before logging in. Check your inbox for the verification code."
+                    }));
+            }
+
             // Update last login
             user.LastLoginAt = DateTime.UtcNow;
             await _users.UpdateAsync(user);
