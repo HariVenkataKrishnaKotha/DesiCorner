@@ -47,9 +47,9 @@ export interface UserProfile {
 
 export interface Address {
   id: string;
-  userId: string;
   label: string;
-  street: string;
+  addressLine1: string;
+  addressLine2?: string;
   city: string;
   state: string;
   zipCode: string;
