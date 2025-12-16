@@ -1,0 +1,308 @@
+<div class="profile-container">
+  <h1>My Profile</h1>
+
+  <!-- Loading State -->
+  @if (loading) {
+    <div class="loading">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading profile...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error && !loading) {
+    <mat-card class="error-card">
+      <mat-card-content>
+        <mat-icon color="warn">error</mat-icon>
+        <h2>{{ error }}</h2>
+        <button mat-raised-button color="primary" (click)="loadProfile()">
+          <mat-icon>refresh</mat-icon>
+          Try Again
+        </button>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Profile Content -->
+  @if (profile && !loading) {
+    <mat-tab-group animationDuration="200ms">
+      <!-- Overview Tab -->
+      <mat-tab label="Overview">
+        <div class="tab-content">
+          <mat-card class="profile-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar class="profile-avatar">account_circle</mat-icon>
+              <mat-card-title>{{ profile.email }}</mat-card-title>
+              <mat-card-subtitle>
+                @for (role of profile.roles; track role) {
+                  <mat-chip class="role-chip">{{ role }}</mat-chip>
+                }
+              </mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <div class="profile-details">
+                <div class="detail-item">
+                  <mat-icon>email</mat-icon>
+                  <div class="detail-content">
+                    <span class="detail-label">Email</span>
+                    <span class="detail-value">{{ profile.email }}</span>
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <mat-icon>phone</mat-icon>
+                  <div class="detail-content">
+                    <span class="detail-label">Phone</span>
+                    <span class="detail-value">
+                      {{ profile.phoneNumber || 'Not provided' }}
+                      @if (profile.phoneNumberConfirmed) {
+                        <mat-icon class="verified-icon" color="primary">verified</mat-icon>
+                      }
+                    </span>
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <mat-icon>restaurant</mat-icon>
+                  <div class="detail-content">
+                    <span class="detail-label">Dietary Preference</span>
+                    <span class="detail-value">{{ profile.dietaryPreference || 'Not specified' }}</span>
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <mat-icon>stars</mat-icon>
+                  <div class="detail-content">
+                    <span class="detail-label">Reward Points</span>
+                    <span class="detail-value reward-points">{{ profile.rewardPoints }} points</span>
+                  </div>
+                </div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <!-- Quick Stats -->
+          <div class="quick-stats">
+            <mat-card class="stat-card">
+              <mat-icon>location_on</mat-icon>
+              <div class="stat-info">
+                <span class="stat-value">{{ profile.addresses?.length || 0 }}</span>
+                <span class="stat-label">Saved Addresses</span>
+              </div>
+            </mat-card>
+
+            <mat-card class="stat-card">
+              <mat-icon>stars</mat-icon>
+              <div class="stat-info">
+                <span class="stat-value">{{ profile.rewardPoints }}</span>
+                <span class="stat-label">Reward Points</span>
+              </div>
+            </mat-card>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Addresses Tab -->
+      <mat-tab label="Addresses">
+        <div class="tab-content">
+          <div class="section-header">
+            <h2>Delivery Addresses</h2>
+            <button mat-raised-button color="primary" (click)="toggleAddressForm()">
+              <mat-icon>{{ showAddressForm ? 'close' : 'add' }}</mat-icon>
+              {{ showAddressForm ? 'Cancel' : 'Add Address' }}
+            </button>
+          </div>
+
+          <!-- Add Address Form -->
+          @if (showAddressForm) {
+            <mat-card class="address-form-card">
+              <mat-card-header>
+                <mat-card-title>Add New Address</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <form [formGroup]="addressForm" (ngSubmit)="saveAddress()">
+                  <div class="form-row">
+                    <mat-form-field appearance="outline">
+                      <mat-label>Label</mat-label>
+                      <mat-select formControlName="label">
+                        @for (label of addressLabels; track label) {
+                          <mat-option [value]="label">{{ label }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Street Address</mat-label>
+                    <input matInput formControlName="addressLine1" placeholder="123 Main St">
+                    @if (addressForm.get('addressLine1')?.hasError('required')) {
+                      <mat-error>Street address is required</mat-error>
+                    }
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Apartment/Suite (Optional)</mat-label>
+                    <input matInput formControlName="addressLine2" placeholder="Apt 4B">
+                  </mat-form-field>
+
+                  <div class="form-row three-columns">
+                    <mat-form-field appearance="outline">
+                      <mat-label>City</mat-label>
+                      <input matInput formControlName="city" placeholder="New York">
+                      @if (addressForm.get('city')?.hasError('required')) {
+                        <mat-error>City is required</mat-error>
+                      }
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>State</mat-label>
+                      <mat-select formControlName="state">
+                        @for (state of states; track state) {
+                          <mat-option [value]="state">{{ state }}</mat-option>
+                        }
+                      </mat-select>
+                      @if (addressForm.get('state')?.hasError('required')) {
+                        <mat-error>State is required</mat-error>
+                      }
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                      <mat-label>ZIP Code</mat-label>
+                      <input matInput formControlName="zipCode" placeholder="10001">
+                      @if (addressForm.get('zipCode')?.hasError('required')) {
+                        <mat-error>ZIP code is required</mat-error>
+                      }
+                      @if (addressForm.get('zipCode')?.hasError('pattern')) {
+                        <mat-error>Invalid ZIP code format</mat-error>
+                      }
+                    </mat-form-field>
+                  </div>
+
+                  <div class="form-actions">
+                    <button mat-button type="button" (click)="toggleAddressForm()">Cancel</button>
+                    <button mat-raised-button color="primary" type="submit" [disabled]="savingAddress">
+                      @if (savingAddress) {
+                        <mat-spinner diameter="20"></mat-spinner>
+                      } @else {
+                        <mat-icon>save</mat-icon>
+                      }
+                      Save Address
+                    </button>
+                  </div>
+                </form>
+              </mat-card-content>
+            </mat-card>
+          }
+
+          <!-- Address List -->
+          @if (profile.addresses && profile.addresses.length > 0) {
+            <div class="addresses-list">
+              @for (address of profile.addresses; track address.id) {
+                <mat-card class="address-card">
+                  <mat-card-content>
+                    <div class="address-header">
+                      <div class="address-label">
+                        <mat-icon>{{ address.label === 'Home' ? 'home' : address.label === 'Work' ? 'work' : 'location_on' }}</mat-icon>
+                        <span>{{ address.label }}</span>
+                        @if (address.isDefault) {
+                          <mat-chip class="default-chip">Default</mat-chip>
+                        }
+                      </div>
+                    </div>
+                    <p class="address-text">{{ formatAddress(address) }}</p>
+                  </mat-card-content>
+                </mat-card>
+              }
+            </div>
+          } @else {
+            <mat-card class="empty-state">
+              <mat-card-content>
+                <mat-icon>location_off</mat-icon>
+                <h3>No addresses saved</h3>
+                <p>Add a delivery address to make checkout faster</p>
+              </mat-card-content>
+            </mat-card>
+          }
+        </div>
+      </mat-tab>
+
+      <!-- Security Tab -->
+      <mat-tab label="Security">
+        <div class="tab-content">
+          <mat-card class="security-card">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>lock</mat-icon>
+              <mat-card-title>Change Password</mat-card-title>
+              <mat-card-subtitle>Update your account password</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+              <form [formGroup]="passwordForm" (ngSubmit)="changePassword()">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Current Password</mat-label>
+                  <input matInput formControlName="currentPassword" 
+                         [type]="hideCurrentPassword ? 'password' : 'text'">
+                  <button mat-icon-button matSuffix type="button"
+                          (click)="hideCurrentPassword = !hideCurrentPassword">
+                    <mat-icon>{{ hideCurrentPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+                  </button>
+                  @if (passwordForm.get('currentPassword')?.hasError('required')) {
+                    <mat-error>Current password is required</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>New Password</mat-label>
+                  <input matInput formControlName="newPassword" 
+                         [type]="hideNewPassword ? 'password' : 'text'">
+                  <button mat-icon-button matSuffix type="button"
+                          (click)="hideNewPassword = !hideNewPassword">
+                    <mat-icon>{{ hideNewPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+                  </button>
+                  @if (passwordForm.get('newPassword')?.hasError('required')) {
+                    <mat-error>New password is required</mat-error>
+                  }
+                  @if (passwordForm.get('newPassword')?.hasError('minlength')) {
+                    <mat-error>Password must be at least 8 characters</mat-error>
+                  }
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Confirm New Password</mat-label>
+                  <input matInput formControlName="confirmNewPassword" 
+                         [type]="hideConfirmPassword ? 'password' : 'text'">
+                  <button mat-icon-button matSuffix type="button"
+                          (click)="hideConfirmPassword = !hideConfirmPassword">
+                    <mat-icon>{{ hideConfirmPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+                  </button>
+                  @if (passwordForm.get('confirmNewPassword')?.hasError('required')) {
+                    <mat-error>Please confirm your new password</mat-error>
+                  }
+                </mat-form-field>
+
+                @if (passwordForm.hasError('passwordMismatch')) {
+                  <div class="password-mismatch-error">
+                    <mat-icon>error</mat-icon>
+                    <span>Passwords do not match</span>
+                  </div>
+                }
+
+                <div class="form-actions">
+                  <button mat-raised-button color="primary" type="submit" 
+                          [disabled]="changingPassword || passwordForm.invalid">
+                    @if (changingPassword) {
+                      <mat-spinner diameter="20"></mat-spinner>
+                    } @else {
+                      <mat-icon>lock</mat-icon>
+                    }
+                    Change Password
+                  </button>
+                </div>
+              </form>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  }
+</div>

@@ -17,7 +17,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       const isAuthCheckEndpoint = req.url.includes('/api/account/check-auth') || 
                                    req.url.includes('/api/account/profile');
       
-      const isLoginEndpoint = req.url.includes('/api/account/login');
+      const isLoginEndpoint = req.url.includes('/api/account/login') || req.url.includes('/connect/token');
 
       if (error.error instanceof ErrorEvent) {
         // Client-side error
@@ -26,8 +26,13 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         // Server-side error
         switch (error.status) {
           case 400:
-            errorMessage = error.error?.message || 'Bad request';
-            break;
+  // Handle OAuth errors (from /connect/token endpoint)
+  if (error.error?.error_description) {
+    errorMessage = error.error.error_description;
+  } else {
+    errorMessage = error.error?.message || 'Bad request';
+  }
+  break;
           case 401:
             if (isAuthCheckEndpoint) {
               // Silently fail for auth check - user is just not logged in
