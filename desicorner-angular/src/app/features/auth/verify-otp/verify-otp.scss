@@ -1,0 +1,201 @@
+.auth-container {
+  min-height: calc(100vh - 64px - 200px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #ffe0b2 0%, #fff3e0 100%);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 450px;
+  padding: 24px;
+}
+
+.auth-header {
+  text-align: center;
+  width: 100%;
+  margin-bottom: 24px;
+
+  .logo {
+    font-size: 4rem;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    margin: 0 0 8px 0;
+    color: #333;
+    font-size: 1.8rem;
+  }
+
+  p {
+    margin: 0;
+    color: #666;
+    font-size: 0.95rem;
+
+    strong {
+      color: #ff9800;
+    }
+  }
+}
+
+.timer-section {
+  margin-bottom: 24px;
+
+  .timer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: #e8f5e9;
+    border-radius: 8px;
+    color: #2e7d32;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    strong {
+      font-size: 1.1rem;
+    }
+
+    &.expired {
+      background: #ffebee;
+      color: #c62828;
+    }
+  }
+
+  &.expired .timer {
+    background: #ffebee;
+    color: #c62828;
+  }
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.otp-field {
+  input {
+    font-size: 1.5rem;
+    letter-spacing: 0.5rem;
+    text-align: center;
+    font-weight: 600;
+  }
+}
+
+.submit-btn {
+  margin-top: 8px;
+  height: 48px;
+  font-size: 1rem;
+  font-weight: 500;
+
+  mat-spinner {
+    display: inline-block;
+    margin-right: 8px;
+  }
+
+  mat-icon {
+    margin-right: 8px;
+  }
+}
+
+.resend-section {
+  text-align: center;
+  margin-top: 24px;
+
+  p {
+    margin: 0 0 12px 0;
+    color: #666;
+    font-size: 0.95rem;
+  }
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    mat-spinner {
+      margin: 0;
+    }
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 24px 0;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #ddd;
+  }
+
+  span {
+    padding: 0 16px;
+    color: #999;
+    font-size: 0.9rem;
+  }
+}
+
+.back-link {
+  text-align: center;
+  margin-top: 8px;
+
+  p {
+    margin: 0;
+    color: #666;
+    font-size: 0.95rem;
+  }
+
+  .link {
+    color: #ff9800;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+::ng-deep {
+  .mat-mdc-form-field-icon-prefix {
+    color: #ff9800;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 600px) {
+  .auth-container {
+    padding: 16px;
+  }
+
+  .auth-card {
+    padding: 16px;
+  }
+
+  .otp-field input {
+    font-size: 1.2rem;
+    letter-spacing: 0.3rem;
+  }
+}

@@ -1,1 +1,101 @@
-<p>verify-otp works!</p>
+<div class="auth-container">
+  <mat-card class="auth-card">
+    <mat-card-header>
+      <div class="auth-header">
+        <div class="logo">🔐</div>
+        <h1>Verify Your Email</h1>
+        <p>We've sent a 6-digit code to <strong>{{ maskedIdentifier }}</strong></p>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Timer Display -->
+      <div class="timer-section" [class.expired]="isExpired">
+        @if (!isExpired) {
+          <div class="timer">
+            <mat-icon>timer</mat-icon>
+            <span>Code expires in <strong>{{ formattedTime }}</strong></span>
+          </div>
+        } @else {
+          <div class="timer expired">
+            <mat-icon>timer_off</mat-icon>
+            <span>Code has expired. Please request a new one.</span>
+          </div>
+        }
+      </div>
+
+      <form [formGroup]="otpForm" (ngSubmit)="onSubmit()">
+        <!-- OTP Input -->
+        <mat-form-field appearance="outline" class="full-width otp-field">
+          <mat-label>Enter 6-digit code</mat-label>
+          <input 
+            matInput 
+            type="text" 
+            formControlName="otp"
+            placeholder="000000"
+            maxlength="6"
+            (input)="onOtpInput($event)"
+            autocomplete="one-time-code"
+            inputmode="numeric">
+          <mat-icon matPrefix>pin</mat-icon>
+          @if (otpForm.get('otp')?.hasError('required') && otpForm.get('otp')?.touched) {
+            <mat-error>OTP is required</mat-error>
+          }
+          @if (otpForm.get('otp')?.hasError('pattern') && otpForm.get('otp')?.touched) {
+            <mat-error>Please enter a valid 6-digit code</mat-error>
+          }
+          @if ((otpForm.get('otp')?.hasError('minlength') || otpForm.get('otp')?.hasError('maxlength')) && otpForm.get('otp')?.touched) {
+            <mat-error>Code must be exactly 6 digits</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Submit Button -->
+        <button 
+          mat-raised-button 
+          color="primary" 
+          type="submit" 
+          class="full-width submit-btn"
+          [disabled]="otpForm.invalid || loading || isExpired">
+          @if (loading) {
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Verifying...</span>
+          } @else {
+            <mat-icon>verified</mat-icon>
+            <span>Verify Code</span>
+          }
+        </button>
+      </form>
+
+      <!-- Resend Section -->
+      <div class="resend-section">
+        <p>Didn't receive the code?</p>
+        <button 
+          mat-stroked-button 
+          color="primary"
+          (click)="resendOtp()"
+          [disabled]="resendCooldown > 0 || resending">
+          @if (resending) {
+            <mat-spinner diameter="18"></mat-spinner>
+            <span>Sending...</span>
+          } @else if (resendCooldown > 0) {
+            <mat-icon>schedule</mat-icon>
+            <span>Resend in {{ resendCooldown }}s</span>
+          } @else {
+            <mat-icon>refresh</mat-icon>
+            <span>Resend Code</span>
+          }
+        </button>
+      </div>
+
+      <!-- Divider -->
+      <div class="divider">
+        <span>OR</span>
+      </div>
+
+      <!-- Back to Register -->
+      <div class="back-link">
+        <p>Wrong email address? <a routerLink="/auth/register" class="link">Go back to register</a></p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

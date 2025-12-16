@@ -84,10 +84,41 @@ export class LoginComponent implements OnInit {
       this.loading = false;
     },
     error: (error) => {
-      console.error('Login error:', error); // Debug log
-      // Error interceptor will show the toast
-      this.loading = false;
-    }
+  console.error('Login error:', error); // Debug log
+  this.loading = false;
+  
+  // Check if error is due to unverified email
+  const errorDescription = error.error?.error_description || error.message || '';
+  if (errorDescription.toLowerCase().includes('verify your email')) {
+    // Send a new OTP before redirecting
+    this.authService.sendOtp({
+      email: this.loginForm.value.email,
+      purpose: 'Registration',
+      deliveryMethod: 'Email'
+    }).subscribe({
+      next: () => {
+        this.toastr.info('A new verification code has been sent to your email.', 'Verification Required');
+        // Redirect to OTP verification page
+        this.router.navigate(['/auth/verify-otp'], {
+          queryParams: {
+            identifier: this.loginForm.value.email,
+            purpose: 'Registration'
+          }
+        });
+      },
+      error: () => {
+        // Even if OTP send fails, still redirect - user can click resend
+        this.router.navigate(['/auth/verify-otp'], {
+          queryParams: {
+            identifier: this.loginForm.value.email,
+            purpose: 'Registration'
+          }
+        });
+      }
+    });
+  }
+  // Error interceptor will show the toast for other errors
+}
   });
 }
 }

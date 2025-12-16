@@ -1,4 +1,5 @@
-﻿using DesiCorner.AuthServer.Identity;
+﻿using DesiCorner.AuthServer.Data;
+using DesiCorner.AuthServer.Identity;
 using DesiCorner.AuthServer.Services;
 using DesiCorner.Contracts.Auth;
 using DesiCorner.Contracts.Common;
@@ -23,13 +24,15 @@ public class AccountController : ControllerBase
     private readonly ITokenService _tokenService;
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<AccountController> _logger;
+    private readonly ApplicationDbContext _context;
 
     public AccountController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         IOtpService otpService,
         IConnectionMultiplexer redis,
-        ILogger<AccountController> logger,ITokenService tokenService)
+        ILogger<AccountController> logger,ITokenService tokenService,
+        ApplicationDbContext context)
     {
         _userManager = userManager;
         _signInManager = signInManager;
@@ -37,6 +40,7 @@ public class AccountController : ControllerBase
         _redis = redis;
         _logger = logger;
         _tokenService = tokenService;
+        _context = context;
     }
 
     /// <summary>
@@ -85,8 +89,8 @@ public class AccountController : ControllerBase
         // Add Customer role by default
         await _userManager.AddToRoleAsync(user, "Customer");
 
-        // Send OTP for phone verification
-        await _otpService.SendOtpAsync(request.PhoneNumber, "Registration");
+        // Send OTP for email verification
+        await _otpService.SendOtpAsync(request.Email, "Registration","Email");
 
         _logger.LogInformation("User {Email} registered successfully", request.Email);
 
@@ -127,6 +131,16 @@ public class AccountController : ControllerBase
             {
                 IsSuccess = false,
                 Message = "Invalid email or password."
+            });
+        }
+
+        // Check if email is verified
+        if (!user.EmailConfirmed)
+        {
+            return Unauthorized(new ResponseDto
+            {
+                IsSuccess = false,
+                Message = "Please verify your email address before logging in. Check your inbox for the verification code."
             });
         }
 
@@ -438,8 +452,8 @@ public class AccountController : ControllerBase
     [HttpPost("addresses")]
     public async Task<IActionResult> AddAddress([FromBody] AddAddressDto request)
     {
-        var user = await _userManager.GetUserAsync(User);
-        if (user is null)
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var userGuid))
         {
             return Unauthorized();
         }
@@ -447,9 +461,8 @@ public class AccountController : ControllerBase
         // If this is set as default, unset all other defaults
         if (request.IsDefault)
         {
-            var existingAddresses = await _userManager.Users
-                .Where(u => u.Id == user.Id)
-                .SelectMany(u => u.DeliveryAddresses)
+            var existingAddresses = await _context.DeliveryAddresses
+                .Where(a => a.UserId == userGuid)
                 .ToListAsync();
 
             foreach (var addr in existingAddresses)
@@ -461,7 +474,7 @@ public class AccountController : ControllerBase
         var address = new DeliveryAddress
         {
             Id = Guid.NewGuid(),
-            UserId = user.Id,
+            UserId = userGuid,
             Label = request.Label,
             AddressLine1 = request.AddressLine1,
             AddressLine2 = request.AddressLine2,
@@ -471,8 +484,8 @@ public class AccountController : ControllerBase
             IsDefault = request.IsDefault
         };
 
-        user.DeliveryAddresses.Add(address);
-        await _userManager.UpdateAsync(user);
+        _context.DeliveryAddresses.Add(address);
+        await _context.SaveChangesAsync();
 
         return Ok(new ResponseDto
         {
