@@ -4,6 +4,14 @@ import { adminGuard } from './core/guards/admin-guard';
 
 export const routes: Routes = [
   {
+  path: 'products',
+  loadComponent: () => import('./features/products/product-list/product-list').then(m => m.ProductListComponent)
+},
+{
+  path: 'products/:id',
+  loadComponent: () => import('./features/products/product-detail/product-detail').then(m => m.ProductDetailComponent)
+},
+  {
   path: 'orders',
   canActivate: [authGuard],
   loadComponent: () => import('./features/orders/order-list').then(m => m.OrderListComponent)

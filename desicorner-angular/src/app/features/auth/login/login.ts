@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '@core/services/auth.service';
 import { ToastrService } from 'ngx-toastr';
+import { CartService } from '@core/services/cart.service';
 
 @Component({
   selector: 'app-login',
@@ -35,6 +36,7 @@ export class LoginComponent implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
   private toastr = inject(ToastrService);
+  private cartService = inject(CartService);
 
   loginForm!: FormGroup;
   loading = false;
@@ -71,14 +73,18 @@ export class LoginComponent implements OnInit {
       console.log('Login response:', response); // Debug log
       
       if (response.isSuccess) {
-        this.toastr.success('Login successful!', 'Welcome');
-        this.authService.loadUserProfile();
-        
-        // Redirect to home or return URL
-        const returnUrl = sessionStorage.getItem('returnUrl') || '/';
-        sessionStorage.removeItem('returnUrl');
-        this.router.navigate([returnUrl]);
-      } else {
+  this.toastr.success('Login successful!', 'Welcome');
+  this.authService.loadUserProfile();
+  
+  // Reload cart from server after login
+  this.cartService.loadCart();
+  
+  // Redirect to home or return URL
+  const returnUrl = sessionStorage.getItem('returnUrl') || '/';
+  sessionStorage.removeItem('returnUrl');
+  this.router.navigate([returnUrl]);
+}
+ else {
         this.toastr.error(response.message || 'Login failed. Please check your credentials.', 'Error');
       }
       this.loading = false;

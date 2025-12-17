@@ -24,4 +24,9 @@ public class ProductDto
     public int PreparationTime { get; set; } // In minutes
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+
+    // Rating aggregation
+    public double AverageRating { get; set; }
+    public int ReviewCount { get; set; }
+
 }

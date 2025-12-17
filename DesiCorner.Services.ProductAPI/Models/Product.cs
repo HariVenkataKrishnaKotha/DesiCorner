@@ -18,6 +18,11 @@ public class Product
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
+    // Rating aggregation (updated when reviews change)
+    public double AverageRating { get; set; } = 0;
+    public int ReviewCount { get; set; } = 0;
+
     // Navigation
     public Category Category { get; set; } = null!;
+    public ICollection<Review> Reviews { get; set; } = new List<Review>();
 }

@@ -59,7 +59,7 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                         new
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8712),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2485),
                             Description = "Start your meal with these delicious appetizers",
                             DisplayOrder = 1,
                             Name = "Appetizers"
@@ -67,7 +67,7 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                         new
                         {
                             Id = new Guid("22222222-2222-2222-2222-222222222222"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8714),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2487),
                             Description = "Hearty main dishes to satisfy your hunger",
                             DisplayOrder = 2,
                             Name = "Main Course"
@@ -75,7 +75,7 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                         new
                         {
                             Id = new Guid("33333333-3333-3333-3333-333333333333"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8715),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2489),
                             Description = "Aromatic rice dishes with your choice of protein",
                             DisplayOrder = 3,
                             Name = "Biryani"
@@ -83,7 +83,7 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                         new
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444444"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8718),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2491),
                             Description = "Sweet endings to your perfect meal",
                             DisplayOrder = 4,
                             Name = "Desserts"
@@ -91,7 +91,7 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                         new
                         {
                             Id = new Guid("55555555-5555-5555-5555-555555555555"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8721),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2492),
                             Description = "Refreshing drinks to complement your meal",
                             DisplayOrder = 5,
                             Name = "Beverages"
@@ -107,6 +107,9 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                     b.Property<string>("Allergens")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<double>("AverageRating")
+                        .HasColumnType("float");
 
                     b.Property<Guid>("CategoryId")
                         .HasColumnType("uniqueidentifier");
@@ -146,6 +149,9 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int>("ReviewCount")
+                        .HasColumnType("int");
+
                     b.Property<int>("SpiceLevel")
                         .HasColumnType("int");
 
@@ -163,9 +169,10 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("2dcd0793-899e-40c1-aa73-67e2be8ed904"),
+                            Id = new Guid("a3b32634-6fcd-464c-8cf5-ffbcf1a1fe99"),
+                            AverageRating = 0.0,
                             CategoryId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8827),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2617),
                             Description = "Crispy pastry filled with spiced potatoes and peas",
                             IsAvailable = true,
                             IsSpicy = true,
@@ -174,13 +181,15 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                             Name = "Samosa (2 pcs)",
                             PreparationTime = 10,
                             Price = 4.99m,
+                            ReviewCount = 0,
                             SpiceLevel = 2
                         },
                         new
                         {
-                            Id = new Guid("fa0bfe8a-423d-4ef9-9f9f-7f8e9ada2747"),
+                            Id = new Guid("e9c98de7-20c9-4694-9e62-42b7eba0879a"),
+                            AverageRating = 0.0,
                             CategoryId = new Guid("11111111-1111-1111-1111-111111111111"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8865),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2654),
                             Description = "Tender chicken marinated in yogurt and spices, grilled to perfection",
                             IsAvailable = true,
                             IsSpicy = true,
@@ -189,13 +198,15 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                             Name = "Chicken Tikka",
                             PreparationTime = 15,
                             Price = 12.99m,
+                            ReviewCount = 0,
                             SpiceLevel = 3
                         },
                         new
                         {
-                            Id = new Guid("f85c305d-4780-443d-9ab6-339d72227470"),
+                            Id = new Guid("658e8094-8080-45ad-b4b2-e5e8652b0cb5"),
+                            AverageRating = 0.0,
                             CategoryId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8868),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2657),
                             Description = "Cottage cheese cubes in rich tomato and cream sauce",
                             IsAvailable = true,
                             IsSpicy = true,
@@ -204,13 +215,15 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                             Name = "Paneer Tikka Masala",
                             PreparationTime = 20,
                             Price = 13.99m,
+                            ReviewCount = 0,
                             SpiceLevel = 2
                         },
                         new
                         {
-                            Id = new Guid("48841368-3764-427e-966f-bbc54c091b70"),
+                            Id = new Guid("d28b2fa2-1c39-4281-9887-e42836c3c9f1"),
+                            AverageRating = 0.0,
                             CategoryId = new Guid("22222222-2222-2222-2222-222222222222"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8870),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2660),
                             Description = "Tender chicken in creamy tomato sauce with butter and spices",
                             IsAvailable = true,
                             IsSpicy = true,
@@ -219,13 +232,15 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                             Name = "Butter Chicken",
                             PreparationTime = 25,
                             Price = 15.99m,
+                            ReviewCount = 0,
                             SpiceLevel = 2
                         },
                         new
                         {
-                            Id = new Guid("2115f9b3-ff26-4a30-af88-052e7d3f5f07"),
+                            Id = new Guid("f99c4d95-32e9-4827-a8e5-dcfbec0fce76"),
+                            AverageRating = 0.0,
                             CategoryId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8872),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2667),
                             Description = "Fragrant basmati rice cooked with chicken, herbs and spices",
                             IsAvailable = true,
                             IsSpicy = true,
@@ -234,13 +249,15 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                             Name = "Chicken Biryani",
                             PreparationTime = 30,
                             Price = 16.99m,
+                            ReviewCount = 0,
                             SpiceLevel = 3
                         },
                         new
                         {
-                            Id = new Guid("78f46fc3-c2b2-44a3-810c-20bc2da9eb84"),
+                            Id = new Guid("110b0658-26f9-4d30-9e07-c7ec8b5feec1"),
+                            AverageRating = 0.0,
                             CategoryId = new Guid("33333333-3333-3333-3333-333333333333"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8874),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2670),
                             Description = "Aromatic basmati rice with mixed vegetables and spices",
                             IsAvailable = true,
                             IsSpicy = true,
@@ -249,13 +266,15 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                             Name = "Vegetable Biryani",
                             PreparationTime = 25,
                             Price = 13.99m,
+                            ReviewCount = 0,
                             SpiceLevel = 2
                         },
                         new
                         {
-                            Id = new Guid("6569f699-da0e-4008-8436-150dbcc70641"),
+                            Id = new Guid("236f8a89-e475-43d7-a875-5c1b2dc82ca7"),
+                            AverageRating = 0.0,
                             CategoryId = new Guid("44444444-4444-4444-4444-444444444444"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8884),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2672),
                             Description = "Soft milk dumplings soaked in rose-flavored sugar syrup",
                             IsAvailable = true,
                             IsSpicy = false,
@@ -264,13 +283,15 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                             Name = "Gulab Jamun (3 pcs)",
                             PreparationTime = 5,
                             Price = 5.99m,
+                            ReviewCount = 0,
                             SpiceLevel = 0
                         },
                         new
                         {
-                            Id = new Guid("b97ba28c-15fa-4e89-a93b-8289254af2a6"),
+                            Id = new Guid("af1e79ed-a5b9-4426-87e0-5359344abdba"),
+                            AverageRating = 0.0,
                             CategoryId = new Guid("55555555-5555-5555-5555-555555555555"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8886),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2674),
                             Description = "Refreshing yogurt drink blended with sweet mangoes",
                             IsAvailable = true,
                             IsSpicy = false,
@@ -279,13 +300,15 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                             Name = "Mango Lassi",
                             PreparationTime = 5,
                             Price = 4.99m,
+                            ReviewCount = 0,
                             SpiceLevel = 0
                         },
                         new
                         {
-                            Id = new Guid("d3f7c900-ab73-438e-9e2c-7020dd0e0d8c"),
+                            Id = new Guid("4d30f61b-0ebe-45a5-ac5d-7c269278f9a3"),
+                            AverageRating = 0.0,
                             CategoryId = new Guid("55555555-5555-5555-5555-555555555555"),
-                            CreatedAt = new DateTime(2025, 11, 4, 20, 27, 4, 364, DateTimeKind.Utc).AddTicks(8890),
+                            CreatedAt = new DateTime(2025, 12, 17, 16, 41, 20, 586, DateTimeKind.Utc).AddTicks(2677),
                             Description = "Traditional Indian tea brewed with aromatic spices",
                             IsAvailable = true,
                             IsSpicy = false,
@@ -294,8 +317,104 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                             Name = "Masala Chai",
                             PreparationTime = 5,
                             Price = 2.99m,
+                            ReviewCount = 0,
                             SpiceLevel = 0
                         });
+                });
+
+            modelBuilder.Entity("DesiCorner.Services.ProductAPI.Models.Review", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("HelpfulCount")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsVerifiedPurchase")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("NotHelpfulCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ProductId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("Reviews");
+                });
+
+            modelBuilder.Entity("DesiCorner.Services.ProductAPI.Models.ReviewVote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsHelpful")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("ReviewId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ReviewId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("ReviewVotes");
                 });
 
             modelBuilder.Entity("DesiCorner.Services.ProductAPI.Models.Product", b =>
@@ -309,9 +428,41 @@ namespace DesiCorner.Services.ProductAPI.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("DesiCorner.Services.ProductAPI.Models.Review", b =>
+                {
+                    b.HasOne("DesiCorner.Services.ProductAPI.Models.Product", "Product")
+                        .WithMany("Reviews")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("DesiCorner.Services.ProductAPI.Models.ReviewVote", b =>
+                {
+                    b.HasOne("DesiCorner.Services.ProductAPI.Models.Review", "Review")
+                        .WithMany("Votes")
+                        .HasForeignKey("ReviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Review");
+                });
+
             modelBuilder.Entity("DesiCorner.Services.ProductAPI.Models.Category", b =>
                 {
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("DesiCorner.Services.ProductAPI.Models.Product", b =>
+                {
+                    b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("DesiCorner.Services.ProductAPI.Models.Review", b =>
+                {
+                    b.Navigation("Votes");
                 });
 #pragma warning restore 612, 618
         }
