@@ -365,4 +365,54 @@
     margin-bottom: 8px;
     color: #333;
   }
+  .product-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 0.9rem;
+
+  .star-icon {
+    color: #ffc107;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  .review-count {
+    color: #888;
+  }
+}
+.filter-indicator {
+  background: #e3f2fd;
+  padding: 12px 0;
+  margin-bottom: 24px;
+
+  .filter-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .clear-filter {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #1976d2;
+    text-decoration: none;
+    font-size: 0.9rem;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
 }

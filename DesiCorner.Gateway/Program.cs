@@ -161,8 +161,9 @@ app.Use(async (ctx, next) =>
 
     // Allow public READ access to products and categories (e-commerce browsing)
     var isPublicProductBrowsing = method.Equals("GET", StringComparison.OrdinalIgnoreCase) &&
-                                   (path.StartsWith("/api/products", StringComparison.OrdinalIgnoreCase) ||
-                                    path.StartsWith("/api/categories", StringComparison.OrdinalIgnoreCase));
+                               (path.StartsWith("/api/products", StringComparison.OrdinalIgnoreCase) ||
+                                path.StartsWith("/api/categories", StringComparison.OrdinalIgnoreCase) ||
+                                path.StartsWith("/api/reviews", StringComparison.OrdinalIgnoreCase));
 
     // Cart and guest order operations - OPTIONAL auth (allow both authenticated and guest)
     var isOptionalAuthOperation = path.StartsWith("/api/cart", StringComparison.OrdinalIgnoreCase) ||

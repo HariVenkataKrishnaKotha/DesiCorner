@@ -10,6 +10,10 @@ public class ProductDbContext : DbContext
     public DbSet<Product> Products { get; set; }
     public DbSet<Category> Categories { get; set; }
 
+    public DbSet<Review> Reviews { get; set; }
+
+    public DbSet<ReviewVote> ReviewVotes { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -41,6 +45,44 @@ public class ProductDbContext : DbContext
 
             entity.HasIndex(e => e.Name);
             entity.HasIndex(e => e.CategoryId);
+        });
+
+        // Review configuration
+        modelBuilder.Entity<Review>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.UserEmail).HasMaxLength(256);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.Comment).HasMaxLength(2000);
+            entity.Property(e => e.Rating).IsRequired();
+
+            // One product has many reviews
+            entity.HasOne(e => e.Product)
+                .WithMany(p => p.Reviews)
+                .HasForeignKey(e => e.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Indexes for faster queries
+            entity.HasIndex(e => e.ProductId);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.ProductId, e.UserId }).IsUnique(); // One review per user per product
+            entity.HasIndex(e => e.CreatedAt);
+        });
+
+        // ReviewVote configuration
+        modelBuilder.Entity<ReviewVote>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.HasOne(e => e.Review)
+                .WithMany(r => r.Votes)
+                .HasForeignKey(e => e.ReviewId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Unique constraint: one vote per user per review
+            entity.HasIndex(e => new { e.ReviewId, e.UserId }).IsUnique();
+            entity.HasIndex(e => e.UserId);
         });
 
         // Seed data
