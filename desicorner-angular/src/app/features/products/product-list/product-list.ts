@@ -1,87 +1,81 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { FormsModule } from '@angular/forms';
 import { ProductService } from '@core/services/product.service';
 import { CartService } from '@core/services/cart.service';
 import { Product, Category } from '@core/models/product.models';
 import { ToastrService } from 'ngx-toastr';
 
 @Component({
-  selector: 'app-home',
+  selector: 'app-product-list',
   standalone: true,
   imports: [
     CommonModule,
     RouterModule,
-    MatButtonModule,
+    FormsModule,
     MatCardModule,
+    MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatSelectModule,
+    MatFormFieldModule
   ],
-  templateUrl: './home.html',
-  styleUrls: ['./home.scss']
+  templateUrl: './product-list.html',
+  styleUrls: ['./product-list.scss']
 })
-export class HomeComponent implements OnInit {
+export class ProductListComponent implements OnInit {
   private productService = inject(ProductService);
   private cartService = inject(CartService);
   private toastr = inject(ToastrService);
   private route = inject(ActivatedRoute);
 
+  products: Product[] = [];
+  filteredProducts: Product[] = [];
   categories: Category[] = [];
-  featuredProducts: Product[] = [];
-  allProducts: Product[] = [];
   loading = true;
+
   selectedCategoryId: string | null = null;
-  selectedCategoryName: string = '';
+  sortBy: string = 'name';
 
   ngOnInit(): void {
-    // Subscribe to query parameter changes
+    this.loadCategories();
+    
     this.route.queryParamMap.subscribe(params => {
       this.selectedCategoryId = params.get('category');
-      this.loadData();
+      this.loadProducts();
     });
   }
 
-  loadData(): void {
-    this.loading = true;
-
-    // Load categories
+  loadCategories(): void {
     this.productService.loadCategories().subscribe({
       next: (response) => {
         if (response.isSuccess && response.result) {
           this.categories = response.result;
-          
-          // Set selected category name if filtering
-          if (this.selectedCategoryId) {
-            const selectedCategory = this.categories.find(c => c.id === this.selectedCategoryId);
-            this.selectedCategoryName = selectedCategory?.name || '';
-          } else {
-            this.selectedCategoryName = '';
-          }
         }
-      },
-      error: (error) => {
-        console.error('Failed to load categories', error);
       }
     });
+  }
 
-    // Load products - either by category or all
+  loadProducts(): void {
+    this.loading = true;
+
     if (this.selectedCategoryId) {
       this.productService.getProductsByCategory(this.selectedCategoryId).subscribe({
         next: (response) => {
           if (response.isSuccess && response.result) {
-            this.featuredProducts = response.result;
-          } else {
-            this.featuredProducts = [];
+            this.products = response.result;
+            this.applySort();
           }
           this.loading = false;
         },
-        error: (error) => {
-          console.error('Failed to load products by category', error);
-          this.featuredProducts = [];
+        error: () => {
           this.loading = false;
         }
       });
@@ -89,40 +83,50 @@ export class HomeComponent implements OnInit {
       this.productService.loadProducts().subscribe({
         next: (response) => {
           if (response.isSuccess && response.result) {
-            this.allProducts = response.result;
-            // Get first 6 products as featured when no category selected
-            this.featuredProducts = response.result.slice(0, 6);
+            this.products = response.result;
+            this.applySort();
           }
           this.loading = false;
         },
-        error: (error) => {
-          console.error('Failed to load products', error);
+        error: () => {
           this.loading = false;
         }
       });
     }
   }
 
-  clearCategoryFilter(): void {
-    this.selectedCategoryId = null;
-    this.selectedCategoryName = '';
+  onCategoryChange(): void {
+    this.loadProducts();
+  }
+
+  onSortChange(): void {
+    this.applySort();
+  }
+
+  applySort(): void {
+    this.filteredProducts = [...this.products].sort((a, b) => {
+      switch (this.sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'price-low':
+          return a.price - b.price;
+        case 'price-high':
+          return b.price - a.price;
+        case 'rating':
+          return b.averageRating - a.averageRating;
+        default:
+          return 0;
+      }
+    });
   }
 
   addToCart(product: Product, event: Event): void {
-    event.stopPropagation(); // Prevent navigation to product detail
+    event.stopPropagation();
     this.cartService.addItem(product, 1);
     this.toastr.success(`${product.name} added to cart!`, 'Success');
   }
 
-  getCategoryEmoji(categoryName: string): string {
-    const emojiMap: { [key: string]: string } = {
-      'Appetizers': '🥟',
-      'Main Course': '🍛',
-      'Biryani': '🍚',
-      'Desserts': '🍮',
-      'Beverages': '🥤'
-    };
-
-    return emojiMap[categoryName] || '🍽️';
+  getCategoryName(categoryId: string): string {
+    return this.categories.find(c => c.id === categoryId)?.name || '';
   }
 }

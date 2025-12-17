@@ -15,6 +15,9 @@ export interface Product {
   preparationTime: number;
   createdAt: Date;
   updatedAt?: Date;
+  // Rating aggregation
+  averageRating: number;
+  reviewCount: number;
 }
 
 export interface Category {

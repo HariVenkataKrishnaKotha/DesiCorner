@@ -1,0 +1,163 @@
+<div class="product-detail-container">
+  @if (loading) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading product...</p>
+    </div>
+  } @else if (product) {
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+      <a routerLink="/">Home</a>
+      <mat-icon>chevron_right</mat-icon>
+      <a routerLink="/" [queryParams]="{category: product.categoryId}">{{ product.categoryName }}</a>
+      <mat-icon>chevron_right</mat-icon>
+      <span>{{ product.name }}</span>
+    </nav>
+
+    <!-- Product Info Section -->
+    <div class="product-main">
+      <div class="product-image-section">
+        @if (product.imageUrl) {
+          <img [src]="product.imageUrl" [alt]="product.name" class="product-image">
+        } @else {
+          <div class="product-image-placeholder">
+            <mat-icon>restaurant</mat-icon>
+          </div>
+        }
+      </div>
+
+      <div class="product-info-section">
+        <div class="product-header">
+          <h1>{{ product.name }}</h1>
+          <div class="product-badges">
+            @if (product.isVegetarian) {
+              <span class="badge badge-veg">Vegetarian</span>
+            }
+            @if (product.isVegan) {
+              <span class="badge badge-vegan">Vegan</span>
+            }
+            @if (product.isSpicy) {
+              <span class="badge badge-spicy">Spicy ({{ product.spiceLevel }}/5)</span>
+            }
+          </div>
+        </div>
+
+        <div class="product-rating">
+          <app-star-rating 
+            [rating]="product.averageRating" 
+            [readonly]="true"
+            [showValue]="true"
+            [reviewCount]="product.reviewCount">
+          </app-star-rating>
+        </div>
+
+        <p class="product-description">{{ product.description }}</p>
+
+        <div class="product-meta">
+          <div class="meta-item">
+            <mat-icon>schedule</mat-icon>
+            <span>{{ product.preparationTime }} min prep time</span>
+          </div>
+          <div class="meta-item">
+            <mat-icon>category</mat-icon>
+            <span>{{ product.categoryName }}</span>
+          </div>
+          @if (product.allergens) {
+            <div class="meta-item allergens">
+              <mat-icon>warning</mat-icon>
+              <span>Allergens: {{ product.allergens }}</span>
+            </div>
+          }
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <div class="product-purchase">
+          <div class="price">${{ product.price.toFixed(2) }}</div>
+          
+          @if (product.isAvailable) {
+            <div class="quantity-selector">
+              <button mat-icon-button (click)="decrementQuantity()" [disabled]="quantity <= 1">
+                <mat-icon>remove</mat-icon>
+              </button>
+              <span class="quantity">{{ quantity }}</span>
+              <button mat-icon-button (click)="incrementQuantity()">
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+
+            <button mat-raised-button color="primary" class="add-to-cart-btn" (click)="addToCart()">
+              <mat-icon>add_shopping_cart</mat-icon>
+              Add to Cart
+            </button>
+          } @else {
+            <div class="unavailable">
+              <mat-icon>block</mat-icon>
+              Currently Unavailable
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- Reviews Section -->
+    <section class="reviews-section">
+      <h2>Customer Reviews</h2>
+
+      <div class="reviews-layout">
+        <!-- Review Summary -->
+        <div class="reviews-sidebar">
+          <app-review-summary [summary]="reviewSummary"></app-review-summary>
+
+          @if (canWriteReview) {
+            <button mat-raised-button color="accent" class="write-review-btn" (click)="onWriteReview()">
+              <mat-icon>rate_review</mat-icon>
+              Write a Review
+            </button>
+          }
+
+          @if (!isAuthenticated) {
+            <p class="login-prompt">
+              <a routerLink="/auth/login" [queryParams]="{returnUrl: '/products/' + product.id}">Login</a> 
+              to write a review
+            </p>
+          }
+
+          @if (userReview && !showReviewForm) {
+            <div class="your-review-notice">
+              <mat-icon>check_circle</mat-icon>
+              <span>You've already reviewed this product</span>
+            </div>
+          }
+        </div>
+
+        <!-- Review Form / List -->
+        <div class="reviews-main">
+          @if (showReviewForm) {
+            <app-review-form
+              [productId]="product.id"
+              [existingReview]="editingReview ?? undefined"
+              [submitting]="submittingReview"
+              (submitReview)="onSubmitReview($event)"
+              (cancel)="onCancelReview()">
+            </app-review-form>
+          }
+
+          <app-review-list
+            [paginatedReviews]="paginatedReviews"
+            [loading]="reviewsLoading"
+            [currentPage]="currentPage"
+            [sortBy]="sortBy"
+            (pageChange)="onPageChange($event)"
+            (sortChange)="onSortChange($event)"
+            (editReview)="onEditReview($event)"
+            (deleteReview)="onDeleteReview($event)"
+            (voteReview)="onVoteReview($event)">
+          </app-review-list>
+        </div>
+      </div>
+    </section>
+  }
+</div>
