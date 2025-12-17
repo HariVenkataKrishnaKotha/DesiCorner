@@ -190,7 +190,10 @@ public class ProductService : IProductService
             Allergens = product.Allergens,
             PreparationTime = product.PreparationTime,
             CreatedAt = product.CreatedAt,
-            UpdatedAt = product.UpdatedAt
+            UpdatedAt = product.UpdatedAt,
+            // Rating aggregation
+            AverageRating = product.AverageRating,
+            ReviewCount = product.ReviewCount
         };
     }
 }

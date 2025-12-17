@@ -1,0 +1,100 @@
+<div class="products-page">
+  <div class="container">
+    <div class="page-header">
+      <h1>Our Menu</h1>
+      
+      <div class="filters">
+        <mat-form-field appearance="outline">
+          <mat-label>Category</mat-label>
+          <mat-select [(ngModel)]="selectedCategoryId" (selectionChange)="onCategoryChange()">
+            <mat-option [value]="null">All Categories</mat-option>
+            @for (category of categories; track category.id) {
+              <mat-option [value]="category.id">{{ category.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Sort By</mat-label>
+          <mat-select [(ngModel)]="sortBy" (selectionChange)="onSortChange()">
+            <mat-option value="name">Name</mat-option>
+            <mat-option value="price-low">Price: Low to High</mat-option>
+            <mat-option value="price-high">Price: High to Low</mat-option>
+            <mat-option value="rating">Top Rated</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    @if (loading) {
+      <div class="loading-spinner">
+        <mat-icon class="spinning">refresh</mat-icon>
+        <p>Loading products...</p>
+      </div>
+    } @else if (filteredProducts.length > 0) {
+      <div class="products-grid">
+        @for (product of filteredProducts; track product.id) {
+          <mat-card class="product-card" [routerLink]="['/products', product.id]">
+            <div class="product-image">
+              @if (product.imageUrl) {
+                <img [src]="product.imageUrl" [alt]="product.name">
+              } @else {
+                <div class="product-image-placeholder">🍽️</div>
+              }
+            </div>
+            
+            <mat-card-content>
+              <div class="product-header">
+                <h3>{{ product.name }}</h3>
+                <div class="product-badges">
+                  @if (product.isVegetarian) {
+                    <span class="badge badge-success">🥬 Veg</span>
+                  }
+                  @if (product.isSpicy) {
+                    <span class="badge badge-danger">🌶️ Spicy</span>
+                  }
+                </div>
+              </div>
+              
+              <p class="product-description">{{ product.description }}</p>
+              
+              <div class="product-info">
+                <span class="product-time">
+                  <mat-icon>schedule</mat-icon>
+                  {{ product.preparationTime }} min
+                </span>
+                <span class="product-category">{{ product.categoryName }}</span>
+              </div>
+
+              @if (product.reviewCount > 0) {
+                <div class="product-rating">
+                  <mat-icon class="star-icon">star</mat-icon>
+                  <span>{{ product.averageRating.toFixed(1) }}</span>
+                  <span class="review-count">({{ product.reviewCount }})</span>
+                </div>
+              }
+              
+              <div class="product-footer">
+                <span class="price">${{ product.price.toFixed(2) }}</span>
+                <button 
+                  mat-raised-button 
+                  color="primary" 
+                  (click)="addToCart(product, $event)"
+                  [disabled]="!product.isAvailable">
+                  <mat-icon>add_shopping_cart</mat-icon>
+                  Add
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <mat-icon>restaurant</mat-icon>
+        <h3>No products found</h3>
+        <p>Try selecting a different category</p>
+      </div>
+    }
+  </div>
+</div>

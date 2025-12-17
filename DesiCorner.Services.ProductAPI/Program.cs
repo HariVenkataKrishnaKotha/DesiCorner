@@ -20,6 +20,7 @@ builder.Services.AddDesiCornerMessageBus(cfg);
 // Services
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
 
 // Controllers
 builder.Services.AddControllers();

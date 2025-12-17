@@ -46,10 +46,26 @@
   </div>
 </section>
 
+<!-- Category Filter Indicator -->
+@if (selectedCategoryId) {
+  <section class="filter-indicator">
+    <div class="container">
+      <div class="filter-content">
+        <span>Showing products in: <strong>{{ selectedCategoryName }}</strong></span>
+        <a routerLink="/" class="clear-filter">
+          <mat-icon>close</mat-icon>
+          Show All
+        </a>
+      </div>
+    </div>
+  </section>
+}
+
+
 <!-- Featured Products Section -->
 <section class="featured-section">
   <div class="container">
-    <h2 class="section-title">Featured Dishes</h2>
+    <h2 class="section-title">{{ selectedCategoryId ? selectedCategoryName : 'Featured Dishes' }}</h2>
     
     @if (loading) {
       <div class="loading-spinner">
@@ -59,7 +75,7 @@
     } @else if (featuredProducts.length > 0) {
       <div class="products-grid">
         @for (product of featuredProducts; track product.id) {
-          <mat-card class="product-card">
+          <mat-card class="product-card" [routerLink]="['/products', product.id]" style="cursor: pointer;">
             <div class="product-image">
               @if (product.imageUrl) {
                 <img [src]="product.imageUrl" [alt]="product.name">
@@ -92,13 +108,20 @@
                 </span>
                 <span class="product-category">{{ product.categoryName }}</span>
               </div>
+              @if (product.reviewCount > 0) {
+  <div class="product-rating">
+    <mat-icon class="star-icon">star</mat-icon>
+    <span>{{ product.averageRating.toFixed(1) }}</span>
+    <span class="review-count">({{ product.reviewCount }})</span>
+  </div>
+}
               
               <div class="product-footer">
                 <span class="price">${{ product.price.toFixed(2) }}</span>
                 <button 
                   mat-raised-button 
                   color="primary" 
-                  (click)="addToCart(product)"
+                  (click)="addToCart(product, $event)"
                   [disabled]="!product.isAvailable">
                   <mat-icon>add_shopping_cart</mat-icon>
                   Add to Cart
