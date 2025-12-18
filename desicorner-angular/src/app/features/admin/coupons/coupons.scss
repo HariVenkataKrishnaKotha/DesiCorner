@@ -1,0 +1,467 @@
+.admin-coupons {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+
+  h1 {
+    margin: 0;
+    color: #333;
+  }
+
+  .btn-create {
+    padding: 12px 24px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+
+    &:hover { background: #059669; }
+  }
+}
+
+.success-message {
+  background: #d1fae5;
+  color: #065f46;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+// Stats Grid
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-align: center;
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+  }
+
+  .stat-label {
+    font-size: 14px;
+    color: #666;
+    margin-top: 4px;
+  }
+
+  &.active { border-left: 4px solid #10b981; }
+  &.expired { border-left: 4px solid #ef4444; }
+  &.used { border-left: 4px solid #f59e0b; }
+}
+
+// Filters
+.filters {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.search-box {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+
+  input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+
+  .btn-search {
+    padding: 10px 20px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover { background: #2563eb; }
+  }
+}
+
+.filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    min-width: 150px;
+  }
+}
+
+// Coupons Grid
+.coupons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.coupon-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  &.inactive {
+    opacity: 0.7;
+    background: #f9fafb;
+  }
+
+  &.expired {
+    border-left: 4px solid #ef4444;
+  }
+}
+
+.coupon-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.coupon-code {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1f2937;
+  font-family: monospace;
+  letter-spacing: 1px;
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+
+  &.status-active { background: #d1fae5; color: #065f46; }
+  &.status-inactive { background: #e5e7eb; color: #6b7280; }
+  &.status-expired { background: #fee2e2; color: #991b1b; }
+  &.status-depleted { background: #fef3c7; color: #92400e; }
+}
+
+.coupon-discount {
+  text-align: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  margin-bottom: 16px;
+
+  .discount-value {
+    display: block;
+    font-size: 32px;
+    font-weight: bold;
+    color: white;
+  }
+
+  .discount-type {
+    font-size: 14px;
+    color: rgba(255,255,255,0.8);
+    text-transform: uppercase;
+  }
+}
+
+.coupon-details {
+  .description {
+    color: #6b7280;
+    font-size: 14px;
+    margin-bottom: 12px;
+    font-style: italic;
+  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 14px;
+
+    .label { color: #6b7280; }
+    .value { 
+      color: #1f2937; 
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .expired-text { color: #ef4444; }
+  }
+}
+
+.usage-bar {
+  width: 60px;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+
+  .usage-fill {
+    height: 100%;
+    background: #10b981;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+}
+
+.coupon-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+
+  button {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .btn-toggle {
+    background: #fef3c7;
+    color: #92400e;
+
+    &.active {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    &:hover { opacity: 0.9; }
+  }
+
+  .btn-edit {
+    background: #dbeafe;
+    color: #1e40af;
+    &:hover { background: #bfdbfe; }
+  }
+
+  .btn-delete {
+    background: #fee2e2;
+    color: #991b1b;
+    &:hover { background: #fecaca; }
+  }
+}
+
+// Modal
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+
+  &.small { max-width: 400px; }
+
+  h2 {
+    margin-bottom: 20px;
+    padding-right: 40px;
+    color: #1f2937;
+  }
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #666;
+
+  &:hover { color: #333; }
+}
+
+// Form
+.coupon-form {
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+
+    @media (max-width: 480px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #374151;
+      font-size: 14px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+
+      &:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
+
+      &.error {
+        border-color: #ef4444;
+      }
+
+      &:disabled {
+        background: #f3f4f6;
+        cursor: not-allowed;
+      }
+    }
+
+    textarea { resize: vertical; }
+  }
+
+  .checkbox-group {
+    label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-weight: normal;
+
+      input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  .field-error {
+    display: block;
+    color: #ef4444;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  .form-error {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+  }
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+
+  .btn-cancel {
+    padding: 10px 20px;
+    background: #e5e7eb;
+    color: #374151;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover { background: #d1d5db; }
+  }
+
+  .btn-submit {
+    padding: 10px 24px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover { background: #059669; }
+  }
+
+  .btn-danger {
+    padding: 10px 20px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover { background: #dc2626; }
+  }
+}
+
+.delete-confirm {
+  p { margin: 12px 0; color: #374151; }
+  .warning { color: #ef4444; font-size: 14px; }
+}
+
+// States
+.loading, .error, .empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+
+  .btn-create {
+    margin-top: 16px;
+  }
+}
+
+.error { color: #dc2626; }

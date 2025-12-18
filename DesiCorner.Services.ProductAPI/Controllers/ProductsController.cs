@@ -77,6 +77,22 @@ public class ProductsController : ControllerBase
     }
 
     /// <summary>
+    /// Get product statistics (Admin only)
+    /// </summary>
+    [HttpGet("admin/stats")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetProductStats(CancellationToken ct)
+    {
+        var stats = await _productService.GetProductStatsAsync(ct);
+
+        return Ok(new ResponseDto
+        {
+            IsSuccess = true,
+            Result = stats
+        });
+    }
+
+    /// <summary>
     /// Get product by ID
     /// </summary>
     [HttpGet("{id}")]

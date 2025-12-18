@@ -1,0 +1,271 @@
+<div class="admin-orders">
+  <h1>Order Management</h1>
+
+  <!-- Stats Cards -->
+  <div class="stats-grid" *ngIf="stats">
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.totalOrders }}</div>
+      <div class="stat-label">Total Orders</div>
+    </div>
+    <div class="stat-card pending">
+      <div class="stat-value">{{ stats.pendingOrders }}</div>
+      <div class="stat-label">Pending</div>
+    </div>
+    <div class="stat-card processing">
+      <div class="stat-value">{{ stats.processingOrders }}</div>
+      <div class="stat-label">Processing</div>
+    </div>
+    <div class="stat-card delivered">
+      <div class="stat-value">{{ stats.deliveredOrders }}</div>
+      <div class="stat-label">Delivered</div>
+    </div>
+    <div class="stat-card revenue">
+      <div class="stat-value">{{ stats.totalRevenue | currency }}</div>
+      <div class="stat-label">Total Revenue</div>
+    </div>
+    <div class="stat-card today">
+      <div class="stat-value">{{ stats.todayRevenue | currency }}</div>
+      <div class="stat-label">Today's Revenue</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="search-box">
+      <input 
+        type="text" 
+        [(ngModel)]="filter.searchTerm" 
+        placeholder="Search by order number or email..."
+        (keyup.enter)="onSearch()"
+      />
+      <button class="btn-search" (click)="onSearch()">Search</button>
+    </div>
+
+    <div class="filter-group">
+      <select [(ngModel)]="filter.status" (change)="onFilterChange()">
+        <option value="">All Statuses</option>
+        <option *ngFor="let status of statusOptions.slice(1)" [value]="status">
+          {{ status }}
+        </option>
+      </select>
+
+      <select [(ngModel)]="filter.paymentStatus" (change)="onFilterChange()">
+        <option value="">All Payment Statuses</option>
+        <option *ngFor="let status of paymentStatusOptions.slice(1)" [value]="status">
+          {{ status }}
+        </option>
+      </select>
+
+      <input 
+        type="date" 
+        [(ngModel)]="filter.fromDate" 
+        (change)="onFilterChange()"
+        placeholder="From Date"
+      />
+      <input 
+        type="date" 
+        [(ngModel)]="filter.toDate" 
+        (change)="onFilterChange()"
+        placeholder="To Date"
+      />
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" *ngIf="loading">Loading orders...</div>
+
+  <!-- Error -->
+  <div class="error" *ngIf="error">{{ error }}</div>
+
+  <!-- Orders Table -->
+  <div class="table-container" *ngIf="!loading && orders.length > 0">
+    <table class="orders-table">
+      <thead>
+        <tr>
+          <th (click)="onSort('OrderNumber')" class="sortable">
+            Order # 
+            <span *ngIf="filter.sortBy === 'OrderNumber'">{{ filter.sortDescending ? '▼' : '▲' }}</span>
+          </th>
+          <th>Customer</th>
+          <th>Items</th>
+          <th (click)="onSort('Total')" class="sortable">
+            Total
+            <span *ngIf="filter.sortBy === 'Total'">{{ filter.sortDescending ? '▼' : '▲' }}</span>
+          </th>
+          <th (click)="onSort('Status')" class="sortable">
+            Status
+            <span *ngIf="filter.sortBy === 'Status'">{{ filter.sortDescending ? '▼' : '▲' }}</span>
+          </th>
+          <th>Payment</th>
+          <th (click)="onSort('OrderDate')" class="sortable">
+            Date
+            <span *ngIf="filter.sortBy === 'OrderDate'">{{ filter.sortDescending ? '▼' : '▲' }}</span>
+          </th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of orders">
+          <td>
+            <strong>{{ order.orderNumber }}</strong>
+            <span class="guest-badge" *ngIf="order.isGuestOrder">Guest</span>
+          </td>
+          <td>{{ order.customerEmail }}</td>
+          <td>{{ order.itemCount }}</td>
+          <td>{{ order.total | currency }}</td>
+          <td>
+            <span class="status-badge" [ngClass]="getStatusClass(order.status)">
+              {{ order.status }}
+            </span>
+          </td>
+          <td>
+            <span class="payment-badge" [ngClass]="getPaymentStatusClass(order.paymentStatus)">
+              {{ order.paymentStatus }}
+            </span>
+          </td>
+          <td>{{ order.orderDate | date:'short' }}</td>
+          <td class="actions">
+            <button class="btn-view" (click)="viewOrder(order)">View</button>
+            <select 
+              class="status-select" 
+              [value]="order.status"
+              (change)="updateStatus(order.id, $any($event.target).value)"
+            >
+              <option *ngFor="let status of statusOptions.slice(1)" [value]="status">
+                {{ status }}
+              </option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!loading && orders.length === 0">
+    <p>No orders found matching your criteria.</p>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="totalPages > 1">
+    <button 
+      class="page-btn" 
+      [disabled]="filter.page === 1"
+      (click)="onPageChange(1)"
+    >
+      First
+    </button>
+    <button 
+      class="page-btn" 
+      [disabled]="filter.page === 1"
+      (click)="onPageChange(filter.page - 1)"
+    >
+      Prev
+    </button>
+    
+    <button 
+      *ngFor="let page of pages"
+      class="page-btn"
+      [class.active]="page === filter.page"
+      (click)="onPageChange(page)"
+    >
+      {{ page }}
+    </button>
+    
+    <button 
+      class="page-btn" 
+      [disabled]="filter.page === totalPages"
+      (click)="onPageChange(filter.page + 1)"
+    >
+      Next
+    </button>
+    <button 
+      class="page-btn" 
+      [disabled]="filter.page === totalPages"
+      (click)="onPageChange(totalPages)"
+    >
+      Last
+    </button>
+
+    <span class="page-info">
+      Page {{ filter.page }} of {{ totalPages }} ({{ totalCount }} orders)
+    </span>
+  </div>
+
+  <!-- Order Detail Modal -->
+  <div class="modal-overlay" *ngIf="showOrderDetail" (click)="closeOrderDetail()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <button class="modal-close" (click)="closeOrderDetail()">&times;</button>
+      
+      <h2>Order Details: {{ selectedOrder?.orderNumber }}</h2>
+      
+      <div class="order-detail" *ngIf="selectedOrder">
+        <div class="detail-section">
+          <h3>Customer Information</h3>
+          <p><strong>Email:</strong> {{ selectedOrder.userEmail }}</p>
+          <p><strong>Phone:</strong> {{ selectedOrder.userPhone }}</p>
+          <p><strong>Type:</strong> {{ selectedOrder.isGuestOrder ? 'Guest Order' : 'Registered User' }}</p>
+        </div>
+
+        <div class="detail-section">
+          <h3>Delivery Address</h3>
+          <p>{{ selectedOrder.deliveryAddress }}</p>
+          <p>{{ selectedOrder.deliveryCity }}, {{ selectedOrder.deliveryState }} {{ selectedOrder.deliveryZipCode }}</p>
+          <p *ngIf="selectedOrder.specialInstructions">
+            <strong>Instructions:</strong> {{ selectedOrder.specialInstructions }}
+          </p>
+        </div>
+
+        <div class="detail-section">
+          <h3>Order Items</h3>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Price</th>
+                <th>Qty</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of selectedOrder.items">
+                <td>{{ item.productName }}</td>
+                <td>{{ item.price | currency }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.price * item.quantity | currency }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="detail-section pricing">
+          <p><span>Subtotal:</span> <span>{{ selectedOrder.subTotal | currency }}</span></p>
+          <p><span>Tax:</span> <span>{{ selectedOrder.taxAmount | currency }}</span></p>
+          <p><span>Delivery Fee:</span> <span>{{ selectedOrder.deliveryFee | currency }}</span></p>
+          <p *ngIf="selectedOrder.discountAmount > 0">
+            <span>Discount:</span> <span class="discount">-{{ selectedOrder.discountAmount | currency }}</span>
+          </p>
+          <p class="total"><span>Total:</span> <span>{{ selectedOrder.total | currency }}</span></p>
+        </div>
+
+        <div class="detail-section">
+          <h3>Status</h3>
+          <div class="status-controls">
+            <span class="status-badge" [ngClass]="getStatusClass(selectedOrder.status)">
+              {{ selectedOrder.status }}
+            </span>
+            <select 
+              class="status-select-large"
+              [value]="selectedOrder.status"
+              (change)="updateStatus(selectedOrder.id, $any($event.target).value)"
+            >
+              <option *ngFor="let status of statusOptions.slice(1)" [value]="status">
+                {{ status }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
