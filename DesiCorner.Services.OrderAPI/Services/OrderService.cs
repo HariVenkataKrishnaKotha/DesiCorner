@@ -1,10 +1,11 @@
-﻿using DesiCorner.Contracts.Orders;
+﻿using DesCorner.Contracts.Orders;
+using DesiCorner.Contracts.Cart;
+using DesiCorner.Contracts.Common;
+using DesiCorner.Contracts.Orders;
+using DesiCorner.Contracts.Payment;
 using DesiCorner.Services.OrderAPI.Data;
 using DesiCorner.Services.OrderAPI.Models;
 using Microsoft.EntityFrameworkCore;
-using DesiCorner.Contracts.Common;
-using DesiCorner.Contracts.Cart;
-using DesiCorner.Contracts.Payment;
 
 namespace DesiCorner.Services.OrderAPI.Services;
 
@@ -430,4 +431,129 @@ public class OrderService : IOrderService
         var random = new Random().Next(1000, 9999);
         return $"DC-{timestamp}-{random}";
     }
+
+    public async Task<(List<AdminOrderListDto> Orders, int TotalCount)> GetAllOrdersAsync(
+    AdminOrderFilterDto filter,
+    CancellationToken ct = default)
+    {
+        var query = _context.Orders.AsQueryable();
+
+        // Apply filters
+        if (!string.IsNullOrEmpty(filter.Status))
+        {
+            query = query.Where(o => o.Status == filter.Status);
+        }
+
+        if (!string.IsNullOrEmpty(filter.PaymentStatus))
+        {
+            query = query.Where(o => o.PaymentStatus == filter.PaymentStatus);
+        }
+
+        if (!string.IsNullOrEmpty(filter.SearchTerm))
+        {
+            var term = filter.SearchTerm.ToLower();
+            query = query.Where(o =>
+                o.OrderNumber.ToLower().Contains(term) ||
+                o.UserEmail.ToLower().Contains(term));
+        }
+
+        if (filter.FromDate.HasValue)
+        {
+            query = query.Where(o => o.OrderDate >= filter.FromDate.Value);
+        }
+
+        if (filter.ToDate.HasValue)
+        {
+            query = query.Where(o => o.OrderDate <= filter.ToDate.Value);
+        }
+
+        // Get total count before pagination
+        var totalCount = await query.CountAsync(ct);
+
+        // Apply sorting
+        query = filter.SortBy.ToLower() switch
+        {
+            "ordernumber" => filter.SortDescending
+                ? query.OrderByDescending(o => o.OrderNumber)
+                : query.OrderBy(o => o.OrderNumber),
+            "total" => filter.SortDescending
+                ? query.OrderByDescending(o => o.Total)
+                : query.OrderBy(o => o.Total),
+            "status" => filter.SortDescending
+                ? query.OrderByDescending(o => o.Status)
+                : query.OrderBy(o => o.Status),
+            _ => filter.SortDescending
+                ? query.OrderByDescending(o => o.OrderDate)
+                : query.OrderBy(o => o.OrderDate)
+        };
+
+        // Apply pagination
+        var orders = await query
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .Include(o => o.Items)
+            .Select(o => new AdminOrderListDto
+            {
+                Id = o.Id,
+                OrderNumber = o.OrderNumber,
+                CustomerEmail = o.UserEmail,
+                CustomerName = o.DeliveryAddress, // Could be parsed or use a separate name field
+                IsGuestOrder = o.IsGuestOrder,
+                Total = o.Total,
+                Status = o.Status,
+                PaymentStatus = o.PaymentStatus ?? "Unknown",
+                OrderDate = o.OrderDate,
+                ItemCount = o.Items.Count
+            })
+            .ToListAsync(ct);
+
+        return (orders, totalCount);
+    }
+
+    public async Task<OrderStatsDto> GetOrderStatsAsync(CancellationToken ct = default)
+    {
+        var today = DateTime.UtcNow.Date;
+        var weekAgo = today.AddDays(-7);
+        var monthAgo = today.AddDays(-30);
+
+        var allOrders = await _context.Orders.ToListAsync(ct);
+        var completedOrders = allOrders.Where(o => o.Status == "Delivered" || o.PaymentStatus == "succeeded");
+
+        return new OrderStatsDto
+        {
+            TotalOrders = allOrders.Count,
+            PendingOrders = allOrders.Count(o => o.Status == "Pending"),
+            ProcessingOrders = allOrders.Count(o => o.Status == "Processing"),
+            DeliveredOrders = allOrders.Count(o => o.Status == "Delivered"),
+            CancelledOrders = allOrders.Count(o => o.Status == "Cancelled"),
+            TotalRevenue = completedOrders.Sum(o => o.Total),
+            TodayRevenue = completedOrders.Where(o => o.OrderDate.Date == today).Sum(o => o.Total),
+            WeekRevenue = completedOrders.Where(o => o.OrderDate >= weekAgo).Sum(o => o.Total),
+            MonthRevenue = completedOrders.Where(o => o.OrderDate >= monthAgo).Sum(o => o.Total)
+        };
+    }
+
+    public async Task<List<AdminOrderListDto>> GetRecentOrdersAsync(int count = 5, CancellationToken ct = default)
+    {
+        var orders = await _context.Orders
+            .Include(o => o.Items)
+            .OrderByDescending(o => o.CreatedAt)
+            .Take(count)
+            .ToListAsync(ct);
+
+        return orders.Select(o => new AdminOrderListDto
+        {
+            Id = o.Id,
+            OrderNumber = o.OrderNumber,
+            CustomerEmail = o.UserEmail,
+            CustomerName = null, // Or parse from DeliveryAddress if needed
+            IsGuestOrder = o.IsGuestOrder,
+            Total = o.Total,
+            Status = o.Status,
+            PaymentStatus = o.PaymentStatus,
+            OrderDate = o.OrderDate,
+            ItemCount = o.Items.Count
+        }).ToList();
+    }
+
 }

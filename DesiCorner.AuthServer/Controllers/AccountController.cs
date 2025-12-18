@@ -124,7 +124,7 @@ public class AccountController : ControllerBase
             });
         }
 
-        var user = await _userManager.FindByEmailAsync(request.Email);
+        var user = await _userManager.FindByEmailAsync(request.Email ?? string.Empty);
         if (user is null)
         {
             return Unauthorized(new ResponseDto
@@ -430,7 +430,7 @@ public class AccountController : ControllerBase
         {
             Id = user.Id,
             Email = user.Email!,
-            PhoneNumber = user.PhoneNumber,
+            PhoneNumber = user.PhoneNumber ?? string.Empty,
             PhoneNumberConfirmed = user.PhoneNumberConfirmed,
             DietaryPreference = user.DietaryPreference,
             RewardPoints = user.RewardPoints,

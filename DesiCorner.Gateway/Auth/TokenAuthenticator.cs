@@ -191,7 +191,7 @@ public sealed class TokenAuthenticator : ITokenAuthenticator
         }
         catch (SecurityTokenExpiredException ex)
         {
-            _log.LogDebug("JWT token expired");
+            _log.LogDebug("JWT token expired" + ex);
             return (false, null, "token_expired");
         }
         catch (Exception ex)

@@ -1,53 +1,371 @@
 <div class="admin-dashboard">
-  <h1>Admin Dashboard</h1>
-
-  <div class="stats-grid">
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <mat-icon color="primary">restaurant</mat-icon>
-        <div class="stat-info">
-          <h2>{{ stats.totalProducts }}</h2>
-          <p>Total Products</p>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <mat-icon color="accent">category</mat-icon>
-        <div class="stat-info">
-          <h2>{{ stats.totalCategories }}</h2>
-          <p>Categories</p>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <mat-icon color="primary">check_circle</mat-icon>
-        <div class="stat-info">
-          <h2>{{ stats.activeProducts }}</h2>
-          <p>Active Products</p>
-        </div>
-      </mat-card-content>
-    </mat-card>
+  <div class="dashboard-header">
+    <h1>Admin Dashboard</h1>
+    <button mat-icon-button (click)="refreshData()" [disabled]="loading" title="Refresh">
+      <mat-icon>refresh</mat-icon>
+    </button>
   </div>
 
-  <div class="action-cards">
-    <mat-card class="action-card" routerLink="/admin/products">
-      <mat-card-content>
-        <mat-icon>restaurant_menu</mat-icon>
-        <h3>Manage Products</h3>
-        <p>Add, edit, or remove products</p>
-      </mat-card-content>
-    </mat-card>
+  <!-- Loading State -->
+  <div class="loading-container" *ngIf="loading">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Loading dashboard...</p>
+  </div>
 
-    <mat-card class="action-card" routerLink="/admin/categories">
-      <mat-card-content>
-        <mat-icon>category</mat-icon>
-        <h3>Manage Categories</h3>
-        <p>Add, edit, or remove categories</p>
-      </mat-card-content>
-    </mat-card>
+  <!-- Error State -->
+  <div class="error-container" *ngIf="error && !loading">
+    <mat-icon color="warn">error</mat-icon>
+    <p>{{ error }}</p>
+    <button mat-raised-button color="primary" (click)="refreshData()">Retry</button>
+  </div>
+
+  <div class="dashboard-content" *ngIf="!loading && !error">
+    
+    <!-- Revenue Stats Row -->
+    <section class="stats-section">
+      <h2>Revenue Overview</h2>
+      <div class="stats-grid revenue">
+        <mat-card class="stat-card revenue-card">
+          <mat-card-content>
+            <mat-icon>attach_money</mat-icon>
+            <div class="stat-info">
+              <h2>{{ formatCurrency(orderStats?.totalRevenue || 0) }}</h2>
+              <p>Total Revenue</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card today-card">
+          <mat-card-content>
+            <mat-icon>today</mat-icon>
+            <div class="stat-info">
+              <h2>{{ formatCurrency(orderStats?.todayRevenue || 0) }}</h2>
+              <p>Today's Revenue</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card week-card">
+          <mat-card-content>
+            <mat-icon>date_range</mat-icon>
+            <div class="stat-info">
+              <h2>{{ formatCurrency(orderStats?.weekRevenue || 0) }}</h2>
+              <p>This Week</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card month-card">
+          <mat-card-content>
+            <mat-icon>calendar_month</mat-icon>
+            <div class="stat-info">
+              <h2>{{ formatCurrency(orderStats?.monthRevenue || 0) }}</h2>
+              <p>This Month</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </section>
+
+    <!-- Orders Stats Row -->
+    <section class="stats-section">
+      <h2>Orders</h2>
+      <div class="stats-grid orders">
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <mat-icon>receipt_long</mat-icon>
+            <div class="stat-info">
+              <h2>{{ orderStats?.totalOrders || 0 }}</h2>
+              <p>Total Orders</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card pending-card">
+          <mat-card-content>
+            <mat-icon>pending</mat-icon>
+            <div class="stat-info">
+              <h2>{{ orderStats?.pendingOrders || 0 }}</h2>
+              <p>Pending</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card processing-card">
+          <mat-card-content>
+            <mat-icon>local_shipping</mat-icon>
+            <div class="stat-info">
+              <h2>{{ orderStats?.processingOrders || 0 }}</h2>
+              <p>Processing</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card delivered-card">
+          <mat-card-content>
+            <mat-icon>check_circle</mat-icon>
+            <div class="stat-info">
+              <h2>{{ orderStats?.deliveredOrders || 0 }}</h2>
+              <p>Delivered</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card cancelled-card">
+          <mat-card-content>
+            <mat-icon>cancel</mat-icon>
+            <div class="stat-info">
+              <h2>{{ orderStats?.cancelledOrders || 0 }}</h2>
+              <p>Cancelled</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </section>
+
+    <!-- Users & Products Row -->
+    <div class="two-column-grid">
+      <!-- Users Stats -->
+      <section class="stats-section">
+        <h2>Users</h2>
+        <div class="stats-grid compact">
+          <mat-card class="stat-card">
+            <mat-card-content>
+              <mat-icon>people</mat-icon>
+              <div class="stat-info">
+                <h2>{{ userStats?.totalUsers || 0 }}</h2>
+                <p>Total Users</p>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="stat-card active-card">
+            <mat-card-content>
+              <mat-icon>person</mat-icon>
+              <div class="stat-info">
+                <h2>{{ userStats?.activeUsers || 0 }}</h2>
+                <p>Active (30d)</p>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="stat-card new-card">
+            <mat-card-content>
+              <mat-icon>person_add</mat-icon>
+              <div class="stat-info">
+                <h2>{{ userStats?.newUsersToday || 0 }}</h2>
+                <p>New Today</p>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="stat-card locked-card">
+            <mat-card-content>
+              <mat-icon>lock</mat-icon>
+              <div class="stat-info">
+                <h2>{{ userStats?.lockedUsers || 0 }}</h2>
+                <p>Locked</p>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </section>
+
+      <!-- Products Stats -->
+      <section class="stats-section">
+        <h2>Products</h2>
+        <div class="stats-grid compact">
+          <mat-card class="stat-card">
+            <mat-card-content>
+              <mat-icon>restaurant</mat-icon>
+              <div class="stat-info">
+                <h2>{{ productStats?.totalProducts || 0 }}</h2>
+                <p>Total Products</p>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="stat-card">
+            <mat-card-content>
+              <mat-icon>category</mat-icon>
+              <div class="stat-info">
+                <h2>{{ totalCategories }}</h2>
+                <p>Categories</p>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="stat-card active-card">
+            <mat-card-content>
+              <mat-icon>check_circle</mat-icon>
+              <div class="stat-info">
+                <h2>{{ productStats?.activeProducts || 0 }}</h2>
+                <p>Active</p>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="stat-card">
+            <mat-card-content>
+              <mat-icon>star</mat-icon>
+              <div class="stat-info">
+                <h2>{{ productStats?.totalReviews || 0 }}</h2>
+                <p>Reviews</p>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </section>
+    </div>
+
+    <!-- Coupons Stats -->
+    <section class="stats-section">
+      <h2>Coupons</h2>
+      <div class="stats-grid coupons">
+        <mat-card class="stat-card">
+          <mat-card-content>
+            <mat-icon>local_offer</mat-icon>
+            <div class="stat-info">
+              <h2>{{ couponStats?.totalCoupons || 0 }}</h2>
+              <p>Total Coupons</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card active-card">
+          <mat-card-content>
+            <mat-icon>check</mat-icon>
+            <div class="stat-info">
+              <h2>{{ couponStats?.activeCoupons || 0 }}</h2>
+              <p>Active</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card expired-card">
+          <mat-card-content>
+            <mat-icon>schedule</mat-icon>
+            <div class="stat-info">
+              <h2>{{ couponStats?.expiredCoupons || 0 }}</h2>
+              <p>Expired</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="stat-card used-card">
+          <mat-card-content>
+            <mat-icon>done_all</mat-icon>
+            <div class="stat-info">
+              <h2>{{ couponStats?.fullyUsedCoupons || 0 }}</h2>
+              <p>Fully Used</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </section>
+
+    <!-- Recent Activity Row -->
+    <div class="two-column-grid">
+      <!-- Recent Orders -->
+      <section class="activity-section">
+        <div class="section-header">
+          <h2>Recent Orders</h2>
+          <a routerLink="/admin/orders" mat-button color="primary">View All</a>
+        </div>
+        <mat-card class="activity-card">
+          <mat-card-content>
+            <div class="activity-list" *ngIf="recentOrders.length > 0">
+              <div class="activity-item" *ngFor="let order of recentOrders">
+                <div class="activity-info">
+                  <strong>{{ order.orderNumber }}</strong>
+                  <span class="customer">{{ order.customerEmail }}</span>
+                </div>
+                <div class="activity-meta">
+                  <span class="amount">{{ formatCurrency(order.total) }}</span>
+                  <span class="status" [ngClass]="getOrderStatusClass(order.status)">
+                    {{ order.status }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="empty-state" *ngIf="recentOrders.length === 0">
+              <p>No recent orders</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </section>
+
+      <!-- Recent Users -->
+      <section class="activity-section">
+        <div class="section-header">
+          <h2>Recent Registrations</h2>
+          <a routerLink="/admin/users" mat-button color="primary">View All</a>
+        </div>
+        <mat-card class="activity-card">
+          <mat-card-content>
+            <div class="activity-list" *ngIf="recentUsers.length > 0">
+              <div class="activity-item" *ngFor="let user of recentUsers">
+                <div class="activity-info">
+                  <mat-icon class="user-icon">person</mat-icon>
+                  <span class="user-email">{{ user.email }}</span>
+                </div>
+                <div class="activity-meta">
+                  <span class="date">{{ formatDate(user.registeredAt) }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="empty-state" *ngIf="recentUsers.length === 0">
+              <p>No recent registrations</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </section>
+    </div>
+
+    <!-- Quick Actions -->
+    <section class="actions-section">
+      <h2>Quick Actions</h2>
+      <div class="action-cards">
+        <mat-card class="action-card" routerLink="/admin/orders">
+          <mat-card-content>
+            <mat-icon>receipt_long</mat-icon>
+            <h3>Manage Orders</h3>
+            <p>View and update order statuses</p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="action-card" routerLink="/admin/users">
+          <mat-card-content>
+            <mat-icon>people</mat-icon>
+            <h3>Manage Users</h3>
+            <p>View users, assign roles, manage accounts</p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="action-card" routerLink="/admin/coupons">
+          <mat-card-content>
+            <mat-icon>local_offer</mat-icon>
+            <h3>Manage Coupons</h3>
+            <p>Create and manage discount coupons</p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="action-card" routerLink="/admin/products">
+          <mat-card-content>
+            <mat-icon>restaurant_menu</mat-icon>
+            <h3>Manage Products</h3>
+            <p>Add, edit, or remove products</p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="action-card" routerLink="/admin/categories">
+          <mat-card-content>
+            <mat-icon>category</mat-icon>
+            <h3>Manage Categories</h3>
+            <p>Organize product categories</p>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </section>
   </div>
 </div>

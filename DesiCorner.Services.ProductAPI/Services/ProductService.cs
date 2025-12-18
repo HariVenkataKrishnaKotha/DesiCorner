@@ -196,4 +196,59 @@ public class ProductService : IProductService
             ReviewCount = product.ReviewCount
         };
     }
+
+    public async Task<ProductStatsDto> GetProductStatsAsync(CancellationToken ct = default)
+    {
+        var products = await _db.Products
+            .Include(p => p.Category)
+            .Include(p => p.Reviews)
+            .ToListAsync(ct);
+
+        var availableProducts = products.Where(p => p.IsAvailable).ToList();
+
+        var stats = new ProductStatsDto
+        {
+            TotalProducts = products.Count,
+            ActiveProducts = availableProducts.Count,
+            OutOfStockProducts = products.Count(p => !p.IsAvailable),
+            LowStockProducts = 0, // Not applicable - no stock tracking
+            FeaturedProducts = 0, // Not applicable - no featured flag
+            AveragePrice = availableProducts.Any() ? availableProducts.Average(p => p.Price) : 0,
+            AverageRating = products.SelectMany(p => p.Reviews).Any()
+                ? (decimal)products.SelectMany(p => p.Reviews).Average(r => r.Rating)
+                : 0,
+            TotalReviews = products.SelectMany(p => p.Reviews).Count(),
+
+            CategoryBreakdown = products
+                .Where(p => p.Category != null)
+                .GroupBy(p => new { p.CategoryId, p.Category!.Name })
+                .Select(g => new CategoryStatsDto
+                {
+                    CategoryId = g.Key.CategoryId,
+                    CategoryName = g.Key.Name,
+                    ProductCount = g.Count(),
+                    AveragePrice = g.Average(p => p.Price)
+                })
+                .OrderByDescending(c => c.ProductCount)
+                .ToList(),
+
+            TopRatedProducts = products
+                .Where(p => p.Reviews.Any())
+                .OrderByDescending(p => p.Reviews.Average(r => r.Rating))
+                .ThenByDescending(p => p.Reviews.Count)
+                .Take(5)
+                .Select(p => new TopProductDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    ImageUrl = p.ImageUrl,
+                    Price = p.Price,
+                    AverageRating = p.Reviews.Average(r => r.Rating),
+                    ReviewCount = p.Reviews.Count
+                })
+                .ToList()
+        };
+
+        return stats;
+    }
 }

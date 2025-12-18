@@ -4,6 +4,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using StackExchange.Redis;
 using System.Text;
+using DesiCorner.Services.CartAPI.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,6 +59,10 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 
 // HttpClient
 builder.Services.AddHttpClient();
+
+// Database
+builder.Services.AddDbContext<CartDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("CartDb")));
 
 // Services
 builder.Services.AddScoped<ICartService, CartService>();

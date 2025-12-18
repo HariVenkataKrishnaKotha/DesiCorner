@@ -1,0 +1,328 @@
+<div class="admin-users">
+  <h1>User Management</h1>
+
+  <!-- Stats Cards -->
+  <div class="stats-grid" *ngIf="stats">
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.totalUsers }}</div>
+      <div class="stat-label">Total Users</div>
+    </div>
+    <div class="stat-card active">
+      <div class="stat-value">{{ stats.activeUsers }}</div>
+      <div class="stat-label">Active (30 days)</div>
+    </div>
+    <div class="stat-card new">
+      <div class="stat-value">{{ stats.newUsersToday }}</div>
+      <div class="stat-label">New Today</div>
+    </div>
+    <div class="stat-card week">
+      <div class="stat-value">{{ stats.newUsersThisWeek }}</div>
+      <div class="stat-label">This Week</div>
+    </div>
+    <div class="stat-card locked">
+      <div class="stat-value">{{ stats.lockedUsers }}</div>
+      <div class="stat-label">Locked</div>
+    </div>
+    <div class="stat-card unverified">
+      <div class="stat-value">{{ stats.unverifiedUsers }}</div>
+      <div class="stat-label">Unverified</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="search-box">
+      <input 
+        type="text" 
+        [(ngModel)]="filter.searchTerm" 
+        placeholder="Search by email or phone..."
+        (keyup.enter)="onSearch()"
+      />
+      <button class="btn-search" (click)="onSearch()">Search</button>
+    </div>
+
+    <div class="filter-group">
+      <select [(ngModel)]="filter.role" (change)="onFilterChange()">
+        <option value="">All Roles</option>
+        <option *ngFor="let role of roles" [value]="role.name">{{ role.name }}</option>
+      </select>
+
+      <select [(ngModel)]="filter.emailConfirmed" (change)="onFilterChange()">
+        <option [ngValue]="undefined">All Verification</option>
+        <option [ngValue]="true">Verified</option>
+        <option [ngValue]="false">Unverified</option>
+      </select>
+
+      <select [(ngModel)]="filter.isLocked" (change)="onFilterChange()">
+        <option [ngValue]="undefined">All Status</option>
+        <option [ngValue]="false">Active</option>
+        <option [ngValue]="true">Locked</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" *ngIf="loading">Loading users...</div>
+
+  <!-- Error -->
+  <div class="error" *ngIf="error">{{ error }}</div>
+
+  <!-- Users Table -->
+  <div class="table-container" *ngIf="!loading && users.length > 0">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th (click)="onSort('Email')" class="sortable">
+            Email
+            <span *ngIf="filter.sortBy === 'Email'">{{ filter.sortDescending ? '▼' : '▲' }}</span>
+          </th>
+          <th>Phone</th>
+          <th>Roles</th>
+          <th>Status</th>
+          <th (click)="onSort('RewardPoints')" class="sortable">
+            Points
+            <span *ngIf="filter.sortBy === 'RewardPoints'">{{ filter.sortDescending ? '▼' : '▲' }}</span>
+          </th>
+          <th (click)="onSort('CreatedAt')" class="sortable">
+            Joined
+            <span *ngIf="filter.sortBy === 'CreatedAt'">{{ filter.sortDescending ? '▼' : '▲' }}</span>
+          </th>
+          <th (click)="onSort('LastLoginAt')" class="sortable">
+            Last Login
+            <span *ngIf="filter.sortBy === 'LastLoginAt'">{{ filter.sortDescending ? '▼' : '▲' }}</span>
+          </th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of users" [class.locked-row]="user.isLocked">
+          <td>
+            <div class="email-cell">
+              <span>{{ user.email }}</span>
+              <span class="verified-badge" *ngIf="user.emailConfirmed" title="Email Verified">✓</span>
+              <span class="unverified-badge" *ngIf="!user.emailConfirmed" title="Email Not Verified">!</span>
+            </div>
+          </td>
+          <td>
+            {{ user.phoneNumber || '-' }}
+            <span class="verified-badge small" *ngIf="user.phoneNumberConfirmed">✓</span>
+          </td>
+          <td>
+            <div class="roles-list">
+              <span 
+                *ngFor="let role of user.roles" 
+                class="role-badge"
+                [class.admin]="role === 'Admin'"
+                [class.customer]="role === 'Customer'"
+              >
+                {{ role }}
+              </span>
+            </div>
+          </td>
+          <td>
+            <span class="status-badge" [class.locked]="user.isLocked" [class.active]="!user.isLocked">
+              {{ user.isLocked ? 'Locked' : 'Active' }}
+            </span>
+          </td>
+          <td>{{ user.rewardPoints }}</td>
+          <td>{{ formatDate(user.createdAt) }}</td>
+          <td>{{ formatDate(user.lastLoginAt) }}</td>
+          <td class="actions">
+            <button class="btn-view" (click)="viewUser(user)">View</button>
+            <button 
+              class="btn-role" 
+              (click)="openRoleModal(user, 'add')"
+              title="Add Role"
+            >
+              +Role
+            </button>
+            <button 
+              *ngIf="user.isLocked"
+              class="btn-unlock" 
+              (click)="quickUnlock(user)"
+              title="Unlock User"
+            >
+              Unlock
+            </button>
+            <button 
+              *ngIf="!user.isLocked"
+              class="btn-lock" 
+              (click)="openLockModal(user)"
+              title="Lock User"
+            >
+              Lock
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!loading && users.length === 0">
+    <p>No users found matching your criteria.</p>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="totalPages > 1">
+    <button class="page-btn" [disabled]="filter.page === 1" (click)="onPageChange(1)">First</button>
+    <button class="page-btn" [disabled]="filter.page === 1" (click)="onPageChange(filter.page - 1)">Prev</button>
+    
+    <button 
+      *ngFor="let page of pages"
+      class="page-btn"
+      [class.active]="page === filter.page"
+      (click)="onPageChange(page)"
+    >
+      {{ page }}
+    </button>
+    
+    <button class="page-btn" [disabled]="filter.page === totalPages" (click)="onPageChange(filter.page + 1)">Next</button>
+    <button class="page-btn" [disabled]="filter.page === totalPages" (click)="onPageChange(totalPages)">Last</button>
+
+    <span class="page-info">Page {{ filter.page }} of {{ totalPages }} ({{ totalCount }} users)</span>
+  </div>
+
+  <!-- User Detail Modal -->
+  <div class="modal-overlay" *ngIf="showUserDetail" (click)="closeUserDetail()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <button class="modal-close" (click)="closeUserDetail()">&times;</button>
+      
+      <h2>User Details</h2>
+      
+      <div class="user-detail" *ngIf="selectedUser">
+        <div class="detail-section">
+          <h3>Account Information</h3>
+          <p><strong>Email:</strong> {{ selectedUser.email }} 
+            <span class="verified-badge" *ngIf="selectedUser.emailConfirmed">Verified</span>
+            <span class="unverified-badge" *ngIf="!selectedUser.emailConfirmed">Not Verified</span>
+          </p>
+          <p><strong>Phone:</strong> {{ selectedUser.phoneNumber || 'Not provided' }}
+            <span class="verified-badge small" *ngIf="selectedUser.phoneNumberConfirmed">Verified</span>
+          </p>
+          <p><strong>Dietary Preference:</strong> {{ selectedUser.dietaryPreference || 'Not set' }}</p>
+          <p><strong>Reward Points:</strong> {{ selectedUser.rewardPoints }}</p>
+        </div>
+
+        <div class="detail-section">
+          <h3>Roles</h3>
+          <div class="roles-management">
+            <div class="current-roles">
+              <span 
+                *ngFor="let role of selectedUser.roles" 
+                class="role-badge large"
+                [class.admin]="role === 'Admin'"
+                [class.customer]="role === 'Customer'"
+              >
+                {{ role }}
+                <button class="remove-role" (click)="openRoleModal(selectedUser, 'remove'); selectedRole = role; confirmRoleChange()">&times;</button>
+              </span>
+            </div>
+            <button class="btn-add-role" (click)="openRoleModal(selectedUser, 'add')">+ Add Role</button>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Activity</h3>
+          <p><strong>Joined:</strong> {{ formatDate(selectedUser.createdAt) }}</p>
+          <p><strong>Last Login:</strong> {{ formatDate(selectedUser.lastLoginAt) }}</p>
+        </div>
+
+        <div class="detail-section">
+          <h3>Account Status</h3>
+          <div class="status-management">
+            <span class="status-badge large" [class.locked]="selectedUser.isLocked" [class.active]="!selectedUser.isLocked">
+              {{ selectedUser.isLocked ? 'Locked' : 'Active' }}
+            </span>
+            <button 
+              *ngIf="selectedUser.isLocked"
+              class="btn-unlock large" 
+              (click)="quickUnlock(selectedUser)"
+            >
+              Unlock Account
+            </button>
+            <button 
+              *ngIf="!selectedUser.isLocked"
+              class="btn-lock large" 
+              (click)="openLockModal(selectedUser)"
+            >
+              Lock Account
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Role Modal -->
+  <div class="modal-overlay" *ngIf="showRoleModal" (click)="closeRoleModal()">
+    <div class="modal-content small" (click)="$event.stopPropagation()">
+      <button class="modal-close" (click)="closeRoleModal()">&times;</button>
+      
+      <h2>{{ roleAction === 'add' ? 'Add Role' : 'Remove Role' }}</h2>
+      
+      <div class="role-form" *ngIf="selectedUser">
+        <p>User: <strong>{{ selectedUser.email }}</strong></p>
+        
+        <div class="form-group" *ngIf="roleAction === 'add'">
+          <label>Select Role to Add:</label>
+          <select [(ngModel)]="selectedRole">
+            <option value="">-- Select Role --</option>
+            <option *ngFor="let role of getAvailableRolesToAdd(selectedUser)" [value]="role.name">
+              {{ role.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group" *ngIf="roleAction === 'remove'">
+          <label>Select Role to Remove:</label>
+          <select [(ngModel)]="selectedRole">
+            <option value="">-- Select Role --</option>
+            <option *ngFor="let role of getAvailableRolesToRemove(selectedUser)" [value]="role">
+              {{ role }}
+            </option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" (click)="closeRoleModal()">Cancel</button>
+          <button 
+            class="btn-confirm" 
+            [disabled]="!selectedRole"
+            (click)="confirmRoleChange()"
+          >
+            {{ roleAction === 'add' ? 'Add Role' : 'Remove Role' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lock Modal -->
+  <div class="modal-overlay" *ngIf="showLockModal" (click)="closeLockModal()">
+    <div class="modal-content small" (click)="$event.stopPropagation()">
+      <button class="modal-close" (click)="closeLockModal()">&times;</button>
+      
+      <h2>Lock User Account</h2>
+      
+      <div class="lock-form" *ngIf="selectedUser">
+        <p>Are you sure you want to lock <strong>{{ selectedUser.email }}</strong>?</p>
+        <p class="warning">This will prevent the user from logging in.</p>
+        
+        <div class="form-group">
+          <label>Reason (optional):</label>
+          <textarea 
+            [(ngModel)]="lockReason" 
+            placeholder="Enter reason for locking this account..."
+            rows="3"
+          ></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" (click)="closeLockModal()">Cancel</button>
+          <button class="btn-danger" (click)="confirmLockToggle()">Lock Account</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
