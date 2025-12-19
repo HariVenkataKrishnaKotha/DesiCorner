@@ -6,12 +6,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace DesiCorner.AuthServer.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[Authorize(Roles = "Admin")]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
 public class AdminController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
