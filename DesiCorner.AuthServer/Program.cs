@@ -91,9 +91,12 @@ builder.Services.AddAuthentication(options =>
         ValidAudiences = new[] { "desicorner-api", "desicorner-angular" },
         ValidateLifetime = true,
         ClockSkew = TimeSpan.FromSeconds(60),
-        ValidateIssuerSigningKey = true
+        ValidateIssuerSigningKey = true,
         // Note: IssuerSigningKey is NOT set here - it will be retrieved from JWKS endpoint
+        RoleClaimType = "role",  
+        NameClaimType = "name"      
     };
+    
 
     options.Events = new JwtBearerEvents
     {
@@ -139,7 +142,6 @@ builder.Services.AddAuthorization(options =>
 });
 
 // OpenIddict
-// OpenIddict
 builder.Services.AddOpenIddict()
     .AddCore(opt => opt.UseEntityFrameworkCore().UseDbContext<ApplicationDbContext>())
     .AddServer(opt =>
@@ -160,7 +162,7 @@ builder.Services.AddOpenIddict()
         // Flows - ADD PASSWORD FLOW HERE
         opt.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange();
         opt.AllowRefreshTokenFlow();
-        opt.AllowPasswordFlow(); // ← ADD THIS LINE
+        opt.AllowPasswordFlow();
 
         // Development keys (use proper keys in production!)
         opt.AddEphemeralEncryptionKey()
