@@ -68,14 +68,14 @@
         <mat-card-header>
           <mat-card-title>Delivery Information</mat-card-title>
           @if (!isAuthenticated) {
-            <mat-card-subtitle>
-  @if (!isAuthenticated) {
+  <mat-card-subtitle>
     <span>Checkout as guest or <a routerLink="/auth/login" [queryParams]="{returnUrl: '/checkout'}">login</a> for faster checkout next time</span>
-  } @else {
+  </mat-card-subtitle>
+} @else {
+  <mat-card-subtitle>
     <span>Complete your order details below</span>
-  }
-</mat-card-subtitle>
-          }
+  </mat-card-subtitle>
+}
         </mat-card-header>
         
         <mat-card-content>
@@ -200,65 +200,138 @@
     </div>
   </div>
 }
+<!-- Order Type Selection -->
+<div class="form-section">
+  <h3>Order Type</h3>
+  <mat-radio-group formControlName="orderType" class="order-type-group">
+    <mat-radio-button value="Delivery">
+      <mat-icon>local_shipping</mat-icon>
+      <div class="option-content">
+        <strong>Delivery</strong>
+        <span>We'll deliver to your address</span>
+      </div>
+    </mat-radio-button>
+    <mat-radio-button value="Pickup">
+      <mat-icon>store</mat-icon>
+      <div class="option-content">
+        <strong>Pickup</strong>
+        <span>Pick up at our store</span>
+      </div>
+    </mat-radio-button>
+  </mat-radio-group>
+</div>
 
-            <!-- Delivery Address -->
-            <div class="form-section">
-              <h3>Delivery Address</h3>
-              
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Full Name</mat-label>
-                <input matInput formControlName="fullName" placeholder="John Doe">
-                @if (checkoutForm.get('fullName')?.hasError('required')) {
-                  <mat-error>Name is required</mat-error>
-                }
-              </mat-form-field>
-              
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Street Address</mat-label>
-                <input matInput formControlName="street" placeholder="123 Main St">
-                @if (checkoutForm.get('street')?.hasError('required')) {
-                  <mat-error>Street address is required</mat-error>
-                }
-              </mat-form-field>
-              
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Apartment/Suite (Optional)</mat-label>
-                <input matInput formControlName="apartment" placeholder="Apt 4B">
-              </mat-form-field>
-              
-              <div class="form-row">
-                <mat-form-field appearance="outline">
-                  <mat-label>City</mat-label>
-                  <input matInput formControlName="city" placeholder="New York">
-                  @if (checkoutForm.get('city')?.hasError('required')) {
-                    <mat-error>City is required</mat-error>
+<!-- Pickup Time (shown only for pickup orders) -->
+@if (checkoutForm.get('orderType')?.value === 'Pickup') {
+  <div class="form-section">
+    <h3>Pickup Details</h3>
+    <div class="pickup-info">
+      <mat-icon>location_on</mat-icon>
+      <div>
+        <strong>DesiCorner Store</strong>
+        <p>123 Main Street, Your City, ST 12345</p>
+        <p>Open: 10 AM - 9 PM</p>
+      </div>
+    </div>
+    
+    <div class="pickup-time-notice">
+      <mat-icon>schedule</mat-icon>
+      <span>Your order will be ready for pickup in approximately <strong>20 minutes</strong></span>
+    </div>
+  </div>
+}
+
+<!-- Delivery Address (shown only for delivery orders) -->
+@if (checkoutForm.get('orderType')?.value === 'Delivery') {
+  <div class="form-section">
+    <h3>Delivery Address</h3>
+
+    <!-- Saved Address Selector (for authenticated users) -->
+    @if (isAuthenticated && savedAddresses.length > 0) {
+      <div class="saved-addresses-section">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Select an address</mat-label>
+          <mat-select
+            [value]="selectedAddressId"
+            (selectionChange)="onAddressSelect($event.value)">
+            @for (address of savedAddresses; track address.id) {
+              <mat-option [value]="address.id">
+                <div class="address-option">
+                  <strong>{{ address.label }}</strong>
+                  <span>{{ address.addressLine1 }}, {{ address.city }}, {{ address.state }} {{ address.zipCode }}</span>
+                  @if (address.isDefault) {
+                    <mat-chip class="default-chip">Default</mat-chip>
                   }
-                </mat-form-field>
-                
-                <mat-form-field appearance="outline">
-                  <mat-label>State</mat-label>
-                  <mat-select formControlName="state">
-                    @for (state of states; track state) {
-                      <mat-option [value]="state">{{ state }}</mat-option>
-                    }
-                  </mat-select>
-                  @if (checkoutForm.get('state')?.hasError('required')) {
-                    <mat-error>State is required</mat-error>
-                  }
-                </mat-form-field>
-                
-                <mat-form-field appearance="outline">
-                  <mat-label>ZIP Code</mat-label>
-                  <input matInput formControlName="zipCode" placeholder="10001">
-                  @if (checkoutForm.get('zipCode')?.hasError('required')) {
-                    <mat-error>ZIP is required</mat-error>
-                  }
-                  @if (checkoutForm.get('zipCode')?.hasError('pattern')) {
-                    <mat-error>Invalid ZIP code</mat-error>
-                  }
-                </mat-form-field>
-              </div>
-            </div>
+                </div>
+              </mat-option>
+            }
+            <mat-option value="new">
+              <mat-icon>add</mat-icon>
+              Enter a new address
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    }
+
+    <!-- Address Form Fields (show if no saved addresses or entering new) -->
+    @if (!isAuthenticated || savedAddresses.length === 0 || useNewAddress) {
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Full Name</mat-label>
+        <input matInput formControlName="fullName" placeholder="John Doe">
+        @if (checkoutForm.get('fullName')?.hasError('required')) {
+          <mat-error>Name is required</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Street Address</mat-label>
+        <input matInput formControlName="street" placeholder="123 Main St">
+        @if (checkoutForm.get('street')?.hasError('required')) {
+          <mat-error>Street address is required</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Apartment/Suite (Optional)</mat-label>
+        <input matInput formControlName="apartment" placeholder="Apt 4B">
+      </mat-form-field>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>City</mat-label>
+          <input matInput formControlName="city" placeholder="New York">
+          @if (checkoutForm.get('city')?.hasError('required')) {
+            <mat-error>City is required</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>State</mat-label>
+          <mat-select formControlName="state">
+            @for (state of states; track state) {
+              <mat-option [value]="state">{{ state }}</mat-option>
+            }
+          </mat-select>
+          @if (checkoutForm.get('state')?.hasError('required')) {
+            <mat-error>State is required</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>ZIP Code</mat-label>
+          <input matInput formControlName="zipCode" placeholder="10001">
+          @if (checkoutForm.get('zipCode')?.hasError('required')) {
+            <mat-error>ZIP is required</mat-error>
+          }
+          @if (checkoutForm.get('zipCode')?.hasError('pattern')) {
+            <mat-error>Invalid ZIP code</mat-error>
+          }
+        </mat-form-field>
+      </div>
+    }
+  </div>
+}
 
             <!-- Special Instructions -->
             <div class="form-section">
@@ -271,14 +344,20 @@
 
             <!-- Payment Method -->
             <div class="form-section">
-              <h3>Payment Method</h3>
-              <mat-radio-group formControlName="paymentMethod">
-  <mat-radio-button value="Stripe" checked>
-    <mat-icon>credit_card</mat-icon>
-    <span>Credit/Debit Card (Stripe)</span>
-  </mat-radio-button>
-</mat-radio-group>
-            </div>
+  <h3>Payment Method</h3>
+  <mat-radio-group formControlName="paymentMethod">
+    @for (method of availablePaymentMethods; track method.value) {
+      <mat-radio-button [value]="method.value">
+        @if (method.value === 'Stripe') {
+          <mat-icon>credit_card</mat-icon>
+        } @else {
+          <mat-icon>payments</mat-icon>
+        }
+        <span>{{ method.label }}</span>
+      </mat-radio-button>
+    }
+  </mat-radio-group>
+</div>
 
             <!-- Error Display -->
             @if (orderError) {
@@ -321,7 +400,7 @@
 
                 <!-- Payment Actions -->
                 <div class="payment-actions">
-                  <button mat-button (click)="cancelPayment()" [disabled]="isProcessingPayment">
+                  <button mat-button type="button" (click)="cancelPayment()" [disabled]="isProcessingPayment">
                     <mat-icon>cancel</mat-icon>
                     Cancel
                   </button>
@@ -341,24 +420,38 @@
                 </div>
               </div>
             } @else {
-              <!-- Submit Button (initial state) -->
-              <div class="form-actions">
-                <a mat-button routerLink="/cart">
-                  <mat-icon>arrow_back</mat-icon>
-                  Back to Cart
-                </a>
-                <button mat-raised-button color="primary" type="submit" class="submit-button"
-                        [disabled]="!canPlaceOrder">
-                  @if (isSubmitting) {
-                    <mat-spinner diameter="20"></mat-spinner>
-                    <span>Processing...</span>
-                  } @else {
-                    <mat-icon>shopping_cart</mat-icon>
-                    <span>Continue to Payment - ${{ cart.total.toFixed(2) }}</span>
-                  }
-                </button>
-              </div>
-            }
+  <!-- Submit Button -->
+  <div class="form-actions">
+    <a mat-button routerLink="/cart">
+      <mat-icon>arrow_back</mat-icon>
+      Back to Cart
+    </a>
+    
+    @if (checkoutForm.get('paymentMethod')?.value === 'PayAtPickup') {
+      <button mat-raised-button color="primary" type="submit" class="submit-button"
+              [disabled]="!canPlaceOrder">
+        @if (isSubmitting) {
+          <mat-spinner diameter="20"></mat-spinner>
+          <span>Processing...</span>
+        } @else {
+          <mat-icon>check_circle</mat-icon>
+          <span>Place Order - Pay at Pickup (${{ cart.total.toFixed(2) }})</span>
+        }
+      </button>
+    } @else {
+      <button mat-raised-button color="primary" type="submit" class="submit-button"
+              [disabled]="!canPlaceOrder">
+        @if (isSubmitting) {
+          <mat-spinner diameter="20"></mat-spinner>
+          <span>Processing...</span>
+        } @else {
+          <mat-icon>shopping_cart</mat-icon>
+          <span>Continue to Payment - ${{ cart.total.toFixed(2) }}</span>
+        }
+      </button>
+    }
+  </div>
+}
           </form>
         </mat-card-content>
       </mat-card>

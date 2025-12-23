@@ -4,30 +4,28 @@ namespace DesiCorner.Contracts.Orders;
 
 public class CreateOrderDto
 {
-    // Guest checkout fields (optional - for non-authenticated users)
+    // Guest checkout fields
     public string? Email { get; set; }
     public string? Phone { get; set; }
     public string? OtpCode { get; set; }
     public string? SessionId { get; set; }
 
-    // Delivery address fields (required)
+    // Order type
     [Required]
-    public string DeliveryAddress { get; set; } = string.Empty;
+    public string OrderType { get; set; } = "Delivery"; // "Delivery" or "Pickup"
 
-    [Required]
-    public string DeliveryCity { get; set; } = string.Empty;
+    public DateTime? ScheduledPickupTime { get; set; }
 
-    [Required]
-    public string DeliveryState { get; set; } = string.Empty;
-
-    [Required]
-    public string DeliveryZipCode { get; set; } = string.Empty;
-
+    // Delivery address (required only for Delivery orders)
+    public string? DeliveryAddress { get; set; }
+    public string? DeliveryCity { get; set; }
+    public string? DeliveryState { get; set; }
+    public string? DeliveryZipCode { get; set; }
     public string? DeliveryInstructions { get; set; }
 
     // Payment
-    public string PaymentMethod { get; set; } = "CashOnDelivery";
+    [Required]
+    public string PaymentMethod { get; set; } = "Stripe"; // "Stripe" or "PayAtPickup"
 
-    [Required(ErrorMessage = "Payment Intent ID is required")]
-    public string? PaymentIntentId { get; set; }
+    public string? PaymentIntentId { get; set; } // Required only for Stripe
 }

@@ -431,17 +431,20 @@ public class OrdersController : ControllerBase
 
     private Guid? GetUserId()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        // With MapInboundClaims = false, use "sub" claim
+        var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return Guid.TryParse(userIdClaim, out var userId) ? userId : null;
     }
 
     private string? GetUserEmail()
     {
-        return User.FindFirst(ClaimTypes.Email)?.Value;
+        // With MapInboundClaims = false, use "email" claim
+        return User.FindFirst("email")?.Value ?? User.FindFirst(ClaimTypes.Email)?.Value;
     }
 
     private string? GetUserPhone()
     {
+        // OpenIddict uses "phone_number" claim
         return User.FindFirst("phone_number")?.Value;
     }
 

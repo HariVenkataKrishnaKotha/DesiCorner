@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OpenIddict.Validation.AspNetCore;
 using StackExchange.Redis;
 using System.Security.Claims;
 
@@ -366,7 +367,7 @@ public class AccountController : ControllerBase
     /// <summary>
     /// Logout - Clears authentication cookie
     /// </summary>
-    [Authorize]
+    [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
@@ -381,11 +382,11 @@ public class AccountController : ControllerBase
     // <summary>
     /// Get current user profile - Supports both Cookie and JWT authentication
     /// </summary>
-    [Authorize]
+    [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
     [HttpGet("profile")]
     public async Task<IActionResult> GetProfile()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userId))
         {
@@ -448,11 +449,11 @@ public class AccountController : ControllerBase
     // <summary>
     /// Add delivery address
     /// </summary>
-    [Authorize]
+    [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
     [HttpPost("addresses")]
     public async Task<IActionResult> AddAddress([FromBody] AddAddressDto request)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var userGuid))
         {
             return Unauthorized();
@@ -508,7 +509,7 @@ public class AccountController : ControllerBase
     // <summary>
     /// Change password
     /// </summary>
-    [Authorize]
+    [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto request)
     {

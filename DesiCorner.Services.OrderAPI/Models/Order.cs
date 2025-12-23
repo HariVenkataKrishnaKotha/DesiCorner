@@ -27,21 +27,17 @@ public class Order
     public List<OrderItem> Items { get; set; } = new();
 
     // Delivery Address
-    [Required]
     [MaxLength(500)]
-    public string DeliveryAddress { get; set; } = string.Empty;
+    public string? DeliveryAddress { get; set; }
 
-    [Required]
     [MaxLength(100)]
-    public string DeliveryCity { get; set; } = string.Empty;
+    public string? DeliveryCity { get; set; }
 
-    [Required]
     [MaxLength(100)]
-    public string DeliveryState { get; set; } = string.Empty;
+    public string? DeliveryState { get; set; }
 
-    [Required]
     [MaxLength(20)]
-    public string DeliveryZipCode { get; set; } = string.Empty;
+    public string? DeliveryZipCode { get; set; }
 
     // Pricing
     [Column(TypeName = "decimal(18,2)")]
@@ -88,4 +84,12 @@ public class Order
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    [Required]
+    [MaxLength(20)]
+    public string OrderType { get; set; } = "Delivery"; // "Delivery" or "Pickup"
+
+    // For pickup orders
+    public DateTime? ScheduledPickupTime { get; set; }
+
 }

@@ -22,6 +22,8 @@ export interface Order {
   items: OrderItem[];
 }
 
+export type OrderType = 'Delivery' | 'Pickup';
+
 export interface OrderItem {
   id: string;
   productId: string;
@@ -41,19 +43,26 @@ export interface OrderSummary {
 }
 
 export interface CreateOrderRequest {
-  deliveryAddress: string;
-  deliveryCity: string;
-  deliveryState: string;
-  deliveryZipCode: string;
+  // Order type
+  orderType: OrderType;
+  scheduledPickupTime?: string;
+  
+  // Delivery address (optional for pickup)
+  deliveryAddress?: string;
+  deliveryCity?: string;
+  deliveryState?: string;
+  deliveryZipCode?: string;
   deliveryInstructions?: string;
-  paymentMethod: string;
+  
+  // Payment
+  paymentMethod: 'Stripe' | 'PayAtPickup';
   paymentIntentId?: string;
   
   // Guest checkout fields
   email?: string;
   phone?: string;
   otpCode?: string;
-  sessionId?: string;  // Add this line
+  sessionId?: string;
 }
 
 export type OrderStatus = 

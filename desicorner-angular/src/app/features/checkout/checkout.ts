@@ -21,6 +21,8 @@ import { CreateOrderRequest } from '../../core/models/order.models';
 import { OtpService } from '@core/services/otp.service';
 import { OnDestroy } from '@angular/core';
 import { PaymentService } from '@core/services/payment.service';
+import { Address } from '../../core/models/auth.models';
+import { MatChipsModule } from '@angular/material/chips';
 
 @Component({
   selector: 'app-checkout',
@@ -37,7 +39,8 @@ import { PaymentService } from '@core/services/payment.service';
     MatIconModule,
     MatProgressSpinnerModule,
     MatRadioModule,
-    MatSelectModule
+    MatSelectModule,
+    MatChipsModule
   ],
   templateUrl: './checkout.html',
   styleUrls: ['./checkout.scss']
@@ -81,6 +84,11 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
   ];
 
+  // Saved addresses for authenticated users
+savedAddresses: Address[] = [];
+selectedAddressId: string | null = null;
+useNewAddress = false;
+
   ngOnInit(): void {
     // Subscribe to cart updates
     this.cartService.cart$.subscribe(cart => {
@@ -90,6 +98,18 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     // Check auth state
     this.authService.authState$.subscribe(state => {
       this.isAuthenticated = state.isAuthenticated;
+
+      // Load saved addresses for authenticated users
+  if (state.isAuthenticated && state.profile?.addresses) {
+    this.savedAddresses = state.profile.addresses;
+    
+    // Pre-select default address
+    const defaultAddress = this.savedAddresses.find(a => a.isDefault);
+    if (defaultAddress) {
+      this.selectedAddressId = defaultAddress.id;
+      this.fillAddressFromSaved(defaultAddress);
+    }
+  }
       this.updateFormValidation();
     });
 
@@ -112,29 +132,85 @@ this.paymentService.initializeStripe().catch(error => {
 }
 
   private initForm(): void {
-    this.checkoutForm = this.fb.group({
-      // Contact info (for guests)
-      email: ['', [Validators.email]],
-      phone: [''],
-      otpCode: ['', [Validators.minLength(6), Validators.maxLength(6)]],
-      
-      // Delivery address
-      fullName: ['', Validators.required],
-      street: ['', Validators.required],
-      apartment: [''],
-      city: ['', Validators.required],
-      state: ['', Validators.required],
-      zipCode: ['', [Validators.required, Validators.pattern(/^\d{5}(-\d{4})?$/)]],
-      
-      // Optional
-      instructions: [''],
-      
-      // Payment
-      paymentMethod: ['Stripe', Validators.required],
-    });
+  this.checkoutForm = this.fb.group({
+    // Order type
+    orderType: ['Delivery', Validators.required],
+    scheduledPickupTime: [''],
+    
+    // Contact info (for guests)
+    email: ['', [Validators.email]],
+    phone: [''],
+    otpCode: ['', [Validators.minLength(6), Validators.maxLength(6)]],
+    
+    // Delivery address (conditional validation)
+    fullName: [''],
+    street: [''],
+    apartment: [''],
+    city: [''],
+    state: [''],
+    zipCode: [''],
+    
+    // Optional
+    instructions: [''],
+    
+    // Payment
+    paymentMethod: ['Stripe', Validators.required],
+  });
 
-    this.updateFormValidation();
+  // Setup conditional validation
+  this.setupConditionalValidation();
+}
+
+private setupConditionalValidation(): void {
+  const orderTypeControl = this.checkoutForm.get('orderType');
+  
+  // Initialize for current value (important for page load!)
+  const initialOrderType = orderTypeControl?.value || 'Delivery';
+  this.updateDeliveryValidation(initialOrderType);
+  this.updatePaymentOptions(initialOrderType);
+  
+  // Subscribe to changes
+  orderTypeControl?.valueChanges.subscribe(orderType => {
+    this.updateDeliveryValidation(orderType);
+    this.updatePaymentOptions(orderType);
+  });
+}
+
+private updateDeliveryValidation(orderType: string): void {
+  const addressFields = ['fullName', 'street', 'city', 'state', 'zipCode'];
+  
+  addressFields.forEach(field => {
+    const control = this.checkoutForm.get(field);
+    if (orderType === 'Delivery') {
+      control?.setValidators([Validators.required]);
+    } else {
+      control?.clearValidators();
+    }
+    control?.updateValueAndValidity();
+  });
+}
+
+// Available payment methods based on order type
+availablePaymentMethods: { value: string; label: string }[] = [
+  { value: 'Stripe', label: 'Credit/Debit Card' }
+];
+
+private updatePaymentOptions(orderType: string): void {
+  if (orderType === 'Pickup') {
+    this.availablePaymentMethods = [
+      { value: 'Stripe', label: 'Credit/Debit Card' },
+      { value: 'PayAtPickup', label: 'Pay at Pickup' }
+    ];
+  } else {
+    this.availablePaymentMethods = [
+      { value: 'Stripe', label: 'Credit/Debit Card' }
+    ];
+    // Reset to Stripe if currently PayAtPickup
+    if (this.checkoutForm.get('paymentMethod')?.value === 'PayAtPickup') {
+      this.checkoutForm.patchValue({ paymentMethod: 'Stripe' });
+    }
   }
+}
 
   private updateFormValidation(): void {
   if (!this.checkoutForm) return;
@@ -236,6 +312,40 @@ verifyOtp(): void {
   });
 }
 
+fillAddressFromSaved(address: Address): void {
+  this.checkoutForm.patchValue({
+    fullName: '', // You may want to add name to Address model
+    street: address.addressLine1,
+    apartment: address.addressLine2 || '',
+    city: address.city,
+    state: address.state,
+    zipCode: address.zipCode
+  });
+}
+
+onAddressSelect(addressId: string): void {
+  if (addressId === 'new') {
+    this.useNewAddress = true;
+    this.selectedAddressId = null;
+    // Clear form for new address
+    this.checkoutForm.patchValue({
+      street: '',
+      apartment: '',
+      city: '',
+      state: '',
+      zipCode: ''
+    });
+  } else {
+    this.useNewAddress = false;
+    this.selectedAddressId = addressId;
+    const address = this.savedAddresses.find(a => a.id === addressId);
+    if (address) {
+      this.fillAddressFromSaved(address);
+    }
+  }
+}
+
+
 getFormErrors(): any {
   const errors: any = {};
   Object.keys(this.checkoutForm.controls).forEach(key => {
@@ -264,10 +374,27 @@ get countdownDisplay(): string {
 }
 
 get canPlaceOrder(): boolean {
-  const formValid = this.checkoutForm.valid;
   const hasItems = this.cart.items.length > 0;
   const notSubmitting = !this.isSubmitting;
   const guestVerified = this.isAuthenticated || this.otpVerified;
+  
+  // Check form validity, but for authenticated users with saved address, skip address validation
+  let formValid = this.checkoutForm.valid;
+  
+  // If authenticated user has selected a saved address (not "new"), address fields don't need validation
+  if (this.isAuthenticated && this.selectedAddressId && this.selectedAddressId !== 'new' && !this.useNewAddress) {
+    // Check only non-address fields
+    const orderType = this.checkoutForm.get('orderType')?.valid ?? false;
+    const paymentMethod = this.checkoutForm.get('paymentMethod')?.valid ?? false;
+    formValid = orderType && paymentMethod;
+  }
+  
+  // For pickup orders, no address validation needed
+  if (this.checkoutForm.get('orderType')?.value === 'Pickup') {
+    const orderType = this.checkoutForm.get('orderType')?.valid ?? false;
+    const paymentMethod = this.checkoutForm.get('paymentMethod')?.valid ?? false;
+    formValid = orderType && paymentMethod;
+  }
 
   console.log('Can place order check:', {
     formValid,
@@ -276,6 +403,9 @@ get canPlaceOrder(): boolean {
     isAuthenticated: this.isAuthenticated,
     otpVerified: this.otpVerified,
     guestVerified,
+    selectedAddressId: this.selectedAddressId,
+    useNewAddress: this.useNewAddress,
+    orderType: this.checkoutForm.get('orderType')?.value,
     finalResult: formValid && hasItems && notSubmitting && guestVerified
   });
 
@@ -292,7 +422,6 @@ resendOtp(): void {
 }
 
   async onSubmit(): Promise<void> {
-  // Validate form
   if (this.checkoutForm.invalid || this.cart.items.length === 0) {
     Object.keys(this.checkoutForm.controls).forEach(key => {
       this.checkoutForm.get(key)?.markAsTouched();
@@ -302,49 +431,144 @@ resendOtp(): void {
 
   // For guest checkout, verify OTP is completed
   if (!this.isAuthenticated && !this.otpVerified) {
-    this.toastr.warning('Please verify your email with the code sent to you', 'Verification Required');
+    this.toastr.warning('Please verify your email', 'Verification Required');
     return;
   }
 
+  const paymentMethod = this.checkoutForm.get('paymentMethod')?.value;
+  
+  if (paymentMethod === 'PayAtPickup') {
+    // Skip Stripe - create order directly
+    await this.createOrderDirectly();
+  } else {
+    // Stripe payment flow
+    this.isSubmitting = true;
+    this.orderError = '';
+    this.paymentError = '';
+
+    try {
+      // Create Payment Intent
+      const paymentIntent = await this.paymentService.createPaymentIntent({
+        orderId: '00000000-0000-0000-0000-000000000000',
+        amount: this.cart.total,
+        currency: 'usd'
+      }).toPromise();
+
+      if (!paymentIntent) {
+        throw new Error('Failed to create payment intent');
+      }
+
+      this.paymentIntentId = paymentIntent.paymentIntentId;
+      this.clientSecret = paymentIntent.clientSecret;
+
+      // Show payment form
+      this.showPaymentForm = true;
+      this.isSubmitting = false;
+
+      setTimeout(() => {
+        this.paymentService.createCardElement('card-element');
+        this.toastr.info('Please enter your card details', 'Payment');
+      }, 100);
+
+    } catch (error: any) {
+      this.isSubmitting = false;
+      this.paymentError = error.message || 'Failed to initialize payment';
+      this.toastr.error(this.paymentError, 'Payment Error');
+    }
+  }
+}
+
+private async createOrderDirectly(): Promise<void> {
   this.isSubmitting = true;
   this.orderError = '';
-  this.paymentError = '';
 
-  try {
-    // Step 1: Create Payment Intent
-    console.log('Creating payment intent for amount:', this.cart.total);
-    
-    const paymentIntent = await this.paymentService.createPaymentIntent({
-      orderId: '00000000-0000-0000-0000-000000000000', // Temporary, will be replaced with actual order ID
-      amount: this.cart.total,
-      currency: 'usd'
-    }).toPromise();
+  const formValue = this.checkoutForm.value;
+  const orderType = formValue.orderType;
 
-    if (!paymentIntent) {
-      throw new Error('Failed to create payment intent');
+  // Get address data - either from saved address or form fields
+  let addressData: { 
+    deliveryAddress?: string; 
+    deliveryCity?: string; 
+    deliveryState?: string; 
+    deliveryZipCode?: string; 
+  } = {};
+
+  if (orderType === 'Delivery') {
+    if (this.isAuthenticated && this.selectedAddressId && this.selectedAddressId !== 'new' && !this.useNewAddress) {
+      // Use saved address
+      const savedAddress = this.savedAddresses.find(a => a.id === this.selectedAddressId);
+      if (savedAddress) {
+        addressData = {
+          deliveryAddress: `${savedAddress.addressLine1}${savedAddress.addressLine2 ? ', ' + savedAddress.addressLine2 : ''}`,
+          deliveryCity: savedAddress.city,
+          deliveryState: savedAddress.state,
+          deliveryZipCode: savedAddress.zipCode,
+        };
+      }
+    } else {
+      // Use form values
+      addressData = {
+        deliveryAddress: this.buildFullAddress(formValue),
+        deliveryCity: formValue.city,
+        deliveryState: formValue.state,
+        deliveryZipCode: formValue.zipCode,
+      };
     }
-
-    this.paymentIntentId = paymentIntent.paymentIntentId;
-    this.clientSecret = paymentIntent.clientSecret;
-
-    console.log('Payment intent created:', this.paymentIntentId);
-
-    // Step 2: Show payment form and create card element
-    this.showPaymentForm = true;
-    this.isSubmitting = false;
-
-    // Wait for DOM to render the card-element container
-    setTimeout(() => {
-      this.paymentService.createCardElement('card-element');
-      this.toastr.info('Please enter your card details', 'Payment');
-    }, 100);
-
-  } catch (error: any) {
-    this.isSubmitting = false;
-    console.error('Error creating payment intent:', error);
-    this.paymentError = error.message || 'Failed to initialize payment';
-    this.toastr.error(this.paymentError, 'Payment Error');
   }
+
+  const orderRequest: CreateOrderRequest = {
+    orderType: orderType,
+    scheduledPickupTime: undefined, // Backend auto-calculates this
+    
+    ...addressData,
+    
+    deliveryInstructions: formValue.instructions || undefined,
+    paymentMethod: formValue.paymentMethod,
+    
+    // No paymentIntentId for PayAtPickup
+    paymentIntentId: undefined,
+    
+    sessionId: this.authService.isAuthenticated ? undefined : this.authService.guestSessionId,
+    email: this.isAuthenticated ? undefined : formValue.email,
+    phone: this.isAuthenticated ? undefined : formValue.phone,
+    otpCode: this.isAuthenticated ? undefined : formValue.otpCode
+  };
+
+  console.log('Creating order directly:', orderRequest);
+
+  this.orderService.createOrder(orderRequest).subscribe({
+    next: (response) => {
+      this.isSubmitting = false;
+      
+      if (response.isSuccess && response.result) {
+        this.cartService.clearCart();
+        
+        this.toastr.success(
+          `Order #${response.result.orderNumber} placed! Pay when you pick up.`,
+          'Order Confirmed',
+          { timeOut: 5000 }
+        );
+        
+        this.router.navigate(['/orders', response.result.id]);
+      } else {
+        this.orderError = response.message || 'Failed to place order';
+        this.toastr.error(this.orderError, 'Order Failed');
+      }
+    },
+    error: (err) => {
+      this.isSubmitting = false;
+      this.orderError = err.error?.message || 'Failed to place order';
+      this.toastr.error(this.orderError, 'Order Failed');
+    }
+  });
+}
+
+private buildFullAddress(formValue: any): string {
+  let address = formValue.street;
+  if (formValue.apartment) {
+    address += `, ${formValue.apartment}`;
+  }
+  return address;
 }
 
 async confirmPayment(): Promise<void> {
@@ -381,27 +605,50 @@ async confirmPayment(): Promise<void> {
 
 private async createOrderWithPayment(): Promise<void> {
   const formValue = this.checkoutForm.value;
+  const orderType = formValue.orderType;
 
-  // Build full address
-  let address = formValue.street;
-  if (formValue.apartment) {
-    address += `, ${formValue.apartment}`;
+  // Get address data - either from saved address or form fields
+  let addressData: { 
+    deliveryAddress?: string; 
+    deliveryCity?: string; 
+    deliveryState?: string; 
+    deliveryZipCode?: string; 
+  } = {};
+
+  if (orderType === 'Delivery') {
+    if (this.isAuthenticated && this.selectedAddressId && this.selectedAddressId !== 'new' && !this.useNewAddress) {
+      // Use saved address
+      const savedAddress = this.savedAddresses.find(a => a.id === this.selectedAddressId);
+      if (savedAddress) {
+        addressData = {
+          deliveryAddress: `${savedAddress.addressLine1}${savedAddress.addressLine2 ? ', ' + savedAddress.addressLine2 : ''}`,
+          deliveryCity: savedAddress.city,
+          deliveryState: savedAddress.state,
+          deliveryZipCode: savedAddress.zipCode,
+        };
+      }
+    } else {
+      // Use form values
+      addressData = {
+        deliveryAddress: this.buildFullAddress(formValue),
+        deliveryCity: formValue.city,
+        deliveryState: formValue.state,
+        deliveryZipCode: formValue.zipCode,
+      };
+    }
   }
 
-  // Build order request with paymentIntentId
   const orderRequest: CreateOrderRequest = {
-    deliveryAddress: address,
-    deliveryCity: formValue.city,
-    deliveryState: formValue.state,
-    deliveryZipCode: formValue.zipCode,
+    orderType: orderType,
+    scheduledPickupTime: undefined, // Backend auto-calculates this
+    
+    ...addressData,
+    
     deliveryInstructions: formValue.instructions || undefined,
     paymentMethod: 'Stripe',
     paymentIntentId: this.paymentIntentId!,
     
-    // Add session ID for guest users
     sessionId: this.authService.isAuthenticated ? undefined : this.authService.guestSessionId,
-    
-    // For guest checkout
     email: this.isAuthenticated ? undefined : formValue.email,
     phone: this.isAuthenticated ? undefined : formValue.phone,
     otpCode: this.isAuthenticated ? undefined : formValue.otpCode

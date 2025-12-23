@@ -69,10 +69,7 @@ builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICouponService, CouponService>();
 
-// JWT Authentication
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secret = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");
-
+// JWT Authentication - Validate tokens from OpenIddict
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -80,16 +77,23 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    // Use Authority to fetch JWKS from OpenIddict
+    options.Authority = builder.Configuration["OpenIddict:Issuer"];
+    options.RequireHttpsMetadata = false; // Dev only
+    // IMPORTANT: Disable claim mapping to keep original claim types
+    options.MapInboundClaims = false;
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
         ValidateIssuer = true,
-        ValidIssuer = jwtSettings["Issuer"],
+        ValidIssuer = builder.Configuration["OpenIddict:Issuer"],
         ValidateAudience = true,
-        ValidAudiences = jwtSettings.GetSection("Audiences").Get<string[]>(),
+        ValidAudiences = new[] { "desicorner-api", "desicorner-angular" },
         ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.FromSeconds(60),
+        ValidateIssuerSigningKey = true,
+        RoleClaimType = "role",
+        NameClaimType = "name"
     };
 
     options.Events = new JwtBearerEvents
@@ -101,12 +105,13 @@ builder.Services.AddAuthentication(options =>
         },
         OnTokenValidated = context =>
         {
-            var userId = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userId = context.Principal?.FindFirst("sub")?.Value;
             Console.WriteLine($"✅ JWT validated for user: {userId}");
             return Task.CompletedTask;
         }
     };
 });
+
 
 builder.Services.AddAuthorization();
 
