@@ -2,17 +2,18 @@
 using DesiCorner.AuthServer.Identity;
 using DesiCorner.Contracts.Auth;
 using DesiCorner.Contracts.Common;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using OpenIddict.Validation.AspNetCore;
 
 namespace DesiCorner.AuthServer.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "Admin")]
+[Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme, Roles = "Admin")]
 public class AdminController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;

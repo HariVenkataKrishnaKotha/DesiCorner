@@ -77,6 +77,8 @@ builder.Services.AddAuthentication(options =>
 {
     options.SaveToken = true;
     options.RequireHttpsMetadata = false; // Dev only!
+    // IMPORTANT: Disable claim mapping to keep original claim types
+    options.MapInboundClaims = false;
 
     // Use Authority for JWKS discovery (validates OpenIddict's RSA tokens)
     options.Authority = cfg["OpenIddict:Issuer"];
@@ -119,18 +121,6 @@ builder.Services.AddAuthentication(options =>
 });
 
 // Authorization - Accept both Cookie and JWT
-builder.Services.AddAuthorization(options =>
-{
-    var defaultPolicy = new AuthorizationPolicyBuilder()
-        .AddAuthenticationSchemes(IdentityConstants.ApplicationScheme, JwtBearerDefaults.AuthenticationScheme)
-        .RequireAuthenticatedUser()
-        .Build();
-
-    options.DefaultPolicy = defaultPolicy;
-});
-
-// Authorization - Create policy that accepts BOTH schemes
-// Don't set FallbackPolicy - it will override [AllowAnonymous]
 builder.Services.AddAuthorization(options =>
 {
     var defaultPolicy = new AuthorizationPolicyBuilder()

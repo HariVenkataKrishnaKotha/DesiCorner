@@ -37,6 +37,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         options.SaveToken = true;
         options.RequireHttpsMetadata = false; // Dev only!
+        // IMPORTANT: Disable claim mapping to keep original claim types
+        options.MapInboundClaims = false;
 
         options.Authority = cfg["JwtSettings:Issuer"];
         options.Audience = cfg["JwtSettings:Audience"]; 
@@ -50,7 +52,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidAudience = cfg["JwtSettings:Audience"],
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
+            ClockSkew = TimeSpan.Zero,
+            RoleClaimType = "role",
+            NameClaimType = "name"
         };
 
         options.Events = new JwtBearerEvents

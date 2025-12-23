@@ -175,12 +175,12 @@ export class AdminService {
     );
   }
 
-  updateOrderStatus(orderId: string, status: string): Observable<ApiResponse> {
-    return this.http.patch<ApiResponse>(
-      `${this.baseUrl}/api/orders/${orderId}/status`,
-      { status }
-    );
-  }
+  updateOrderStatus(orderId: string, status: string, notes?: string): Observable<ApiResponse> {
+  return this.http.put<ApiResponse>(
+    `${this.baseUrl}/api/orders/status`,
+    { orderId, status, notes }
+  );
+}
 
   getOrderById(orderId: string): Observable<ApiResponse> {
     return this.http.get<ApiResponse>(`${this.baseUrl}/api/orders/${orderId}`);

@@ -104,56 +104,80 @@ public class OrderService : IOrderService
             }
         }
 
-        // === VERIFY PAYMENT WITH PAYMENTAPI ===
-        if (string.IsNullOrWhiteSpace(request.PaymentIntentId))
+        // === VERIFY PAYMENT (only for Stripe payments) ===
+        if (request.PaymentMethod == "Stripe")
         {
-            throw new ArgumentException("PaymentIntentId is required");
+            if (string.IsNullOrWhiteSpace(request.PaymentIntentId))
+            {
+                throw new ArgumentException("PaymentIntentId is required for Stripe payments");
+            }
+
+            _logger.LogInformation("Verifying payment: {PaymentIntentId}", request.PaymentIntentId);
+
+            var paymentClient = _httpClientFactory.CreateClient("PaymentAPI");
+            var verifyRequest = new VerifyPaymentRequest
+            {
+                PaymentIntentId = request.PaymentIntentId
+            };
+
+            var verifyResponse = await paymentClient.PostAsJsonAsync("/api/payment/verify", verifyRequest, ct);
+
+            if (!verifyResponse.IsSuccessStatusCode)
+            {
+                _logger.LogError("Payment verification failed with status: {StatusCode}", verifyResponse.StatusCode);
+                throw new InvalidOperationException("Payment verification failed. Please try again.");
+            }
+
+            var verifyData = await verifyResponse.Content.ReadFromJsonAsync<ResponseDto>(cancellationToken: ct);
+            if (verifyData?.IsSuccess != true || verifyData.Result == null)
+            {
+                throw new InvalidOperationException("Payment verification failed. Invalid response from payment service.");
+            }
+
+            // Deserialize verification result
+            var verifyJson = System.Text.Json.JsonSerializer.Serialize(verifyData.Result);
+            var verifyResult = System.Text.Json.JsonSerializer.Deserialize<VerifyPaymentResponse>(
+                verifyJson,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
+
+            if (verifyResult == null || !verifyResult.IsSuccess)
+            {
+                var errorMsg = verifyResult?.ErrorMessage ?? "Payment not confirmed";
+                _logger.LogWarning("Payment verification failed: {Error}", errorMsg);
+                throw new InvalidOperationException($"Payment failed: {errorMsg}");
+            }
+
+            if (verifyResult.Status != "succeeded")
+            {
+                _logger.LogWarning("Payment not succeeded. Status: {Status}", verifyResult.Status);
+                throw new InvalidOperationException($"Payment not completed. Status: {verifyResult.Status}");
+            }
+
+            _logger.LogInformation("Payment verified successfully: {PaymentIntentId}, Amount: {Amount}",
+                request.PaymentIntentId, verifyResult.Amount);
+        }
+        else if (request.PaymentMethod == "PayAtPickup")
+        {
+            // Validate it's a pickup order
+            if (request.OrderType != "Pickup")
+            {
+                throw new ArgumentException("Pay at Pickup is only available for pickup orders");
+            }
+            _logger.LogInformation("PayAtPickup order - skipping payment verification");
         }
 
-        _logger.LogInformation("Verifying payment: {PaymentIntentId}", request.PaymentIntentId);
-
-        var paymentClient = _httpClientFactory.CreateClient("PaymentAPI");
-        var verifyRequest = new VerifyPaymentRequest
+        // Validate delivery address for delivery orders
+        if (request.OrderType == "Delivery")
         {
-            PaymentIntentId = request.PaymentIntentId
-        };
-
-        var verifyResponse = await paymentClient.PostAsJsonAsync("/api/payment/verify", verifyRequest, ct);
-
-        if (!verifyResponse.IsSuccessStatusCode)
-        {
-            _logger.LogError("Payment verification failed with status: {StatusCode}", verifyResponse.StatusCode);
-            throw new InvalidOperationException("Payment verification failed. Please try again.");
+            if (string.IsNullOrWhiteSpace(request.DeliveryAddress) ||
+                string.IsNullOrWhiteSpace(request.DeliveryCity) ||
+                string.IsNullOrWhiteSpace(request.DeliveryState) ||
+                string.IsNullOrWhiteSpace(request.DeliveryZipCode))
+            {
+                throw new ArgumentException("Delivery address is required for delivery orders");
+            }
         }
-
-        var verifyData = await verifyResponse.Content.ReadFromJsonAsync<ResponseDto>(cancellationToken: ct);
-        if (verifyData?.IsSuccess != true || verifyData.Result == null)
-        {
-            throw new InvalidOperationException("Payment verification failed. Invalid response from payment service.");
-        }
-
-        // Deserialize verification result
-        var verifyJson = System.Text.Json.JsonSerializer.Serialize(verifyData.Result);
-        var verifyResult = System.Text.Json.JsonSerializer.Deserialize<VerifyPaymentResponse>(
-            verifyJson,
-            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-        );
-
-        if (verifyResult == null || !verifyResult.IsSuccess)
-        {
-            var errorMsg = verifyResult?.ErrorMessage ?? "Payment not confirmed";
-            _logger.LogWarning("Payment verification failed: {Error}", errorMsg);
-            throw new InvalidOperationException($"Payment failed: {errorMsg}");
-        }
-
-        if (verifyResult.Status != "succeeded")
-        {
-            _logger.LogWarning("Payment not succeeded. Status: {Status}", verifyResult.Status);
-            throw new InvalidOperationException($"Payment not completed. Status: {verifyResult.Status}");
-        }
-
-        _logger.LogInformation("Payment verified successfully: {PaymentIntentId}, Amount: {Amount}",
-            request.PaymentIntentId, verifyResult.Amount);
 
         // === FETCH CART FROM CARTAPI ===
         _logger.LogInformation("Fetching cart for user {UserId} or session {SessionId}", finalUserId, request.SessionId);
@@ -253,8 +277,8 @@ public class OrderService : IOrderService
             CouponCode = cart.CouponCode,
 
             // Status
-            Status = "Confirmed",  // Change from "Pending" to "Confirmed" since payment succeeded
-            PaymentStatus = "Paid",  // Change from "Pending" to "Paid"
+            Status = request.PaymentMethod == "Stripe" ? "Confirmed" : "Pending",
+            PaymentStatus = request.PaymentMethod == "Stripe" ? "Paid" : "Pending",
             PaymentMethod = request.PaymentMethod,
             PaymentIntentId = request.PaymentIntentId,
 
@@ -262,7 +286,9 @@ public class OrderService : IOrderService
             OrderDate = DateTime.UtcNow,
             EstimatedDeliveryTime = DateTime.UtcNow.AddMinutes(45),
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            OrderType = request.OrderType,
+            ScheduledPickupTime = request.OrderType == "Pickup" ? DateTime.UtcNow.AddMinutes(20) : null,
         };
 
         // Convert CartItems to OrderItems
@@ -517,7 +543,7 @@ public class OrderService : IOrderService
         var monthAgo = today.AddDays(-30);
 
         var allOrders = await _context.Orders.ToListAsync(ct);
-        var completedOrders = allOrders.Where(o => o.Status == "Delivered" || o.PaymentStatus == "succeeded");
+        var completedOrders = allOrders.Where(o => o.Status == "Delivered" || o.PaymentStatus == "Paid");
 
         return new OrderStatsDto
         {
