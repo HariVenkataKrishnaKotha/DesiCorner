@@ -1,10 +1,11 @@
-﻿using DesiCorner.Contracts.Orders;
+﻿using DesCorner.Contracts.Orders;
+using DesiCorner.Contracts.Cart;
+using DesiCorner.Contracts.Common;
+using DesiCorner.Contracts.Orders;
+using DesiCorner.Contracts.Payment;
 using DesiCorner.Services.OrderAPI.Data;
 using DesiCorner.Services.OrderAPI.Models;
 using Microsoft.EntityFrameworkCore;
-using DesiCorner.Contracts.Common;
-using DesiCorner.Contracts.Cart;
-using DesiCorner.Contracts.Payment;
 
 namespace DesiCorner.Services.OrderAPI.Services;
 
@@ -103,56 +104,80 @@ public class OrderService : IOrderService
             }
         }
 
-        // === VERIFY PAYMENT WITH PAYMENTAPI ===
-        if (string.IsNullOrWhiteSpace(request.PaymentIntentId))
+        // === VERIFY PAYMENT (only for Stripe payments) ===
+        if (request.PaymentMethod == "Stripe")
         {
-            throw new ArgumentException("PaymentIntentId is required");
+            if (string.IsNullOrWhiteSpace(request.PaymentIntentId))
+            {
+                throw new ArgumentException("PaymentIntentId is required for Stripe payments");
+            }
+
+            _logger.LogInformation("Verifying payment: {PaymentIntentId}", request.PaymentIntentId);
+
+            var paymentClient = _httpClientFactory.CreateClient("PaymentAPI");
+            var verifyRequest = new VerifyPaymentRequest
+            {
+                PaymentIntentId = request.PaymentIntentId
+            };
+
+            var verifyResponse = await paymentClient.PostAsJsonAsync("/api/payment/verify", verifyRequest, ct);
+
+            if (!verifyResponse.IsSuccessStatusCode)
+            {
+                _logger.LogError("Payment verification failed with status: {StatusCode}", verifyResponse.StatusCode);
+                throw new InvalidOperationException("Payment verification failed. Please try again.");
+            }
+
+            var verifyData = await verifyResponse.Content.ReadFromJsonAsync<ResponseDto>(cancellationToken: ct);
+            if (verifyData?.IsSuccess != true || verifyData.Result == null)
+            {
+                throw new InvalidOperationException("Payment verification failed. Invalid response from payment service.");
+            }
+
+            // Deserialize verification result
+            var verifyJson = System.Text.Json.JsonSerializer.Serialize(verifyData.Result);
+            var verifyResult = System.Text.Json.JsonSerializer.Deserialize<VerifyPaymentResponse>(
+                verifyJson,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+            );
+
+            if (verifyResult == null || !verifyResult.IsSuccess)
+            {
+                var errorMsg = verifyResult?.ErrorMessage ?? "Payment not confirmed";
+                _logger.LogWarning("Payment verification failed: {Error}", errorMsg);
+                throw new InvalidOperationException($"Payment failed: {errorMsg}");
+            }
+
+            if (verifyResult.Status != "succeeded")
+            {
+                _logger.LogWarning("Payment not succeeded. Status: {Status}", verifyResult.Status);
+                throw new InvalidOperationException($"Payment not completed. Status: {verifyResult.Status}");
+            }
+
+            _logger.LogInformation("Payment verified successfully: {PaymentIntentId}, Amount: {Amount}",
+                request.PaymentIntentId, verifyResult.Amount);
+        }
+        else if (request.PaymentMethod == "PayAtPickup")
+        {
+            // Validate it's a pickup order
+            if (request.OrderType != "Pickup")
+            {
+                throw new ArgumentException("Pay at Pickup is only available for pickup orders");
+            }
+            _logger.LogInformation("PayAtPickup order - skipping payment verification");
         }
 
-        _logger.LogInformation("Verifying payment: {PaymentIntentId}", request.PaymentIntentId);
-
-        var paymentClient = _httpClientFactory.CreateClient("PaymentAPI");
-        var verifyRequest = new VerifyPaymentRequest
+        // Validate delivery address for delivery orders
+        if (request.OrderType == "Delivery")
         {
-            PaymentIntentId = request.PaymentIntentId
-        };
-
-        var verifyResponse = await paymentClient.PostAsJsonAsync("/api/payment/verify", verifyRequest, ct);
-
-        if (!verifyResponse.IsSuccessStatusCode)
-        {
-            _logger.LogError("Payment verification failed with status: {StatusCode}", verifyResponse.StatusCode);
-            throw new InvalidOperationException("Payment verification failed. Please try again.");
+            if (string.IsNullOrWhiteSpace(request.DeliveryAddress) ||
+                string.IsNullOrWhiteSpace(request.DeliveryCity) ||
+                string.IsNullOrWhiteSpace(request.DeliveryState) ||
+                string.IsNullOrWhiteSpace(request.DeliveryZipCode))
+            {
+                throw new ArgumentException("Delivery address is required for delivery orders");
+            }
         }
-
-        var verifyData = await verifyResponse.Content.ReadFromJsonAsync<ResponseDto>(cancellationToken: ct);
-        if (verifyData?.IsSuccess != true || verifyData.Result == null)
-        {
-            throw new InvalidOperationException("Payment verification failed. Invalid response from payment service.");
-        }
-
-        // Deserialize verification result
-        var verifyJson = System.Text.Json.JsonSerializer.Serialize(verifyData.Result);
-        var verifyResult = System.Text.Json.JsonSerializer.Deserialize<VerifyPaymentResponse>(
-            verifyJson,
-            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-        );
-
-        if (verifyResult == null || !verifyResult.IsSuccess)
-        {
-            var errorMsg = verifyResult?.ErrorMessage ?? "Payment not confirmed";
-            _logger.LogWarning("Payment verification failed: {Error}", errorMsg);
-            throw new InvalidOperationException($"Payment failed: {errorMsg}");
-        }
-
-        if (verifyResult.Status != "succeeded")
-        {
-            _logger.LogWarning("Payment not succeeded. Status: {Status}", verifyResult.Status);
-            throw new InvalidOperationException($"Payment not completed. Status: {verifyResult.Status}");
-        }
-
-        _logger.LogInformation("Payment verified successfully: {PaymentIntentId}, Amount: {Amount}",
-            request.PaymentIntentId, verifyResult.Amount);
 
         // === FETCH CART FROM CARTAPI ===
         _logger.LogInformation("Fetching cart for user {UserId} or session {SessionId}", finalUserId, request.SessionId);
@@ -252,8 +277,8 @@ public class OrderService : IOrderService
             CouponCode = cart.CouponCode,
 
             // Status
-            Status = "Confirmed",  // Change from "Pending" to "Confirmed" since payment succeeded
-            PaymentStatus = "Paid",  // Change from "Pending" to "Paid"
+            Status = request.PaymentMethod == "Stripe" ? "Confirmed" : "Pending",
+            PaymentStatus = request.PaymentMethod == "Stripe" ? "Paid" : "Pending",
             PaymentMethod = request.PaymentMethod,
             PaymentIntentId = request.PaymentIntentId,
 
@@ -261,7 +286,9 @@ public class OrderService : IOrderService
             OrderDate = DateTime.UtcNow,
             EstimatedDeliveryTime = DateTime.UtcNow.AddMinutes(45),
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            OrderType = request.OrderType,
+            ScheduledPickupTime = request.OrderType == "Pickup" ? DateTime.UtcNow.AddMinutes(20) : null,
         };
 
         // Convert CartItems to OrderItems
@@ -430,4 +457,129 @@ public class OrderService : IOrderService
         var random = new Random().Next(1000, 9999);
         return $"DC-{timestamp}-{random}";
     }
+
+    public async Task<(List<AdminOrderListDto> Orders, int TotalCount)> GetAllOrdersAsync(
+    AdminOrderFilterDto filter,
+    CancellationToken ct = default)
+    {
+        var query = _context.Orders.AsQueryable();
+
+        // Apply filters
+        if (!string.IsNullOrEmpty(filter.Status))
+        {
+            query = query.Where(o => o.Status == filter.Status);
+        }
+
+        if (!string.IsNullOrEmpty(filter.PaymentStatus))
+        {
+            query = query.Where(o => o.PaymentStatus == filter.PaymentStatus);
+        }
+
+        if (!string.IsNullOrEmpty(filter.SearchTerm))
+        {
+            var term = filter.SearchTerm.ToLower();
+            query = query.Where(o =>
+                o.OrderNumber.ToLower().Contains(term) ||
+                o.UserEmail.ToLower().Contains(term));
+        }
+
+        if (filter.FromDate.HasValue)
+        {
+            query = query.Where(o => o.OrderDate >= filter.FromDate.Value);
+        }
+
+        if (filter.ToDate.HasValue)
+        {
+            query = query.Where(o => o.OrderDate <= filter.ToDate.Value);
+        }
+
+        // Get total count before pagination
+        var totalCount = await query.CountAsync(ct);
+
+        // Apply sorting
+        query = filter.SortBy.ToLower() switch
+        {
+            "ordernumber" => filter.SortDescending
+                ? query.OrderByDescending(o => o.OrderNumber)
+                : query.OrderBy(o => o.OrderNumber),
+            "total" => filter.SortDescending
+                ? query.OrderByDescending(o => o.Total)
+                : query.OrderBy(o => o.Total),
+            "status" => filter.SortDescending
+                ? query.OrderByDescending(o => o.Status)
+                : query.OrderBy(o => o.Status),
+            _ => filter.SortDescending
+                ? query.OrderByDescending(o => o.OrderDate)
+                : query.OrderBy(o => o.OrderDate)
+        };
+
+        // Apply pagination
+        var orders = await query
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .Include(o => o.Items)
+            .Select(o => new AdminOrderListDto
+            {
+                Id = o.Id,
+                OrderNumber = o.OrderNumber,
+                CustomerEmail = o.UserEmail,
+                CustomerName = o.DeliveryAddress, // Could be parsed or use a separate name field
+                IsGuestOrder = o.IsGuestOrder,
+                Total = o.Total,
+                Status = o.Status,
+                PaymentStatus = o.PaymentStatus ?? "Unknown",
+                OrderDate = o.OrderDate,
+                ItemCount = o.Items.Count
+            })
+            .ToListAsync(ct);
+
+        return (orders, totalCount);
+    }
+
+    public async Task<OrderStatsDto> GetOrderStatsAsync(CancellationToken ct = default)
+    {
+        var today = DateTime.UtcNow.Date;
+        var weekAgo = today.AddDays(-7);
+        var monthAgo = today.AddDays(-30);
+
+        var allOrders = await _context.Orders.ToListAsync(ct);
+        var completedOrders = allOrders.Where(o => o.Status == "Delivered" || o.PaymentStatus == "Paid");
+
+        return new OrderStatsDto
+        {
+            TotalOrders = allOrders.Count,
+            PendingOrders = allOrders.Count(o => o.Status == "Pending"),
+            ProcessingOrders = allOrders.Count(o => o.Status == "Processing"),
+            DeliveredOrders = allOrders.Count(o => o.Status == "Delivered"),
+            CancelledOrders = allOrders.Count(o => o.Status == "Cancelled"),
+            TotalRevenue = completedOrders.Sum(o => o.Total),
+            TodayRevenue = completedOrders.Where(o => o.OrderDate.Date == today).Sum(o => o.Total),
+            WeekRevenue = completedOrders.Where(o => o.OrderDate >= weekAgo).Sum(o => o.Total),
+            MonthRevenue = completedOrders.Where(o => o.OrderDate >= monthAgo).Sum(o => o.Total)
+        };
+    }
+
+    public async Task<List<AdminOrderListDto>> GetRecentOrdersAsync(int count = 5, CancellationToken ct = default)
+    {
+        var orders = await _context.Orders
+            .Include(o => o.Items)
+            .OrderByDescending(o => o.CreatedAt)
+            .Take(count)
+            .ToListAsync(ct);
+
+        return orders.Select(o => new AdminOrderListDto
+        {
+            Id = o.Id,
+            OrderNumber = o.OrderNumber,
+            CustomerEmail = o.UserEmail,
+            CustomerName = null, // Or parse from DeliveryAddress if needed
+            IsGuestOrder = o.IsGuestOrder,
+            Total = o.Total,
+            Status = o.Status,
+            PaymentStatus = o.PaymentStatus,
+            OrderDate = o.OrderDate,
+            ItemCount = o.Items.Count
+        }).ToList();
+    }
+
 }

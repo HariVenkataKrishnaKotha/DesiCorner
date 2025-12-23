@@ -4,7 +4,18 @@ import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { forkJoin } from 'rxjs';
+import { AdminService } from '@core/services/admin.service';
 import { ProductService } from '@core/services/product.service';
+import { 
+  OrderStats, 
+  UserStats, 
+  CouponStats, 
+  ProductStats,
+  AdminOrderListItem,
+  RecentUser
+} from '@core/models/admin.models';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -14,40 +25,117 @@ import { ProductService } from '@core/services/product.service';
     RouterModule,
     MatCardModule,
     MatButtonModule,
-    MatIconModule
+    MatIconModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.scss']
 })
 export class AdminDashboardComponent implements OnInit {
+  private adminService = inject(AdminService);
   private productService = inject(ProductService);
 
-  stats = {
-    totalProducts: 0,
-    totalCategories: 0,
-    activeProducts: 0
-  };
+  loading = true;
+  error = '';
+
+  // Stats
+  orderStats: OrderStats | null = null;
+  userStats: UserStats | null = null;
+  couponStats: CouponStats | null = null;
+  productStats: ProductStats | null = null;
+
+  // Recent activity
+  recentOrders: AdminOrderListItem[] = [];
+  recentUsers: RecentUser[] = [];
+
+  // Basic stats fallback
+  totalCategories = 0;
 
   ngOnInit(): void {
-    this.loadStats();
+    this.loadAllStats();
   }
 
-  private loadStats(): void {
-    this.productService.loadProducts().subscribe({
-      next: (response) => {
-        if (response.isSuccess && response.result) {
-          this.stats.totalProducts = response.result.length;
-          this.stats.activeProducts = response.result.filter(p => p.isAvailable).length;
-        }
-      }
-    });
+  private loadAllStats(): void {
+    this.loading = true;
 
-    this.productService.loadCategories().subscribe({
-      next: (response) => {
-        if (response.isSuccess && response.result) {
-          this.stats.totalCategories = response.result.length;
+    // Load all stats in parallel
+    forkJoin({
+      orderStats: this.adminService.getOrderStats(),
+      userStats: this.adminService.getUserStats(),
+      couponStats: this.adminService.getCouponStats(),
+      productStats: this.adminService.getProductStats(),
+      recentOrders: this.adminService.getRecentOrders(5),
+      recentUsers: this.adminService.getRecentUsers(5),
+      categories: this.productService.loadCategories()
+    }).subscribe({
+      next: (results) => {
+        this.loading = false;
+
+        if (results.orderStats.isSuccess) {
+          this.orderStats = results.orderStats.result!;
         }
+
+        if (results.userStats.isSuccess) {
+          this.userStats = results.userStats.result!;
+        }
+
+        if (results.couponStats.isSuccess) {
+          this.couponStats = results.couponStats.result!;
+        }
+
+        if (results.productStats.isSuccess) {
+          this.productStats = results.productStats.result!;
+        }
+
+        if (results.recentOrders.isSuccess) {
+          this.recentOrders = results.recentOrders.result || [];
+        }
+
+        if (results.recentUsers.isSuccess) {
+          this.recentUsers = results.recentUsers.result || [];
+        }
+
+        if (results.categories.isSuccess) {
+          this.totalCategories = results.categories.result?.length || 0;
+        }
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = 'Failed to load dashboard data';
+        console.error(err);
       }
     });
+  }
+
+  refreshData(): void {
+    this.loadAllStats();
+  }
+
+  formatCurrency(value: number): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(value);
+  }
+
+  formatDate(dateString: string): string {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  getOrderStatusClass(status: string): string {
+    const classes: Record<string, string> = {
+      'Pending': 'status-pending',
+      'Confirmed': 'status-confirmed',
+      'Preparing': 'status-preparing',
+      'OutForDelivery': 'status-out',
+      'Delivered': 'status-delivered',
+      'Cancelled': 'status-cancelled'
+    };
+    return classes[status] || '';
   }
 }

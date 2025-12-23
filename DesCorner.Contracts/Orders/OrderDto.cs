@@ -39,8 +39,6 @@ public class OrderDto
     public DateTime? DeliveredAt { get; set; }
 
     public string? SpecialInstructions { get; set; }
-
-    // Add this property
     public DateTime CreatedAt { get; set; }
 }
 
