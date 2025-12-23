@@ -270,6 +270,18 @@ export class CartService {
     };
   }
 
+  setDeliveryFee(orderType: 'Delivery' | 'Pickup'): void {
+  const cart = this.cartSubject.value;
+  // Simple delivery fee logic: free for orders over $50, otherwise $5
+  const deliveryFee = orderType === 'Pickup' ? 0 : (cart.subtotal >= 50 ? 0 : 5);
+  
+  this.cartSubject.next({
+    ...cart,
+    deliveryFee,
+    total: cart.subtotal + cart.tax + deliveryFee - cart.discount
+  });
+}
+
   get itemCount(): number {
     return this.cartSubject.value.items.reduce((sum, item) => sum + item.quantity, 0);
   }

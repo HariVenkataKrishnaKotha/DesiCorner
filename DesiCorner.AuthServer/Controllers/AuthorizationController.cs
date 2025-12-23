@@ -147,7 +147,7 @@ public class AuthorizationController : ControllerBase
             _logger.LogInformation("Processing password grant for user: {Username}", request.Username);
 
             // Find user by email (username in this case)
-            var user = await _users.FindByEmailAsync(request.Username);
+            var user = await _users.FindByEmailAsync(request.Username ?? string.Empty);
             if (user is null)
             {
                 _logger.LogWarning("Password grant failed - user not found: {Username}", request.Username);
@@ -161,7 +161,7 @@ public class AuthorizationController : ControllerBase
             }
 
             // Verify password
-            var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
+            var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password ?? string.Empty, lockoutOnFailure: true);
 
             if (!result.Succeeded)
             {

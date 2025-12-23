@@ -77,6 +77,8 @@ builder.Services.AddAuthentication(options =>
 {
     options.SaveToken = true;
     options.RequireHttpsMetadata = false; // Dev only!
+    // IMPORTANT: Disable claim mapping to keep original claim types
+    options.MapInboundClaims = false;
 
     // Use Authority for JWKS discovery (validates OpenIddict's RSA tokens)
     options.Authority = cfg["OpenIddict:Issuer"];
@@ -91,9 +93,12 @@ builder.Services.AddAuthentication(options =>
         ValidAudiences = new[] { "desicorner-api", "desicorner-angular" },
         ValidateLifetime = true,
         ClockSkew = TimeSpan.FromSeconds(60),
-        ValidateIssuerSigningKey = true
+        ValidateIssuerSigningKey = true,
         // Note: IssuerSigningKey is NOT set here - it will be retrieved from JWKS endpoint
+        RoleClaimType = "role",  
+        NameClaimType = "name"      
     };
+    
 
     options.Events = new JwtBearerEvents
     {
@@ -126,19 +131,6 @@ builder.Services.AddAuthorization(options =>
     options.DefaultPolicy = defaultPolicy;
 });
 
-// Authorization - Create policy that accepts BOTH schemes
-// Don't set FallbackPolicy - it will override [AllowAnonymous]
-builder.Services.AddAuthorization(options =>
-{
-    var defaultPolicy = new AuthorizationPolicyBuilder()
-        .AddAuthenticationSchemes(IdentityConstants.ApplicationScheme, JwtBearerDefaults.AuthenticationScheme)
-        .RequireAuthenticatedUser()
-        .Build();
-
-    options.DefaultPolicy = defaultPolicy;
-});
-
-// OpenIddict
 // OpenIddict
 builder.Services.AddOpenIddict()
     .AddCore(opt => opt.UseEntityFrameworkCore().UseDbContext<ApplicationDbContext>())
@@ -160,7 +152,7 @@ builder.Services.AddOpenIddict()
         // Flows - ADD PASSWORD FLOW HERE
         opt.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange();
         opt.AllowRefreshTokenFlow();
-        opt.AllowPasswordFlow(); // ← ADD THIS LINE
+        opt.AllowPasswordFlow();
 
         // Development keys (use proper keys in production!)
         opt.AddEphemeralEncryptionKey()

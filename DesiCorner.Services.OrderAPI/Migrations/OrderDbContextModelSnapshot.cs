@@ -39,12 +39,10 @@ namespace DesiCorner.Services.OrderAPI.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("DeliveryAddress")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("DeliveryCity")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -52,12 +50,10 @@ namespace DesiCorner.Services.OrderAPI.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("DeliveryState")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("DeliveryZipCode")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
@@ -78,6 +74,11 @@ namespace DesiCorner.Services.OrderAPI.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("OrderType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("PaymentIntentId")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
@@ -91,6 +92,9 @@ namespace DesiCorner.Services.OrderAPI.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("ScheduledPickupTime")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("SpecialInstructions")
                         .HasMaxLength(1000)

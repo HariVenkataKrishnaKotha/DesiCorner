@@ -1,10 +1,12 @@
-﻿using DesiCorner.Contracts.Common;
+﻿using DesCorner.Contracts.Orders;
+using DesiCorner.Contracts.Common;
 using DesiCorner.Contracts.Orders;
 using DesiCorner.Services.OrderAPI.Models;
 using DesiCorner.Services.OrderAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+
 
 namespace DesiCorner.Services.OrderAPI.Controllers;
 
@@ -348,19 +350,101 @@ public class OrdersController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Get all orders (Admin only)
+    /// </summary>
+    [HttpGet("admin/all")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<ResponseDto>> GetAllOrders([FromQuery] AdminOrderFilterDto filter, CancellationToken ct)
+    {
+        try
+        {
+            var (orders, totalCount) = await _orderService.GetAllOrdersAsync(filter, ct);
+
+            return Ok(new ResponseDto
+            {
+                IsSuccess = true,
+                Result = new
+                {
+                    Orders = orders,
+                    TotalCount = totalCount,
+                    Page = filter.Page,
+                    PageSize = filter.PageSize,
+                    TotalPages = (int)Math.Ceiling(totalCount / (double)filter.PageSize)
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting all orders");
+            return StatusCode(500, new ResponseDto
+            {
+                IsSuccess = false,
+                Message = "Failed to retrieve orders"
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get order statistics (Admin only)
+    /// </summary>
+    [HttpGet("admin/stats")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<ResponseDto>> GetOrderStats(CancellationToken ct)
+    {
+        try
+        {
+            var stats = await _orderService.GetOrderStatsAsync(ct);
+
+            return Ok(new ResponseDto
+            {
+                IsSuccess = true,
+                Result = stats
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting order stats");
+            return StatusCode(500, new ResponseDto
+            {
+                IsSuccess = false,
+                Message = "Failed to retrieve order statistics"
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get recent orders (Admin only)
+    /// </summary>
+    [HttpGet("admin/recent")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetRecentOrders([FromQuery] int count = 5, CancellationToken ct = default)
+    {
+        var orders = await _orderService.GetRecentOrdersAsync(count, ct);
+
+        return Ok(new ResponseDto
+        {
+            IsSuccess = true,
+            Result = orders
+        });
+    }
+
     private Guid? GetUserId()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        // With MapInboundClaims = false, use "sub" claim
+        var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return Guid.TryParse(userIdClaim, out var userId) ? userId : null;
     }
 
     private string? GetUserEmail()
     {
-        return User.FindFirst(ClaimTypes.Email)?.Value;
+        // With MapInboundClaims = false, use "email" claim
+        return User.FindFirst("email")?.Value ?? User.FindFirst(ClaimTypes.Email)?.Value;
     }
 
     private string? GetUserPhone()
     {
+        // OpenIddict uses "phone_number" claim
         return User.FindFirst("phone_number")?.Value;
     }
 
@@ -419,4 +503,5 @@ public class OrdersController : ControllerBase
             ItemCount = order.Items.Sum(i => i.Quantity)
         };
     }
+
 }

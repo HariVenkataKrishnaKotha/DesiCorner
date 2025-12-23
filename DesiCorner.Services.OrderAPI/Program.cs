@@ -1,4 +1,4 @@
-using DesiCorner.Services.OrderAPI.Data;
+﻿using DesiCorner.Services.OrderAPI.Data;
 using DesiCorner.Services.OrderAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -49,6 +49,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.Authority = builder.Configuration["Authentication:Authority"];
         options.Audience = builder.Configuration["Authentication:Audience"];
         options.RequireHttpsMetadata = false;
+        // IMPORTANT: Disable claim mapping to keep original claim types
+        options.MapInboundClaims = false;
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -56,7 +58,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ClockSkew = TimeSpan.Zero
+            ClockSkew = TimeSpan.Zero,
+            RoleClaimType = "role",
+            NameClaimType = "name"
         };
     });
 

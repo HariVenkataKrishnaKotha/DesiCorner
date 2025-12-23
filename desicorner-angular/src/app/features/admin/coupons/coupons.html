@@ -1,0 +1,298 @@
+<div class="admin-coupons">
+  <div class="header">
+    <h1>Coupon Management</h1>
+    <button class="btn-create" (click)="openCreateModal()">+ Create Coupon</button>
+  </div>
+
+  <!-- Success Message -->
+  <div class="success-message" *ngIf="successMessage">
+    {{ successMessage }}
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-grid" *ngIf="stats">
+    <div class="stat-card">
+      <div class="stat-value">{{ stats.totalCoupons }}</div>
+      <div class="stat-label">Total Coupons</div>
+    </div>
+    <div class="stat-card active">
+      <div class="stat-value">{{ stats.activeCoupons }}</div>
+      <div class="stat-label">Active</div>
+    </div>
+    <div class="stat-card expired">
+      <div class="stat-value">{{ stats.expiredCoupons }}</div>
+      <div class="stat-label">Expired</div>
+    </div>
+    <div class="stat-card used">
+      <div class="stat-value">{{ stats.fullyUsedCoupons }}</div>
+      <div class="stat-label">Fully Used</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="search-box">
+      <input 
+        type="text" 
+        [(ngModel)]="filter.searchTerm" 
+        placeholder="Search by code or description..."
+        (keyup.enter)="onSearch()"
+      />
+      <button class="btn-search" (click)="onSearch()">Search</button>
+    </div>
+
+    <div class="filter-group">
+      <select [(ngModel)]="filter.isActive" (change)="onFilterChange()">
+        <option [ngValue]="undefined">All Status</option>
+        <option [ngValue]="true">Active</option>
+        <option [ngValue]="false">Inactive</option>
+      </select>
+
+      <select [(ngModel)]="filter.isExpired" (change)="onFilterChange()">
+        <option [ngValue]="undefined">All Expiry</option>
+        <option [ngValue]="false">Not Expired</option>
+        <option [ngValue]="true">Expired</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" *ngIf="loading">Loading coupons...</div>
+
+  <!-- Error -->
+  <div class="error" *ngIf="error">{{ error }}</div>
+
+  <!-- Coupons Grid -->
+  <div class="coupons-grid" *ngIf="!loading && coupons.length > 0">
+    <div 
+      class="coupon-card" 
+      *ngFor="let coupon of coupons"
+      [class.inactive]="!coupon.isActive"
+      [class.expired]="isExpired(coupon)"
+    >
+      <div class="coupon-header">
+        <div class="coupon-code">{{ coupon.code }}</div>
+        <span class="status-badge" [ngClass]="getStatusClass(coupon)">
+          {{ getStatusText(coupon) }}
+        </span>
+      </div>
+
+      <div class="coupon-discount">
+        <span class="discount-value">{{ getDiscountDisplay(coupon) }}</span>
+        <span class="discount-type">{{ coupon.discountType }}</span>
+      </div>
+
+      <div class="coupon-details">
+        <p *ngIf="coupon.description" class="description">{{ coupon.description }}</p>
+        
+        <div class="detail-row">
+          <span class="label">Min. Order:</span>
+          <span class="value">${{ coupon.minAmount }}</span>
+        </div>
+
+        <div class="detail-row" *ngIf="coupon.maxDiscount">
+          <span class="label">Max Discount:</span>
+          <span class="value">${{ coupon.maxDiscount }}</span>
+        </div>
+
+        <div class="detail-row">
+          <span class="label">Expiry:</span>
+          <span class="value" [class.expired-text]="isExpired(coupon)">
+            {{ formatDate(coupon.expiryDate) }}
+          </span>
+        </div>
+
+        <div class="detail-row">
+          <span class="label">Usage:</span>
+          <span class="value">
+            {{ coupon.usedCount }} / {{ coupon.maxUsageCount }}
+            <span class="usage-bar">
+              <span 
+                class="usage-fill" 
+                [style.width.%]="(coupon.usedCount / coupon.maxUsageCount) * 100"
+              ></span>
+            </span>
+          </span>
+        </div>
+      </div>
+
+      <div class="coupon-actions">
+        <button 
+          class="btn-toggle"
+          [class.active]="coupon.isActive"
+          (click)="toggleStatus(coupon)"
+          [title]="coupon.isActive ? 'Deactivate' : 'Activate'"
+        >
+          {{ coupon.isActive ? 'Deactivate' : 'Activate' }}
+        </button>
+        <button class="btn-edit" (click)="openEditModal(coupon)">Edit</button>
+        <button class="btn-delete" (click)="openDeleteModal(coupon)">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!loading && coupons.length === 0">
+    <p>No coupons found.</p>
+    <button class="btn-create" (click)="openCreateModal()">Create Your First Coupon</button>
+  </div>
+
+  <!-- Create/Edit Modal -->
+  <div class="modal-overlay" *ngIf="showCreateModal || showEditModal" (click)="showCreateModal ? closeCreateModal() : closeEditModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <button class="modal-close" (click)="showCreateModal ? closeCreateModal() : closeEditModal()">&times;</button>
+      
+      <h2>{{ showCreateModal ? 'Create New Coupon' : 'Edit Coupon' }}</h2>
+
+      <div class="form-error" *ngIf="formErrors['general']">
+        {{ formErrors['general'] }}
+      </div>
+      
+      <form class="coupon-form" (ngSubmit)="showCreateModal ? createCoupon() : updateCoupon()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Coupon Code *</label>
+            <input 
+              type="text" 
+              [(ngModel)]="couponForm.code" 
+              name="code"
+              placeholder="e.g., SAVE20"
+              [class.error]="formErrors['code']"
+              [disabled]="showEditModal"
+            />
+            <span class="field-error" *ngIf="formErrors['code']">{{ formErrors['code'] }}</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea 
+            [(ngModel)]="couponForm.description" 
+            name="description"
+            placeholder="Optional description..."
+            rows="2"
+          ></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Discount Type *</label>
+            <select [(ngModel)]="couponForm.discountType" name="discountType">
+              <option value="Fixed">Fixed Amount ($)</option>
+              <option value="Percentage">Percentage (%)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Discount Amount *</label>
+            <input 
+              type="number" 
+              [(ngModel)]="couponForm.discountAmount" 
+              name="discountAmount"
+              [placeholder]="couponForm.discountType === 'Percentage' ? 'e.g., 20' : 'e.g., 10.00'"
+              step="0.01"
+              min="0"
+              [class.error]="formErrors['discountAmount']"
+            />
+            <span class="field-error" *ngIf="formErrors['discountAmount']">{{ formErrors['discountAmount'] }}</span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Minimum Order Amount</label>
+            <input 
+              type="number" 
+              [(ngModel)]="couponForm.minAmount" 
+              name="minAmount"
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              [class.error]="formErrors['minAmount']"
+            />
+            <span class="field-error" *ngIf="formErrors['minAmount']">{{ formErrors['minAmount'] }}</span>
+          </div>
+
+          <div class="form-group" *ngIf="couponForm.discountType === 'Percentage'">
+            <label>Max Discount Cap</label>
+            <input 
+              type="number" 
+              [(ngModel)]="couponForm.maxDiscount" 
+              name="maxDiscount"
+              placeholder="Optional max discount"
+              step="0.01"
+              min="0"
+            />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Expiry Date</label>
+            <input 
+              type="date" 
+              [(ngModel)]="couponForm.expiryDate" 
+              name="expiryDate"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Max Usage Count *</label>
+            <input 
+              type="number" 
+              [(ngModel)]="couponForm.maxUsageCount" 
+              name="maxUsageCount"
+              placeholder="1000"
+              min="1"
+              [class.error]="formErrors['maxUsageCount']"
+            />
+            <span class="field-error" *ngIf="formErrors['maxUsageCount']">{{ formErrors['maxUsageCount'] }}</span>
+          </div>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label>
+            <input 
+              type="checkbox" 
+              [(ngModel)]="couponForm.isActive" 
+              name="isActive"
+            />
+            Active (coupon can be used)
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button 
+            type="button" 
+            class="btn-cancel" 
+            (click)="showCreateModal ? closeCreateModal() : closeEditModal()"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn-submit">
+            {{ showCreateModal ? 'Create Coupon' : 'Save Changes' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeDeleteModal()">
+    <div class="modal-content small" (click)="$event.stopPropagation()">
+      <button class="modal-close" (click)="closeDeleteModal()">&times;</button>
+      
+      <h2>Delete Coupon</h2>
+      
+      <div class="delete-confirm" *ngIf="deletingCoupon">
+        <p>Are you sure you want to delete the coupon <strong>{{ deletingCoupon.code }}</strong>?</p>
+        <p class="warning">This action cannot be undone.</p>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" (click)="closeDeleteModal()">Cancel</button>
+          <button class="btn-danger" (click)="confirmDelete()">Delete Coupon</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
