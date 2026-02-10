@@ -9,7 +9,7 @@
 
     h1 {
       margin: 0;
-      color: #333;
+      color: #e0e0e0;
     }
   }
 
@@ -35,7 +35,7 @@
           display: block;
           font-weight: 500;
           margin-bottom: 8px;
-          color: #666;
+          color: #bbb;
         }
 
         .image-preview {
@@ -48,7 +48,7 @@
             height: 150px;
             object-fit: cover;
             border-radius: 8px;
-            border: 2px solid #ddd;
+            border: 2px solid #3f4948;
           }
 
           button {
@@ -62,7 +62,7 @@
         .hint {
           margin: 8px 0 0 0;
           font-size: 0.875rem;
-          color: #666;
+          color: #bbb;
         }
       }
 
@@ -91,7 +91,7 @@
       gap: 16px;
       margin-top: 24px;
       padding-top: 16px;
-      border-top: 1px solid #eee;
+      border-top: 1px solid #3f4948;
     }
   }
 
@@ -116,7 +116,7 @@
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #f5f5f5;
+          background: #2a2a2a;
           border-radius: 8px;
           font-size: 2rem;
         }
@@ -143,12 +143,12 @@
 
     h3 {
       margin: 0 0 8px 0;
-      color: #333;
+      color: #e0e0e0;
     }
 
     p {
       margin: 0;
-      color: #666;
+      color: #bbb;
     }
   }
 

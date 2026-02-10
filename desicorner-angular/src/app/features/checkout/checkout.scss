@@ -173,16 +173,16 @@ mat-card-subtitle a {
 .otp-verification-section {
   margin-top: 24px;
   padding: 24px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: linear-gradient(135deg, #272b2a 0%, #1c2020 100%);
   border-radius: 12px;
-  border: 2px solid #dee2e6;
+  border: 2px solid #3f4948;
 
   h4 {
     display: flex;
     align-items: center;
     gap: 8px;
     margin: 0 0 8px 0;
-    color: #495057;
+    color: #e0e0e0;
     font-size: 1.1rem;
     font-weight: 600;
 
@@ -193,7 +193,7 @@ mat-card-subtitle a {
 
   .otp-description {
     margin: 0 0 20px 0;
-    color: #6c757d;
+    color: #bbb;
     font-size: 0.9rem;
   }
 }
@@ -262,7 +262,7 @@ mat-card-subtitle a {
       display: flex;
       align-items: center;
       gap: 6px;
-      color: #6c757d;
+      color: #bbb;
       font-size: 0.9rem;
       font-weight: 500;
 
@@ -416,7 +416,7 @@ mat-card-subtitle a {
   gap: 1rem;
   margin-top: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid #3f4948;
 
   button {
     padding: 0 24px;
@@ -463,23 +463,23 @@ mat-card-subtitle a {
   mat-form-field {
     input,
     textarea {
-      color: #333 !important;
-      caret-color: #333 !important;
+      color: #e0e0e0 !important;
+      caret-color: #e0e0e0 !important;
     }
     
     // Override Material theme
     .mat-mdc-input-element {
-      color: #333 !important;
+      color: #e0e0e0 !important;
     }
-    
+
     // Make labels visible
     .mat-mdc-form-field-label {
-      color: #666 !important;
+      color: #bbb !important;
     }
-    
+
     // Make select text visible
     .mat-mdc-select-value {
-      color: #333 !important;
+      color: #e0e0e0 !important;
     }
   }
 }
@@ -487,12 +487,12 @@ mat-card-subtitle a {
 // Fix OTP input specifically
 .otp-input {
   input {
-    color: #333 !important;
-    caret-color: #333 !important;
+    color: #e0e0e0 !important;
+    caret-color: #e0e0e0 !important;
   }
-  
+
   .mat-mdc-input-element {
-    color: #333 !important;
+    color: #e0e0e0 !important;
   }
 }
 

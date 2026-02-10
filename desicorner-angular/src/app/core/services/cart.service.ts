@@ -13,7 +13,7 @@ export class CartService {
   private http = inject(HttpClient);
   
   private readonly CART_STORAGE_KEY = 'desicorner_cart';
-  private readonly TAX_RATE = 0.08; // 8% tax
+  private readonly TAX_RATE = 0.06; // 6% tax
   private readonly DELIVERY_FEE = 5.00;
   private readonly FREE_DELIVERY_THRESHOLD = 50;
 

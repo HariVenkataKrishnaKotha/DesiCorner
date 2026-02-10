@@ -1,0 +1,19 @@
+# Contributing to DesiCorner
+
+This is a personal portfolio project, but suggestions and feedback are welcome!
+
+## How to Contribute
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Development Setup
+
+See the [Getting Started](README.md#getting-started) section in the main README.
+
+## Reporting Issues
+
+If you find a bug or have a suggestion, please [open an issue](https://github.com/HariVenkataKrishnaKotha/DesiCorner/issues).

@@ -5,7 +5,7 @@
 
   h1 {
     margin-bottom: 20px;
-    color: #333;
+    color: #e0e0e0;
   }
 }
 
@@ -18,7 +18,7 @@
 }
 
 .stat-card {
-  background: white;
+  background: #1c2020;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -27,12 +27,12 @@
   .stat-value {
     font-size: 28px;
     font-weight: bold;
-    color: #333;
+    color: #e0e0e0;
   }
 
   .stat-label {
     font-size: 14px;
-    color: #666;
+    color: #9ca3af;
     margin-top: 4px;
   }
 
@@ -45,7 +45,7 @@
 
 // Filters
 .filters {
-  background: white;
+  background: #1c2020;
   padding: 16px;
   border-radius: 8px;
   margin-bottom: 20px;
@@ -60,7 +60,9 @@
   input {
     flex: 1;
     padding: 10px 14px;
-    border: 1px solid #ddd;
+    border: 1px solid #3f4948;
+    background: #272b2a;
+    color: #e0e0e0;
     border-radius: 6px;
     font-size: 14px;
   }
@@ -84,7 +86,9 @@
 
   select, input[type="date"] {
     padding: 8px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid #3f4948;
+    background: #272b2a;
+    color: #e0e0e0;
     border-radius: 6px;
     font-size: 14px;
     min-width: 150px;
@@ -93,7 +97,7 @@
 
 // Table
 .table-container {
-  background: white;
+  background: #1c2020;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -106,24 +110,24 @@
   th, td {
     padding: 12px 16px;
     text-align: left;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #3f4948;
   }
 
   th {
-    background: #f8f9fa;
+    background: #272b2a;
     font-weight: 600;
-    color: #333;
+    color: #e0e0e0;
 
     &.sortable {
       cursor: pointer;
       user-select: none;
 
-      &:hover { background: #e9ecef; }
+      &:hover { background: #3f4948; }
     }
   }
 
   tr:hover {
-    background: #f8f9fa;
+    background: #272b2a;
   }
 }
 
@@ -152,10 +156,10 @@
   display: inline-block;
   margin-left: 6px;
   padding: 2px 6px;
-  background: #e5e7eb;
+  background: #3f4948;
   border-radius: 4px;
   font-size: 10px;
-  color: #6b7280;
+  color: #9ca3af;
 }
 
 // Actions
@@ -178,7 +182,9 @@
 
   .status-select {
     padding: 4px 8px;
-    border: 1px solid #ddd;
+    border: 1px solid #3f4948;
+    background: #272b2a;
+    color: #e0e0e0;
     border-radius: 4px;
     font-size: 12px;
   }
@@ -195,19 +201,20 @@
 
   .page-btn {
     padding: 8px 14px;
-    border: 1px solid #ddd;
-    background: white;
+    border: 1px solid #3f4948;
+    background: #1c2020;
+    color: #e0e0e0;
     border-radius: 4px;
     cursor: pointer;
 
-    &:hover:not(:disabled) { background: #f3f4f6; }
+    &:hover:not(:disabled) { background: #272b2a; }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
     &.active { background: #3b82f6; color: white; border-color: #3b82f6; }
   }
 
   .page-info {
     margin-left: 16px;
-    color: #666;
+    color: #9ca3af;
     font-size: 14px;
   }
 }
@@ -227,7 +234,7 @@
 }
 
 .modal-content {
-  background: white;
+  background: #272b2a;
   border-radius: 12px;
   padding: 24px;
   max-width: 700px;
@@ -250,25 +257,25 @@
   border: none;
   font-size: 28px;
   cursor: pointer;
-  color: #666;
+  color: #9ca3af;
 
-  &:hover { color: #333; }
+  &:hover { color: #e0e0e0; }
 }
 
 .detail-section {
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #3f4948;
 
   h3 {
     font-size: 16px;
     margin-bottom: 12px;
-    color: #333;
+    color: #e0e0e0;
   }
 
   p {
     margin: 6px 0;
-    color: #555;
+    color: #bbb;
   }
 }
 
@@ -280,11 +287,11 @@
   th, td {
     padding: 8px 12px;
     text-align: left;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #3f4948;
   }
 
   th {
-    background: #f8f9fa;
+    background: #1c2020;
     font-size: 12px;
     font-weight: 600;
   }
@@ -316,7 +323,9 @@
 
 .status-select-large {
   padding: 8px 16px;
-  border: 1px solid #ddd;
+  border: 1px solid #3f4948;
+  background: #272b2a;
+  color: #e0e0e0;
   border-radius: 6px;
   font-size: 14px;
 }
@@ -325,7 +334,7 @@
 .loading, .error, .empty-state {
   text-align: center;
   padding: 40px;
-  color: #666;
+  color: #bbb;
 }
 
 .error { color: #dc2626; }
