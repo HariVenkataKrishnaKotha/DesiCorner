@@ -2,7 +2,7 @@
   padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
-  background: #f5f5f5;
+  background: #101414;
   min-height: 100vh;
 }
 
@@ -14,7 +14,7 @@
 
   h1 {
     margin: 0;
-    color: #333;
+    color: #e0e0e0;
     font-size: 28px;
   }
 }
@@ -30,7 +30,7 @@
 
   p {
     margin-top: 16px;
-    color: #666;
+    color: #bbb;
   }
 }
 
@@ -53,7 +53,7 @@
   h2 {
     font-size: 18px;
     font-weight: 500;
-    color: #444;
+    color: #e0e0e0;
     margin-bottom: 16px;
   }
 }
@@ -120,7 +120,7 @@
     font-size: 36px;
     width: 36px;
     height: 36px;
-    color: #666;
+    color: #aaa;
   }
 
   .stat-info {
@@ -128,13 +128,13 @@
       margin: 0;
       font-size: 24px;
       font-weight: 600;
-      color: #1f2937;
+      color: #e0e0e0;
     }
 
     p {
       margin: 4px 0 0;
       font-size: 14px;
-      color: #6b7280;
+      color: #9ca3af;
     }
   }
 
@@ -229,7 +229,7 @@
       margin: 0;
       font-size: 18px;
       font-weight: 500;
-      color: #444;
+      color: #e0e0e0;
     }
   }
 }
@@ -248,7 +248,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 0;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #3f4948;
 
     &:last-child {
       border-bottom: none;
@@ -261,12 +261,12 @@
     gap: 12px;
 
     strong {
-      color: #1f2937;
+      color: #e0e0e0;
       font-size: 14px;
     }
 
     .customer, .user-email {
-      color: #6b7280;
+      color: #9ca3af;
       font-size: 13px;
     }
 
@@ -286,7 +286,7 @@
 
     .amount {
       font-weight: 600;
-      color: #1f2937;
+      color: #e0e0e0;
     }
 
     .date {
@@ -323,7 +323,7 @@
   h2 {
     font-size: 18px;
     font-weight: 500;
-    color: #444;
+    color: #e0e0e0;
     margin-bottom: 16px;
   }
 }
@@ -364,12 +364,12 @@
     margin: 0 0 8px;
     font-size: 16px;
     font-weight: 600;
-    color: #1f2937;
+    color: #e0e0e0;
   }
 
   p {
     margin: 0;
     font-size: 13px;
-    color: #6b7280;
+    color: #9ca3af;
   }
 }
