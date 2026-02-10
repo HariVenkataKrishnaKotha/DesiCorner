@@ -37,7 +37,8 @@
   <a href="#tech-stack">Tech Stack</a> &bull;
   <a href="#getting-started">Getting Started</a> &bull;
   <a href="#api-documentation">API Docs</a> &bull;
-  <a href="#project-structure">Project Structure</a>
+  <a href="#project-structure">Project Structure</a> &bull;
+  <a href="docs/Development_Report.md">Development Report</a>
 </p>
 
 <details>
@@ -55,6 +56,7 @@
 - [API Documentation](#api-documentation)
 - [Architectural Decisions](#architectural-decisions)
 - [Development Process](#development-process)
+- [Development Report](docs/Development_Report.md)
 - [Roadmap](#roadmap)
 - [License](#license)
 
@@ -448,6 +450,8 @@ Architecture Decision (Me) --> Requirements Spec (Me) --> Implementation (Claude
 
 This workflow mirrors modern AI-augmented development practices. The distinction between directing AI tooling and writing code from scratch is less relevant than the ability to **design systems, debug distributed architectures, and make sound technical decisions** — skills that AI assistants cannot replace.
 
+> For a comprehensive atomic-level breakdown of every commit, bug resolution, and file-level attribution, see the [Development Report](docs/Development_Report.md).
+
 ### Development Stats
 
 | Metric | Value |
@@ -458,7 +462,7 @@ This workflow mirrors modern AI-augmented development practices. The distinction
 | Merged pull requests | 22 |
 | Bugs encountered & resolved | 8/8 (100%) |
 | Databases | 5 (separate per microservice) |
-| Shared DTO contracts | 44 files |
+| Shared DTO contracts | 41 files across 9 subdomains |
 
 ---
 
