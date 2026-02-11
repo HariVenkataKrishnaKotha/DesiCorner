@@ -3,8 +3,8 @@
 **Project:** DesiCorner - Indian Restaurant E-Commerce Platform
 **Author:** Hari Venkata Krishna Kotha
 **Repository:** [github.com/HariVenkataKrishnaKotha/DesiCorner](https://github.com/HariVenkataKrishnaKotha/DesiCorner)
-**Report Generated:** February 9, 2026
-**Total Development Period:** January 4, 2023 (initial scaffold) - February 9, 2026 (documentation & polish)
+**Report Generated:** February 11, 2026
+**Total Development Period:** January 4, 2023 (initial scaffold) - February 11, 2026 (NgRx, PKCE, Mermaid diagrams)
 **Total Commits:** 48 commits across 15 branches
 **Total Pull Requests:** 22 merged PRs
 
@@ -32,6 +32,9 @@
    - [Phase 14: Reviews & Ratings (Dec 17, 2025)](#phase-14-reviews--ratings-system-december-17-2025)
    - [Phase 15: Admin Dashboard (Dec 18-23, 2025)](#phase-15-admin-dashboard-december-18-23-2025)
    - [Phase 16: Documentation & Dark Theme (Feb 7-9, 2026)](#phase-16-documentation-dark-theme--diagram-verification-february-7-9-2026)
+   - [Phase 17: NgRx State Management (Feb 10, 2026)](#phase-17-ngrx-state-management-february-10-2026)
+   - [Phase 18: OAuth 2.0 PKCE Implementation (Feb 10-11, 2026)](#phase-18-oauth-20-pkce-implementation-february-10-11-2026)
+   - [Phase 19: Mermaid Diagrams & README Updates (Feb 11, 2026)](#phase-19-mermaid-diagrams--readme-updates-february-11-2026)
 5. [Bugs Encountered & Resolutions](#5-bugs-encountered--resolutions)
 6. [Contributions Breakdown](#6-contributions-breakdown---hari-vs-claude-ai)
 7. [Microservices Detail](#7-microservices-detail)
@@ -100,27 +103,29 @@ DesiCorner is a **production-grade Indian restaurant e-commerce platform** built
 
 ## 3. Architecture Overview
 
-```
-                        Angular 20 SPA (localhost:4200)
-                                  |
-                                  v
-                    YARP API Gateway (localhost:5000)
-                   /        |        |         \
-                  v         v        v          v
-           AuthServer   ProductAPI  CartAPI   OrderAPI   PaymentAPI
-           (:7001)      (:7101)    (:7301)    (:7401)    (:7501)
-              |            |         |       /  |  \        |
-              v            v         v      v   v   v       v
-           SQL Server   SQL Server  SQL Server SQL Server  SQL Server
-           (AuthDb)     (ProductDb) (CartDb)   (OrderDb)   (PaymentDb)
-              |            |         |
-              v            v         v
-                        Redis (Cache Layer)
+```mermaid
+flowchart TD
+    SPA["Angular 20 SPA<br/>:4200"] --> GW["YARP API Gateway<br/>:5000"]
 
-  Inter-service HTTP (via Gateway):
-    OrderAPI --> PaymentAPI  (Verify Payment)
-    OrderAPI --> CartAPI     (Clear Cart after order)
-    CartAPI  --> ProductAPI  (Validate product prices)
+    GW --> AS["AuthServer :7001"]
+    GW --> PA["ProductAPI :7101"]
+    GW --> CA["CartAPI :7301"]
+    GW --> OA["OrderAPI :7401"]
+    GW --> PY["PaymentAPI :7501"]
+
+    AS --> AuthDB["SQL Server (AuthDb)"]
+    PA --> ProdDB["SQL Server (ProductDb)"]
+    CA --> CartDB["SQL Server (CartDb)"]
+    OA --> OrderDB["SQL Server (OrderDb)"]
+    PY --> PayDB["SQL Server (PaymentDb)"]
+
+    AS --> Redis["Redis (Cache Layer)"]
+    PA --> Redis
+    CA --> Redis
+
+    OA -->|Verify Payment| PY
+    OA -->|Clear Cart| CA
+    CA -->|Validate Prices| PA
 ```
 
 **Solution Projects (9 total):**
@@ -1024,6 +1029,110 @@ This was the **final major fix** resolving multiple interrelated issues with the
 
 ---
 
+### Phase 17: NgRx State Management (February 10, 2026)
+
+**Context:** The Angular frontend was managing state through services with direct `localStorage` access. A factual audit of the documentation revealed that NgRx was listed as a technology but not actually implemented. This phase added proper Redux-inspired state management.
+
+#### NgRx Store Implementation
+- Created 3 store slices with full actions → reducers → effects → selectors pattern:
+  - **Auth Store** (`store/auth/`) — `auth.actions.ts`, `auth.reducer.ts`, `auth.effects.ts`, `auth.selectors.ts`
+    - Actions: `checkAuth`, `login`, `loginSuccess`, `loginFailure`, `logout`, `loadUserProfile`, `loadUserProfileSuccess`, `loadUserProfileFailure`, `pkceCallbackSuccess`
+    - Effects: `checkAuth$` checks `OAuthService.hasValidAccessToken()`, `loadUserProfile$` calls ProfileService, `logout$` clears tokens
+  - **Cart Store** (`store/cart/`) — `cart.actions.ts`, `cart.reducer.ts`, `cart.effects.ts`, `cart.selectors.ts`
+    - Actions: `loadCart`, `addToCart`, `removeFromCart`, `updateQuantity`, `applyCoupon`, `removeCoupon`, `clearCart`
+    - Effects: all cart API calls through CartService, cross-store: `AuthActions.logout` resets cart state
+  - **Products Store** (`store/products/`) — `products.actions.ts`, `products.reducer.ts`, `products.effects.ts`, `products.selectors.ts`
+    - Actions: `loadProducts`, `loadCategories`, `filterByCategory`, `searchProducts`
+    - Effects: API calls through ProductService with Redis-backed caching
+- Updated `app.config.ts` with `provideStore()`, `provideEffects()`, `provideStoreDevtools()`
+- Updated components to use `Store.select()` and `Store.dispatch()` instead of direct service calls:
+  - Header component: auth state from `selectIsAuthenticated`, `selectUserProfile`
+  - Cart component: cart state from `selectCartItems`, `selectCartTotal`
+  - Home/Product components: product state from `selectAllProducts`, `selectCategories`
+- **Files created (12):** All store files under `src/app/store/{auth,cart,products}/`
+- **Files modified (10+):** `app.config.ts`, header, cart, home, product-list, product-detail components
+- **Who:** Hari (directed architecture and store design) + Claude AI (implemented the store pattern)
+
+---
+
+### Phase 18: OAuth 2.0 PKCE Implementation (February 10-11, 2026)
+
+**Context:** The Angular client was using **Password Grant** (sending `client_secret` + credentials directly to `/connect/token`), but documentation claimed OAuth 2.0 Authorization Code + PKCE. The backend (OpenIddict) already had `RequireProofKeyForCodeExchange()` configured. This phase implemented the actual PKCE flow.
+
+#### AuthServer Razor Pages (Server-Side Login)
+- Created `/Account/Login` Razor Page for OAuth login UI:
+  - `Pages/_ViewImports.cshtml` — Tag helpers
+  - `Pages/Shared/_Layout.cshtml` — DesiCorner-branded layout
+  - `Pages/Account/Login.cshtml` — Login form (email + password)
+  - `Pages/Account/Login.cshtml.cs` — Login via `SignInManager.PasswordSignInAsync`, email confirmation check, lockout handling
+- Created `/Account/Logout` Razor Page:
+  - `Pages/Account/Logout.cshtml` + `.cshtml.cs` — Signs out via `SignInManager.SignOutAsync()`, validates `post_logout_redirect_uri` against allowed origins, clears `.DesiCorner.Auth` cookie
+- Updated `Program.cs`:
+  - Added `AddRazorPages()`, `MapRazorPages()`, `UseStaticFiles()`
+  - Cookie config: `LoginPath = "/Account/Login"`, custom `OnRedirectToLogin` (redirect for `/connect/authorize`, 401 for API)
+  - JwtBearerEvents: `OnChallenge` handler suppresses JWT Bearer 401 on `/connect/authorize` (allows cookie auth's 302 redirect)
+- Fixed `Seed.cs`: removed `else` block that added `client_secret` (kept client as Public)
+- **Who:** Hari (identified the gap, directed architecture) + Claude AI (implemented Razor Pages and auth pipeline changes)
+
+#### Angular PKCE Integration
+- Updated `app.config.ts` with `provideOAuthClient()` and `OAuthStorage` → `localStorage`
+- Updated `auth.service.ts`:
+  - Injected `OAuthService`, configured AuthConfig from environment
+  - `configureOAuth()`: discovery document loading + silent refresh setup
+  - `initLogin()`: calls `oauthService.initCodeFlow()` (redirects to AuthServer)
+  - `handlePkceCallback()`: exchanges auth code for tokens
+  - `logout()`: dispatches NgRx logout + redirects to AuthServer `/Account/Logout`
+  - Skip `loadDiscoveryDocumentAndTryLogin()` on `/auth/callback` route (prevents double code exchange → 400 error)
+- Updated login component: replaced email/password form with "Sign In" button that triggers PKCE redirect
+- Implemented callback component: processes auth code exchange, dispatches `pkceCallbackSuccess`, navigates to return URL
+- Updated `auth.effects.ts`: removed password grant effect, added PKCE-aware `checkAuth$` and `pkceCallbackSuccess$`
+- Updated `cart.reducer.ts`: added `AuthActions.logout` handler to reset cart state on logout
+- **Files created (4):** Razor Pages (Login, Logout, Layout, ViewImports)
+- **Files modified (8):** AuthServer Program.cs, Seed.cs, Angular auth.service.ts, app.config.ts, auth.effects.ts, auth.actions.ts, login component, callback component, cart.reducer.ts
+- **Who:** Hari (tested PKCE flow end-to-end, identified 4 runtime bugs) + Claude AI (implemented PKCE integration)
+
+#### PKCE Bugs Found During Testing
+- **Bug #9: 401 on /connect/authorize** — JWT Bearer challenge overrode cookie auth's 302 redirect. Fixed with `OnChallenge` handler.
+- **Bug #10: 400 on /connect/token** — Double `loadDiscoveryDocumentAndTryLogin()` call exchanged same auth code twice. Fixed by skipping on callback route.
+- **Bug #11: Cart not clearing on logout** — Cart NgRx state had no handler for `AuthActions.logout`. Fixed in cart.reducer.ts.
+- **Bug #12: Stale admin session on re-login** — AuthServer `.DesiCorner.Auth` cookie persisted after Angular-only logout. Fixed by creating server-side Logout page.
+
+```mermaid
+sequenceDiagram
+    participant SPA as Angular SPA
+    participant AS as AuthServer
+
+    SPA->>AS: GET /connect/authorize (PKCE)
+    AS-->>SPA: 302 → /Account/Login
+    SPA->>AS: POST /Account/Login
+    AS-->>SPA: Cookie + redirect → /connect/authorize
+    AS-->>SPA: 302 → /auth/callback?code=AUTH_CODE
+    SPA->>AS: POST /connect/token (code + code_verifier)
+    AS-->>SPA: access_token + refresh_token + id_token
+```
+
+---
+
+### Phase 19: Mermaid Diagrams & README Updates (February 11, 2026)
+
+**Context:** All 10 README files needed Mermaid diagrams to replace ASCII art and document the newly implemented NgRx and PKCE flows.
+
+#### README Updates
+- **Root README** — Added PKCE flow sequence diagram, updated project structure (added `Pages/` under AuthServer, `store/` under Angular)
+- **AuthServer README** — Replaced ASCII art with Mermaid sequence diagram (PKCE + Registration/OTP flows), added "OAuth Login UI" section documenting Login/Logout Razor Pages
+- **Gateway README** — Replaced ASCII art with Mermaid flowchart (JWT → Rate Limiting → OpenTelemetry → Route Matching → Services)
+- **Angular SPA README** — Added 3 Mermaid diagrams: service communication flowchart, PKCE authentication sequence, NgRx state architecture
+- **ProductAPI README** — Added service communication flowchart, replaced ASCII entity relationships with Mermaid ER diagram
+- **CartAPI README** — Added service communication flowchart, cart identification strategy flowchart
+- **OrderAPI README** — Added service communication flowchart (already had state diagram)
+- **PaymentAPI README** — Added service communication flowchart (already had payment flow sequence)
+- **Contracts README** — Added dependency graph showing all consuming services
+- **MessageBus README** — Replaced ASCII art with Mermaid flowchart (active Redis caching + planned Service Bus)
+- **Development_Report.md** — Replaced ASCII architecture diagram with Mermaid, added Phase 17/18/19, added Bugs #9-12
+- **Who:** Hari (directed) + Claude AI (generated diagrams from codebase analysis)
+
+---
+
 ## 5. Bugs Encountered & Resolutions
 
 ### Bug #1: Authentication Forwarding Issue
@@ -1090,6 +1199,34 @@ This was the **final major fix** resolving multiple interrelated issues with the
 - **Symptom:** `.claude/settings.local.json` committed to repo
 - **Resolution (Dec 16, Commits `8556b9f` + `50c2b1c`):** Deleted from both master and feature branches, updated `.gitignore`
 - **Resolved By:** Hari
+
+### Bug #9: PKCE 401 on /connect/authorize
+- **When:** Feb 10, 2026
+- **Symptom:** Clicking "Sign In" redirected to `/connect/authorize` but returned 401 instead of 302 to login page
+- **Root Cause:** ASP.NET Core's `AuthorizationPolicy.CombineAsync` merges default policy schemes — both Cookie and JWT Bearer challenged simultaneously, and JWT Bearer's 401 overrode Cookie's 302 redirect
+- **Resolution:** Added `OnChallenge` handler to `JwtBearerEvents` that calls `HandleResponse()` when path starts with `/connect/authorize`, suppressing the JWT Bearer 401
+- **Resolved By:** Hari (diagnosed the multi-scheme challenge conflict) + Claude AI (implemented the fix)
+
+### Bug #10: Double Auth Code Exchange (400 on /connect/token)
+- **When:** Feb 10, 2026
+- **Symptom:** After registering a new user and logging in, POST to `/connect/token` returned 400 Bad Request
+- **Root Cause:** `AuthService` constructor called `loadDiscoveryDocumentAndTryLogin()` on app init, and the callback component also called it — both tried to exchange the same authorization code, second attempt got 400 (code already consumed)
+- **Resolution:** Skip `loadDiscoveryDocumentAndTryLogin()` in the constructor when URL path includes `/auth/callback`
+- **Resolved By:** Hari (identified the double-exchange from network tab) + Claude AI (implemented the route check)
+
+### Bug #11: Cart State Not Cleared on Logout
+- **When:** Feb 10, 2026
+- **Symptom:** After logging out as admin and logging in as a new user, admin's cart items were still visible
+- **Root Cause:** Cart NgRx reducer had no handler for `AuthActions.logout` — the cart state persisted across user sessions
+- **Resolution:** Added `on(AuthActions.logout, () => initialCartState)` to cart reducer
+- **Resolved By:** Hari (noticed the stale cart) + Claude AI (implemented the cross-store reset)
+
+### Bug #12: Stale Authentication Cookie
+- **When:** Feb 10, 2026
+- **Symptom:** After logout, clicking "Sign In" auto-authenticated as the previous user (admin) without showing the login page
+- **Root Cause:** Angular logout only cleared `localStorage` tokens. The AuthServer's `.DesiCorner.Auth` cookie persisted in the browser, so the next `/connect/authorize` request auto-issued a code for the old session
+- **Resolution:** Created `/Account/Logout` Razor Page on AuthServer that calls `SignInManager.SignOutAsync()`. Updated Angular `logout()` to redirect to this endpoint
+- **Resolved By:** Hari (identified the cookie persistence issue) + Claude AI (implemented server-side logout)
 
 ---
 
@@ -1805,9 +1942,9 @@ Payment (PaymentAPI DB)
 |---|---|
 | Initial scaffold | Jan 4-6, 2023 |
 | Architecture reboot | Nov 4, 2025 |
-| Active development period | Nov 4 - Dec 23, 2025 (~7 weeks) |
-| Bugs encountered | 8 |
-| Bugs resolved | 8 (100%) |
+| Active development period | Nov 4, 2025 - Feb 11, 2026 |
+| Bugs encountered | 12 |
+| Bugs resolved | 12 (100%) |
 | Days from first bug to resolution | Same day to 4 days max |
 
 ### Databases (5 separate SQL Server databases)
@@ -1863,4 +2000,4 @@ Payment (PaymentAPI DB)
 
 ---
 
-*Report generated from git history analysis of 48 commits across 15 branches and 22 pull requests. Updated February 9, 2026 with Phase 16 documentation, dark theme fixes, and diagram verification.*
+*Report generated from git history analysis. Updated February 11, 2026 with Phase 17 (NgRx state management), Phase 18 (OAuth 2.0 PKCE implementation), Phase 19 (Mermaid diagrams & README updates), and Bugs #9-12.*

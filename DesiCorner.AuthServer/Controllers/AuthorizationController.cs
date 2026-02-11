@@ -30,7 +30,7 @@ public class AuthorizationController : ControllerBase
 
     [HttpGet("/connect/authorize")]
     [HttpPost("/connect/authorize")]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = "Identity.Application")]
     public async Task<IActionResult> AuthorizeAsync()
     {
         var request = HttpContext.GetOpenIddictServerRequest();

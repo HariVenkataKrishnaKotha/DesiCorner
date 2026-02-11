@@ -12,6 +12,14 @@
 
 PaymentAPI processes payments via Stripe's Payment Intents API. When the Angular frontend initiates checkout, it calls `create-intent` to get a `client_secret`, uses Stripe Elements (client-side) to collect card details — **raw card numbers never touch our server (PCI DSS compliance)** — and then the frontend confirms payment. Stripe sends async webhook events to confirm the payment status.
 
+```mermaid
+flowchart LR
+    GW["Gateway :5000"] -->|/api/payment/*| API["PaymentAPI :7501"]
+    API -->|Payment Intents<br/>Webhooks| Stripe["Stripe API"]
+    API --> DB["SQL Server<br/>PaymentDb"]
+    Order["OrderAPI :7401"] -->|Verify payment| API
+```
+
 **Communicates with:**
 - **Gateway** ← receives routed requests from `/api/payment/*`
 - **Stripe** → external API for payment processing, webhook events

@@ -28,6 +28,10 @@
 |----------|-----------------|
 | ![Checkout](docs/images/checkout.png) | ![Admin Dashboard](docs/images/admin-dashboard.png) |
 
+| Login (Angular — PKCE Redirect) | Login (AuthServer — Razor Page) |
+|---------------------------------|---------------------------------|
+| ![Client Login](docs/images/client-login.png) | ![AuthServer Login](docs/images/login-page.png) |
+
 </div>
 
 ---
@@ -123,6 +127,31 @@ graph TB
     F -.->|OrderCreated - planned| N
     G -.->|PaymentSucceeded - planned| N
     N -.->|OrderConfirmed - planned| F
+```
+
+### OAuth 2.0 Authorization Code + PKCE Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User (Browser)
+    participant A as Angular SPA<br/>:4200
+    participant AS as AuthServer<br/>:7001
+    participant G as YARP Gateway<br/>:5000
+
+    U->>A: Click "Sign In"
+    A->>A: Generate code_verifier + code_challenge (S256)
+    A->>AS: GET /connect/authorize?response_type=code<br/>&code_challenge=...&code_challenge_method=S256
+    AS-->>U: 302 → /Account/Login (no auth cookie)
+    U->>AS: POST /Account/Login (email + password)
+    AS->>AS: Validate credentials, set auth cookie
+    AS-->>A: 302 → /auth/callback?code=AUTH_CODE
+    A->>AS: POST /connect/token (code + code_verifier)
+    AS->>AS: Verify code_verifier matches code_challenge
+    AS-->>A: { access_token, refresh_token, id_token }
+    A->>A: Store tokens, dispatch NgRx actions
+    A->>G: API requests with Bearer token
+    G->>G: Validate JWT (JWKS from AuthServer)
+    G->>AS: Forward to backend services
 ```
 
 ### Service Inventory
@@ -336,6 +365,7 @@ DesiCorner/
 │   ├── Identity/                   #   ApplicationUser, ApplicationRole, DeliveryAddress
 │   ├── Infrastructure/             #   OpenIddict client seeding
 │   ├── Models/                     #   View models and request models
+│   ├── Pages/                      #   Razor Pages for OAuth login/logout UI
 │   └── Services/                   #   TokenService, EmailService, OtpService
 │
 ├── DesiCorner.Gateway/             # YARP API Gateway (Port 5000)
@@ -378,6 +408,7 @@ DesiCorner/
 │   └── src/app/
 │       ├── core/                   #   Guards, Interceptors, Models, Services
 │       ├── features/               #   Home, Auth, Admin, Cart, Checkout, Products, Profile, Orders
+│       ├── store/                  #   NgRx store (auth, cart, products — actions, reducers, effects, selectors)
 │       └── shared/                 #   Header, Footer, StarRating, ReviewForm components
 │
 ├── docs/                           # Documentation & images

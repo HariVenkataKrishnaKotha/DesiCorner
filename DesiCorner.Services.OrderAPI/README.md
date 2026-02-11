@@ -12,6 +12,14 @@
 
 OrderAPI processes orders for both authenticated and guest users. Supports delivery and scheduled pickup options. After order creation, it calls PaymentAPI via synchronous HTTP to verify payment, then updates the order status. It also calls CartAPI to clear the cart post-order. (Azure Service Bus event publishing is scaffolded but not yet active.)
 
+```mermaid
+flowchart LR
+    GW["Gateway :5000"] -->|/api/orders/*| API["OrderAPI :7401"]
+    API -->|Verify payment| Pay["PaymentAPI :7501"]
+    API -->|Clear cart| Cart["CartAPI :7301"]
+    API --> DB["SQL Server<br/>OrderDb"]
+```
+
 **Communicates with:**
 - **Gateway** <- receives routed requests from `/api/orders/*`
 - **CartAPI** -> HTTP call to clear cart after order placement
@@ -19,7 +27,7 @@ OrderAPI processes orders for both authenticated and guest users. Supports deliv
 - **MessageBus** -> project reference present (event publishing/consumption scaffolded, not yet active)
 - **SQL Server (OrderDb)** -> orders, order items
 
-> For the overall system architecture, see the [root README](../README.md).
+> 📖 For the overall system architecture, see the [root README](../README.md).
 
 ---
 

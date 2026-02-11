@@ -12,13 +12,21 @@
 
 ProductAPI serves the product catalog to the Angular frontend via the YARP Gateway. It handles CRUD for products and categories, image upload with local file storage, and a complete review/rating system with helpful voting and verified purchase badges. Product data is cached in Redis for fast reads.
 
+```mermaid
+flowchart LR
+    GW["Gateway :5000"] -->|/api/products/*<br/>/api/categories/*<br/>/api/reviews/*| API["ProductAPI :7101"]
+    API --> Redis["Redis<br/>Product & Category Cache"]
+    API --> DB["SQL Server<br/>ProductDb"]
+    API --> MB["MessageBus<br/>ICacheService"]
+```
+
 **Communicates with:**
 - **Gateway** <- receives routed requests from `/api/products/*`, `/api/categories/*`, `/api/reviews/*`
 - **Redis** -> caches product listings and category data
 - **SQL Server (ProductDb)** -> products, categories, reviews, review votes
 - **MessageBus** -> uses `ICacheService` for product/category caching (event publishing scaffolded, not yet active)
 
-> For the overall system architecture, see the [root README](../README.md).
+> 📖 For the overall system architecture, see the [root README](../README.md).
 
 ---
 
@@ -91,10 +99,12 @@ ProductAPI serves the product catalog to the Angular frontend via the YARP Gatew
 - **ReviewVote** — `ReviewId`, `UserId`, `IsHelpful` (boolean)
 
 ### Relationships
-```
-Category 1:N Product
-Product 1:N Review
-Review 1:N ReviewVote
+
+```mermaid
+erDiagram
+    Category ||--o{ Product : "has many"
+    Product ||--o{ Review : "has many"
+    Review ||--o{ ReviewVote : "has many"
 ```
 
 ---

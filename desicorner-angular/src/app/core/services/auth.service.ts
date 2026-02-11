@@ -1,299 +1,179 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap, catchError, throwError, switchMap, delay, map } from 'rxjs';
-import { environment } from '@env/environment';
-import { GuestSessionService} from './guest-session.service';
-import { 
-  LoginRequest, 
-  RegisterRequest, 
-  UserProfile, 
-  AuthState,
+import { Observable } from 'rxjs';
+import { map, take } from 'rxjs/operators';
+import { Store } from '@ngrx/store';
+import { Actions, ofType } from '@ngrx/effects';
+import { OAuthService, AuthConfig } from 'angular-oauth2-oidc';
+import { AppState } from '../../store';
+import { AuthActions } from '../../store/auth/auth.actions';
+import {
+  selectIsAuthenticated,
+  selectUserProfile,
+  selectAuthStateForGuards,
+} from '../../store/auth/auth.selectors';
+import { GuestSessionService } from './guest-session.service';
+import {
+  RegisterRequest,
+  UserProfile,
   SendOtpRequest,
   VerifyOtpRequest,
-  TokenResponse
 } from '../models/auth.models';
 import { ApiResponse } from '../models/response.models';
+import { environment } from '@env/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private http = inject(HttpClient);
-  private router = inject(Router);
+  private store = inject(Store<AppState>);
+  private actions$ = inject(Actions);
+  private oauthService = inject(OAuthService);
   private guestSessionService = inject(GuestSessionService);
 
-  private authStateSubject = new BehaviorSubject<AuthState>({
-    isAuthenticated: false,
-    loading: false
-  });
-
-  public authState$ = this.authStateSubject.asObservable();
-  
-  private readonly TOKEN_KEY = 'access_token';
-  private readonly REFRESH_TOKEN_KEY = 'refresh_token';
-  private readonly TOKEN_EXPIRY_KEY = 'token_expiry';
-  private readonly USER_KEY = 'desicorner_user';
+  /** Observable for guards and components */
+  public authState$ = this.store.select(selectAuthStateForGuards);
 
   constructor() {
-    // Check if user is logged in on init
-    this.checkAuth();
+    this.configureOAuth();
+    this.store.dispatch(AuthActions.checkAuth());
   }
 
-  private checkAuth(): void {
-    const token = this.getToken();
-    
-    if (token && !this.isTokenExpired()) {
-      // Token exists and is valid, load profile
-      this.authStateSubject.next({ isAuthenticated: true, loading: true });
-      this.loadUserProfile();
-    } else {
-      this.authStateSubject.next({ isAuthenticated: false, loading: false });
-    }
-  }
+  /** Configure angular-oauth2-oidc for Authorization Code + PKCE */
+  private configureOAuth(): void {
+    const authConfig: AuthConfig = {
+      issuer: environment.oidc.issuer,
+      clientId: environment.oidc.clientId,
+      redirectUri: environment.oidc.redirectUri,
+      postLogoutRedirectUri: environment.oidc.postLogoutRedirectUri,
+      responseType: environment.oidc.responseType,
+      scope: environment.oidc.scope,
+      showDebugInformation: environment.oidc.showDebugInformation,
+      requireHttps: environment.oidc.requireHttps,
+      strictDiscoveryDocumentValidation: environment.oidc.strictDiscoveryDocumentValidation,
+    };
 
-  /**
-   * Login using OpenIddict Password Grant
-   * Returns ApiResponse for backward compatibility with existing login component
-   */
-  login(request: LoginRequest): Observable<ApiResponse<any>> {
-    this.authStateSubject.next({ isAuthenticated: false, loading: true });
+    this.oauthService.configure(authConfig);
+    this.oauthService.setupAutomaticSilentRefresh();
 
-    // Build form data for OAuth2 password grant
-    const body = new URLSearchParams();
-    body.set('grant_type', 'password');
-    body.set('username', request.email);
-    body.set('password', request.password);
-    body.set('client_id', 'desicorner-angular');
-    body.set('client_secret', 'secret_for_testing_password_grant');
-    body.set('scope', 'openid profile email phone offline_access desicorner.products.read desicorner.products.write desicorner.cart desicorner.orders.read desicorner.orders.write desicorner.payment desicorner.admin');
-
-    return this.http.post<TokenResponse>(
-      `${environment.gatewayUrl}/connect/token`,
-      body.toString(),
-      {
-        headers: new HttpHeaders({
-          'Content-Type': 'application/x-www-form-urlencoded'
-        })
-      }
-    ).pipe(
-      tap(tokenResponse => {
-    console.log('✅ Token received from OpenIddict:', {
-        hasAccessToken: !!tokenResponse.access_token,
-        hasRefreshToken: !!tokenResponse.refresh_token,
-        expiresIn: tokenResponse.expires_in
-    });
-    
-    // Store tokens
-    localStorage.setItem(this.TOKEN_KEY, tokenResponse.access_token);
-    localStorage.setItem(this.REFRESH_TOKEN_KEY, tokenResponse.refresh_token);
-    localStorage.setItem(this.TOKEN_EXPIRY_KEY, (Date.now() + tokenResponse.expires_in * 1000).toString());
-    
-    // Verify it was saved
-    console.log('💾 Token saved to localStorage:', {
-        saved: !!localStorage.getItem(this.TOKEN_KEY)
-    });
-}),
-      // Add delay to ensure localStorage is written
-      delay(100),
-      // Load profile after token is stored
-      switchMap(() => {
-        console.log('✅ Loading user profile...');
-        this.authStateSubject.next({ isAuthenticated: true, loading: true });
-        return this.loadUserProfileObservable();
-      }),
-      // Convert to ApiResponse format for backward compatibility
-      map(() => {
-        const response: ApiResponse<any> = {
-          isSuccess: true,
-          message: 'Login successful'
-        };
-        return response;
-      }),
-      catchError(error => {
-        console.error('❌ Login failed:', error);
-        this.authStateSubject.next({ isAuthenticated: false, loading: false });
-        
-        // Convert OAuth error to ApiResponse format
-        const errorResponse: ApiResponse<any> = {
-          isSuccess: false,
-          message: error.error?.error_description || 'Login failed. Please check your credentials.'
-        };
-        return throwError(() => errorResponse);
-      })
-    );
-  }
-
-  /**
-   * Load user profile - returns Observable for chaining
-   */
-  private loadUserProfileObservable(): Observable<UserProfile> {
-    return this.http.get<ApiResponse<UserProfile>>(
-      `${environment.gatewayUrl}/api/account/profile`
-    ).pipe(
-      map(response => {
-        if (response?.isSuccess && response.result) {
-          return response.result;
+    // Only auto-process tokens on non-callback routes.
+    // The callback component handles the auth code exchange exclusively
+    // to avoid a double exchange (which causes a 400 error).
+    if (!window.location.pathname.includes('/auth/callback')) {
+      this.oauthService.loadDiscoveryDocumentAndTryLogin().then(loggedIn => {
+        if (loggedIn && this.oauthService.hasValidAccessToken()) {
+          this.store.dispatch(AuthActions.pkceCallbackSuccess());
         }
-        throw new Error('Failed to load profile');
-      }),
-      tap(profile => {
-        console.log('✅ Profile loaded:', profile.email);
-        this.setStoredUser(profile);
-        this.authStateSubject.next({
-          isAuthenticated: true,
-          userId: profile.id,
-          profile: profile,
-          loading: false
-        });
-      }),
-      catchError(error => {
-        console.error('❌ Failed to load profile:', error);
-        this.logout();
-        return throwError(() => error);
-      })
-    );
-  }
-
-  /**
-   * Load user profile - void method for manual calls
-   */
-  loadUserProfile(): void {
-    this.loadUserProfileObservable().subscribe({
-      error: (error) => {
-        console.error('Profile load error:', error);
-      }
-    });
-  }
-
-  /**
-   * Register new user
-   */
-  register(request: RegisterRequest): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(
-      `${environment.gatewayUrl}/api/account/register`,
-      request
-    );
-  }
-
-  /**
-   * Send OTP
-   */
-  sendOtp(request: SendOtpRequest): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(
-      `${environment.gatewayUrl}/api/account/send-otp`,
-      request
-    );
-  }
-
-  /**
-   * Verify OTP
-   */
-  verifyOtp(request: VerifyOtpRequest): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(
-      `${environment.gatewayUrl}/api/account/verify-otp`,
-      request
-    );
-  }
-
-  /**
-   * Refresh access token
-   */
-  refreshToken(): Observable<TokenResponse> {
-    const refreshToken = localStorage.getItem(this.REFRESH_TOKEN_KEY);
-    
-    if (!refreshToken) {
-      return throwError(() => new Error('No refresh token available'));
+      });
     }
+  }
 
-    const body = new URLSearchParams();
-    body.set('grant_type', 'refresh_token');
-    body.set('refresh_token', refreshToken);
-    body.set('client_id', 'desicorner-angular');
-    body.set('client_secret', 'secret_for_testing_password_grant');
+  /** Initiate PKCE login — redirects to AuthServer */
+  initLogin(): void {
+    this.oauthService.initCodeFlow();
+  }
 
-    return this.http.post<TokenResponse>(
-      `${environment.gatewayUrl}/connect/token`,
-      body.toString(),
-      {
-        headers: new HttpHeaders({
-          'Content-Type': 'application/x-www-form-urlencoded'
-        })
+  /**
+   * Handle PKCE callback (called from callback component).
+   * Returns true if tokens were received successfully.
+   */
+  async handlePkceCallback(): Promise<boolean> {
+    try {
+      const loggedIn = await this.oauthService.loadDiscoveryDocumentAndTryLogin();
+      if (loggedIn && this.oauthService.hasValidAccessToken()) {
+        this.store.dispatch(AuthActions.pkceCallbackSuccess());
+        return true;
       }
-    ).pipe(
-      tap(tokenResponse => {
-        localStorage.setItem(this.TOKEN_KEY, tokenResponse.access_token);
-        localStorage.setItem(this.REFRESH_TOKEN_KEY, tokenResponse.refresh_token);
-        localStorage.setItem(this.TOKEN_EXPIRY_KEY, (Date.now() + tokenResponse.expires_in * 1000).toString());
-      }),
-      catchError(error => {
-        console.error('Token refresh failed:', error);
-        this.logout();
-        return throwError(() => error);
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Trigger profile reload */
+  loadUserProfile(): void {
+    this.store.dispatch(AuthActions.loadUserProfile());
+  }
+
+  /** Logout — clear local state, then redirect to AuthServer to clear the cookie */
+  logout(): void {
+    // Clear local NgRx state + localStorage tokens first
+    this.store.dispatch(AuthActions.logout());
+
+    // Redirect to AuthServer logout to clear the .DesiCorner.Auth cookie.
+    // Without this, the next login would auto-authenticate as the previous user.
+    const postLogoutUri = encodeURIComponent(environment.oidc.postLogoutRedirectUri);
+    window.location.href = `${environment.authServerUrl}/Account/Logout?post_logout_redirect_uri=${postLogoutUri}`;
+  }
+
+  /** Register new user */
+  register(request: RegisterRequest): Observable<ApiResponse> {
+    this.store.dispatch(AuthActions.register({ request }));
+    return this.actions$.pipe(
+      ofType(AuthActions.registerSuccess, AuthActions.registerFailure),
+      take(1),
+      map(action => {
+        if (action.type === AuthActions.registerSuccess.type) {
+          return (action as any).response as ApiResponse;
+        }
+        return { isSuccess: false, message: (action as any).error } as ApiResponse;
       })
     );
   }
 
-  /**
-   * Logout
-   */
-  logout(): void {
-  // Clear auth tokens
-  localStorage.removeItem(this.TOKEN_KEY);
-  localStorage.removeItem(this.REFRESH_TOKEN_KEY);
-  localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
-  this.removeStoredUser();
-  
-  // Clear guest session (so interceptor will create a new one)
-  localStorage.removeItem('guest_session_id');
-  this.guestSessionService.clearSession();
-  
-  // Update auth state
-  this.authStateSubject.next({
-    isAuthenticated: false,
-    loading: false
-  });
-  
-  // Navigate to home
-  this.router.navigate(['/']);
-}
-
-  // Token management
-  getToken(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY);
+  /** Send OTP */
+  sendOtp(request: SendOtpRequest): Observable<ApiResponse> {
+    this.store.dispatch(AuthActions.sendOtp({ request }));
+    return this.actions$.pipe(
+      ofType(AuthActions.sendOtpSuccess, AuthActions.sendOtpFailure),
+      take(1),
+      map(action => {
+        if (action.type === AuthActions.sendOtpSuccess.type) {
+          return (action as any).response as ApiResponse;
+        }
+        return { isSuccess: false, message: (action as any).error } as ApiResponse;
+      })
+    );
   }
 
-  private isTokenExpired(): boolean {
-    const expiry = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
-    if (!expiry) return true;
-    return Date.now() >= parseInt(expiry);
+  /** Verify OTP */
+  verifyOtp(request: VerifyOtpRequest): Observable<ApiResponse> {
+    this.store.dispatch(AuthActions.verifyOtp({ request }));
+    return this.actions$.pipe(
+      ofType(AuthActions.verifyOtpSuccess, AuthActions.verifyOtpFailure),
+      take(1),
+      map(action => {
+        if (action.type === AuthActions.verifyOtpSuccess.type) {
+          return (action as any).response as ApiResponse;
+        }
+        return { isSuccess: false, message: (action as any).error } as ApiResponse;
+      })
+    );
   }
 
-  // User management
-  private getStoredUser(): UserProfile | null {
-    const user = localStorage.getItem(this.USER_KEY);
-    return user ? JSON.parse(user) : null;
-  }
+  // --- Synchronous getters ---
 
-  private setStoredUser(user: UserProfile): void {
-    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-  }
-
-  private removeStoredUser(): void {
-    localStorage.removeItem(this.USER_KEY);
-  }
-
-  // Getters
   get isAuthenticated(): boolean {
-    return this.authStateSubject.value.isAuthenticated;
+    // Check both NgRx store and OAuthService
+    if (this.oauthService.hasValidAccessToken()) {
+      return true;
+    }
+    let value = false;
+    this.store.select(selectIsAuthenticated).pipe(take(1)).subscribe(v => value = v);
+    return value;
   }
 
   get currentUser(): UserProfile | undefined {
-    return this.authStateSubject.value.profile;
+    let value: UserProfile | undefined;
+    this.store.select(selectUserProfile).pipe(take(1)).subscribe(v => value = v);
+    return value;
   }
 
   get accessToken(): string | null {
-    return this.getToken();
+    return this.oauthService.getAccessToken() || localStorage.getItem('access_token');
+  }
+
+  getToken(): string | null {
+    return this.accessToken;
   }
 
   hasRole(role: string): boolean {

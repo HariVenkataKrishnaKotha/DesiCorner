@@ -1,1 +1,10 @@
-<p>callback works!</p>
+<div class="callback-container">
+  @if (!error) {
+    <mat-spinner diameter="48"></mat-spinner>
+    <h2>Completing sign-in...</h2>
+    <p>Please wait while we verify your credentials.</p>
+  } @else {
+    <h2>Authentication Failed</h2>
+    <p>Redirecting you back to the login page...</p>
+  }
+</div>

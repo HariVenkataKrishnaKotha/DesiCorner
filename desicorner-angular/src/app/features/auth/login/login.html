@@ -3,91 +3,36 @@
     <mat-card-header>
       <div class="auth-header">
         <div class="logo">🍛</div>
-        <h1>Welcome Back</h1>
-        <p>Sign in to your DesiCorner account</p>
+        <h1>Welcome to DesiCorner</h1>
+        <p>Sign in to your account to continue</p>
       </div>
     </mat-card-header>
 
     <mat-card-content>
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-        <!-- Email -->
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Email</mat-label>
-          <input 
-            matInput 
-            type="email" 
-            formControlName="email"
-            placeholder="your@email.com"
-            autocomplete="email">
-          <mat-icon matPrefix>email</mat-icon>
-          @if (loginForm.get('email')?.hasError('required') && loginForm.get('email')?.touched) {
-            <mat-error>Email is required</mat-error>
-          }
-          @if (loginForm.get('email')?.hasError('email') && loginForm.get('email')?.touched) {
-            <mat-error>Please enter a valid email</mat-error>
-          }
-        </mat-form-field>
+      <!-- Sign In Button -->
+      <button
+        mat-raised-button
+        color="primary"
+        class="full-width submit-btn"
+        (click)="signIn()">
+        <mat-icon>login</mat-icon>
+        <span>Sign In</span>
+      </button>
 
-        <!-- Password -->
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Password</mat-label>
-          <input 
-            matInput 
-            [type]="hidePassword ? 'password' : 'text'" 
-            formControlName="password"
-            placeholder="Enter your password"
-            autocomplete="current-password">
-          <mat-icon matPrefix>lock</mat-icon>
-          <button 
-            mat-icon-button 
-            matSuffix 
-            type="button"
-            (click)="hidePassword = !hidePassword"
-            [attr.aria-label]="'Toggle password visibility'"
-            [attr.aria-pressed]="!hidePassword">
-            <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
-          </button>
-          @if (loginForm.get('password')?.hasError('required') && loginForm.get('password')?.touched) {
-            <mat-error>Password is required</mat-error>
-          }
-          @if (loginForm.get('password')?.hasError('minlength') && loginForm.get('password')?.touched) {
-            <mat-error>Password must be at least 6 characters</mat-error>
-          }
-        </mat-form-field>
+      <p class="secure-note">
+        <mat-icon class="lock-icon">lock</mat-icon>
+        You'll be securely redirected to sign in via OAuth 2.0 PKCE
+      </p>
 
-        <!-- Remember Me & Forgot Password -->
-        <div class="form-row">
-          <mat-checkbox formControlName="rememberMe">
-            Remember me
-          </mat-checkbox>
-          <a routerLink="/auth/forgot-password" class="link">Forgot password?</a>
-        </div>
+      <!-- Divider -->
+      <div class="divider">
+        <span>OR</span>
+      </div>
 
-        <!-- Submit Button -->
-        <button 
-          mat-raised-button 
-          color="primary" 
-          type="submit" 
-          class="full-width submit-btn"
-          [disabled]="loginForm.invalid || loading">
-          @if (loading) {
-            <mat-spinner diameter="20"></mat-spinner>
-            <span>Signing in...</span>
-          } @else {
-            <span>Sign In</span>
-          }
-        </button>
-
-        <!-- Divider -->
-        <div class="divider">
-          <span>OR</span>
-        </div>
-
-        <!-- Register Link -->
-        <div class="register-link">
-          <p>Don't have an account? <a routerLink="/auth/register" class="link">Sign Up</a></p>
-        </div>
-      </form>
+      <!-- Register Link -->
+      <div class="register-link">
+        <p>Don't have an account? <a routerLink="/auth/register" class="link">Sign Up</a></p>
+      </div>
     </mat-card-content>
   </mat-card>
 </div>

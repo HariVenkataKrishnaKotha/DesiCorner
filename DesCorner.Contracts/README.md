@@ -13,6 +13,17 @@ DesCorner.Contracts is a **pure .NET 8.0 class library** with zero external NuGe
 
 This library contains **no business logic, no database models, and no infrastructure concerns** — only the shapes of data that flow between services via HTTP (and the message bus when activated).
 
+```mermaid
+flowchart TD
+    C["DesCorner.Contracts<br/>(Shared DTOs)"]
+    C --> AS["AuthServer"]
+    C --> PA["ProductAPI"]
+    C --> CA["CartAPI"]
+    C --> OA["OrderAPI"]
+    C --> PY["PaymentAPI"]
+    C --> MB["MessageBus"]
+```
+
 > 📖 For the overall system architecture, see the [root README](../README.md).
 
 ---
