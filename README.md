@@ -14,6 +14,8 @@
 
 *A 9-service microservices architecture demonstrating distributed system patterns -- OAuth 2.0, API gateway routing, distributed caching, and PCI-compliant payments.*
 
+If you find this project useful or interesting, please consider giving it a ⭐!
+
 </div>
 
 ---
