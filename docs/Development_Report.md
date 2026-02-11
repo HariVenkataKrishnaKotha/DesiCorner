@@ -987,7 +987,7 @@ This was the **final major fix** resolving multiple interrelated issues with the
 
 ### Phase 16: Documentation, Dark Theme & Diagram Verification (February 7-9, 2026)
 
-**Context:** Final polish before pushing to GitHub — comprehensive documentation, dark theme accessibility fixes, and Mermaid diagram verification against actual source code.
+**Context:** Final polish before pushing to GitHub -- comprehensive documentation, dark theme accessibility fixes, and Mermaid diagram verification against actual source code.
 
 #### Dark Theme Contrast Fixes
 - Fixed low-contrast text in dark mode across multiple SCSS files:
@@ -1020,10 +1020,10 @@ This was the **final major fix** resolving multiple interrelated issues with the
 
 #### Mermaid Diagram Deep Verification
 - Verified all Mermaid diagrams against actual source code:
-  - **Root architecture diagram** — Added 3 missing inter-service HTTP connections
-  - **OrderAPI state diagram** — Fixed incorrect statuses: removed "Processing" and "Shipped" (don't exist in code), added "Confirmed" state for Stripe-verified payments, corrected transitions
-  - **PaymentAPI sequence diagram** — Fixed incorrect caller: verify endpoint is called by OrderAPI (not Angular SPA directly); added OrderAPI as participant in the flow
-  - **MessageBus diagram** — Verified accurate, no structural changes
+  - **Root architecture diagram** -- Added 3 missing inter-service HTTP connections
+  - **OrderAPI state diagram** -- Fixed incorrect statuses: removed "Processing" and "Shipped" (don't exist in code), added "Confirmed" state for Stripe-verified payments, corrected transitions
+  - **PaymentAPI sequence diagram** -- Fixed incorrect caller: verify endpoint is called by OrderAPI (not Angular SPA directly); added OrderAPI as participant in the flow
+  - **MessageBus diagram** -- Verified accurate, no structural changes
 - Installed `bierner.markdown-mermaid` VSCode extension for diagram rendering
 - **Who:** Hari + Claude AI (Claude analyzed all source code to verify diagram accuracy)
 
@@ -1035,13 +1035,13 @@ This was the **final major fix** resolving multiple interrelated issues with the
 
 #### NgRx Store Implementation
 - Created 3 store slices with full actions → reducers → effects → selectors pattern:
-  - **Auth Store** (`store/auth/`) — `auth.actions.ts`, `auth.reducer.ts`, `auth.effects.ts`, `auth.selectors.ts`
+  - **Auth Store** (`store/auth/`) -- `auth.actions.ts`, `auth.reducer.ts`, `auth.effects.ts`, `auth.selectors.ts`
     - Actions: `checkAuth`, `login`, `loginSuccess`, `loginFailure`, `logout`, `loadUserProfile`, `loadUserProfileSuccess`, `loadUserProfileFailure`, `pkceCallbackSuccess`
     - Effects: `checkAuth$` checks `OAuthService.hasValidAccessToken()`, `loadUserProfile$` calls ProfileService, `logout$` clears tokens
-  - **Cart Store** (`store/cart/`) — `cart.actions.ts`, `cart.reducer.ts`, `cart.effects.ts`, `cart.selectors.ts`
+  - **Cart Store** (`store/cart/`) -- `cart.actions.ts`, `cart.reducer.ts`, `cart.effects.ts`, `cart.selectors.ts`
     - Actions: `loadCart`, `addToCart`, `removeFromCart`, `updateQuantity`, `applyCoupon`, `removeCoupon`, `clearCart`
     - Effects: all cart API calls through CartService, cross-store: `AuthActions.logout` resets cart state
-  - **Products Store** (`store/products/`) — `products.actions.ts`, `products.reducer.ts`, `products.effects.ts`, `products.selectors.ts`
+  - **Products Store** (`store/products/`) -- `products.actions.ts`, `products.reducer.ts`, `products.effects.ts`, `products.selectors.ts`
     - Actions: `loadProducts`, `loadCategories`, `filterByCategory`, `searchProducts`
     - Effects: API calls through ProductService with Redis-backed caching
 - Updated `app.config.ts` with `provideStore()`, `provideEffects()`, `provideStoreDevtools()`
@@ -1061,12 +1061,12 @@ This was the **final major fix** resolving multiple interrelated issues with the
 
 #### AuthServer Razor Pages (Server-Side Login)
 - Created `/Account/Login` Razor Page for OAuth login UI:
-  - `Pages/_ViewImports.cshtml` — Tag helpers
-  - `Pages/Shared/_Layout.cshtml` — DesiCorner-branded layout
-  - `Pages/Account/Login.cshtml` — Login form (email + password)
-  - `Pages/Account/Login.cshtml.cs` — Login via `SignInManager.PasswordSignInAsync`, email confirmation check, lockout handling
+  - `Pages/_ViewImports.cshtml` -- Tag helpers
+  - `Pages/Shared/_Layout.cshtml` -- DesiCorner-branded layout
+  - `Pages/Account/Login.cshtml` -- Login form (email + password)
+  - `Pages/Account/Login.cshtml.cs` -- Login via `SignInManager.PasswordSignInAsync`, email confirmation check, lockout handling
 - Created `/Account/Logout` Razor Page:
-  - `Pages/Account/Logout.cshtml` + `.cshtml.cs` — Signs out via `SignInManager.SignOutAsync()`, validates `post_logout_redirect_uri` against allowed origins, clears `.DesiCorner.Auth` cookie
+  - `Pages/Account/Logout.cshtml` + `.cshtml.cs` -- Signs out via `SignInManager.SignOutAsync()`, validates `post_logout_redirect_uri` against allowed origins, clears `.DesiCorner.Auth` cookie
 - Updated `Program.cs`:
   - Added `AddRazorPages()`, `MapRazorPages()`, `UseStaticFiles()`
   - Cookie config: `LoginPath = "/Account/Login"`, custom `OnRedirectToLogin` (redirect for `/connect/authorize`, 401 for API)
@@ -1092,10 +1092,10 @@ This was the **final major fix** resolving multiple interrelated issues with the
 - **Who:** Hari (tested PKCE flow end-to-end, identified 4 runtime bugs) + Claude AI (implemented PKCE integration)
 
 #### PKCE Bugs Found During Testing
-- **Bug #9: 401 on /connect/authorize** — JWT Bearer challenge overrode cookie auth's 302 redirect. Fixed with `OnChallenge` handler.
-- **Bug #10: 400 on /connect/token** — Double `loadDiscoveryDocumentAndTryLogin()` call exchanged same auth code twice. Fixed by skipping on callback route.
-- **Bug #11: Cart not clearing on logout** — Cart NgRx state had no handler for `AuthActions.logout`. Fixed in cart.reducer.ts.
-- **Bug #12: Stale admin session on re-login** — AuthServer `.DesiCorner.Auth` cookie persisted after Angular-only logout. Fixed by creating server-side Logout page.
+- **Bug #9: 401 on /connect/authorize** -- JWT Bearer challenge overrode cookie auth's 302 redirect. Fixed with `OnChallenge` handler.
+- **Bug #10: 400 on /connect/token** -- Double `loadDiscoveryDocumentAndTryLogin()` call exchanged same auth code twice. Fixed by skipping on callback route.
+- **Bug #11: Cart not clearing on logout** -- Cart NgRx state had no handler for `AuthActions.logout`. Fixed in cart.reducer.ts.
+- **Bug #12: Stale admin session on re-login** -- AuthServer `.DesiCorner.Auth` cookie persisted after Angular-only logout. Fixed by creating server-side Logout page.
 
 ```mermaid
 sequenceDiagram
@@ -1118,17 +1118,17 @@ sequenceDiagram
 **Context:** All 10 README files needed Mermaid diagrams to replace ASCII art and document the newly implemented NgRx and PKCE flows.
 
 #### README Updates
-- **Root README** — Added PKCE flow sequence diagram, updated project structure (added `Pages/` under AuthServer, `store/` under Angular)
-- **AuthServer README** — Replaced ASCII art with Mermaid sequence diagram (PKCE + Registration/OTP flows), added "OAuth Login UI" section documenting Login/Logout Razor Pages
-- **Gateway README** — Replaced ASCII art with Mermaid flowchart (JWT → Rate Limiting → OpenTelemetry → Route Matching → Services)
-- **Angular SPA README** — Added 3 Mermaid diagrams: service communication flowchart, PKCE authentication sequence, NgRx state architecture
-- **ProductAPI README** — Added service communication flowchart, replaced ASCII entity relationships with Mermaid ER diagram
-- **CartAPI README** — Added service communication flowchart, cart identification strategy flowchart
-- **OrderAPI README** — Added service communication flowchart (already had state diagram)
-- **PaymentAPI README** — Added service communication flowchart (already had payment flow sequence)
-- **Contracts README** — Added dependency graph showing all consuming services
-- **MessageBus README** — Replaced ASCII art with Mermaid flowchart (active Redis caching + planned Service Bus)
-- **Development_Report.md** — Replaced ASCII architecture diagram with Mermaid, added Phase 17/18/19, added Bugs #9-12
+- **Root README** -- Added PKCE flow sequence diagram, updated project structure (added `Pages/` under AuthServer, `store/` under Angular)
+- **AuthServer README** -- Replaced ASCII art with Mermaid sequence diagram (PKCE + Registration/OTP flows), added "OAuth Login UI" section documenting Login/Logout Razor Pages
+- **Gateway README** -- Replaced ASCII art with Mermaid flowchart (JWT → Rate Limiting → OpenTelemetry → Route Matching → Services)
+- **Angular SPA README** -- Added 3 Mermaid diagrams: service communication flowchart, PKCE authentication sequence, NgRx state architecture
+- **ProductAPI README** -- Added service communication flowchart, replaced ASCII entity relationships with Mermaid ER diagram
+- **CartAPI README** -- Added service communication flowchart, cart identification strategy flowchart
+- **OrderAPI README** -- Added service communication flowchart (already had state diagram)
+- **PaymentAPI README** -- Added service communication flowchart (already had payment flow sequence)
+- **Contracts README** -- Added dependency graph showing all consuming services
+- **MessageBus README** -- Replaced ASCII art with Mermaid flowchart (active Redis caching + planned Service Bus)
+- **Development_Report.md** -- Replaced ASCII architecture diagram with Mermaid, added Phase 17/18/19, added Bugs #9-12
 - **Who:** Hari (directed) + Claude AI (generated diagrams from codebase analysis)
 
 ---
@@ -1203,21 +1203,21 @@ sequenceDiagram
 ### Bug #9: PKCE 401 on /connect/authorize
 - **When:** Feb 10, 2026
 - **Symptom:** Clicking "Sign In" redirected to `/connect/authorize` but returned 401 instead of 302 to login page
-- **Root Cause:** ASP.NET Core's `AuthorizationPolicy.CombineAsync` merges default policy schemes — both Cookie and JWT Bearer challenged simultaneously, and JWT Bearer's 401 overrode Cookie's 302 redirect
+- **Root Cause:** ASP.NET Core's `AuthorizationPolicy.CombineAsync` merges default policy schemes -- both Cookie and JWT Bearer challenged simultaneously, and JWT Bearer's 401 overrode Cookie's 302 redirect
 - **Resolution:** Added `OnChallenge` handler to `JwtBearerEvents` that calls `HandleResponse()` when path starts with `/connect/authorize`, suppressing the JWT Bearer 401
 - **Resolved By:** Hari (diagnosed the multi-scheme challenge conflict) + Claude AI (implemented the fix)
 
 ### Bug #10: Double Auth Code Exchange (400 on /connect/token)
 - **When:** Feb 10, 2026
 - **Symptom:** After registering a new user and logging in, POST to `/connect/token` returned 400 Bad Request
-- **Root Cause:** `AuthService` constructor called `loadDiscoveryDocumentAndTryLogin()` on app init, and the callback component also called it — both tried to exchange the same authorization code, second attempt got 400 (code already consumed)
+- **Root Cause:** `AuthService` constructor called `loadDiscoveryDocumentAndTryLogin()` on app init, and the callback component also called it -- both tried to exchange the same authorization code, second attempt got 400 (code already consumed)
 - **Resolution:** Skip `loadDiscoveryDocumentAndTryLogin()` in the constructor when URL path includes `/auth/callback`
 - **Resolved By:** Hari (identified the double-exchange from network tab) + Claude AI (implemented the route check)
 
 ### Bug #11: Cart State Not Cleared on Logout
 - **When:** Feb 10, 2026
 - **Symptom:** After logging out as admin and logging in as a new user, admin's cart items were still visible
-- **Root Cause:** Cart NgRx reducer had no handler for `AuthActions.logout` — the cart state persisted across user sessions
+- **Root Cause:** Cart NgRx reducer had no handler for `AuthActions.logout` -- the cart state persisted across user sessions
 - **Resolution:** Added `on(AuthActions.logout, () => initialCartState)` to cart reducer
 - **Resolved By:** Hari (noticed the stale cart) + Claude AI (implemented the cross-store reset)
 

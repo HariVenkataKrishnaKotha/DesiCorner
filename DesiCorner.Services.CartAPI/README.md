@@ -62,7 +62,7 @@ flowchart LR
 | `POST` | `/api/cart/apply-coupon` | Session/Auth | Apply coupon code |
 | `POST` | `/api/cart/remove-coupon/{cartId}` | Session/Auth | Remove coupon from cart |
 
-### Coupons — Admin (`/api/coupons`)
+### Coupons -- Admin (`/api/coupons`)
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
@@ -78,13 +78,13 @@ flowchart LR
 
 ## Database Schema (CartDb)
 
-**EF Core code-first** — run `dotnet ef database update --project DesiCorner.Services.CartAPI` to create.
+**EF Core code-first** -- run `dotnet ef database update --project DesiCorner.Services.CartAPI` to create.
 
 ### Key Entities
 
-- **Cart** — `UserId` (nullable), `SessionId` (for guests), `CouponCode`, `DiscountAmount`, `SubTotal`, `TaxAmount`, `DeliveryFee`, `Total` (all computed), `CreatedAt`, `UpdatedAt`
-- **CartItem** — `ProductId`, `ProductName`, `ProductImage`, `Price`, `Quantity`, `Total` (computed: Price × Quantity)
-- **Coupon** — `Code`, `DiscountType` (percentage/fixed), `DiscountValue`, `MinOrderAmount`, `MaxDiscount`, `ExpiryDate`, `IsActive`, `UsageCount`, `MaxUsage`
+- **Cart** -- `UserId` (nullable), `SessionId` (for guests), `CouponCode`, `DiscountAmount`, `SubTotal`, `TaxAmount`, `DeliveryFee`, `Total` (all computed), `CreatedAt`, `UpdatedAt`
+- **CartItem** -- `ProductId`, `ProductName`, `ProductImage`, `Price`, `Quantity`, `Total` (computed: Price × Quantity)
+- **Coupon** -- `Code`, `DiscountType` (percentage/fixed), `DiscountValue`, `MinOrderAmount`, `MaxDiscount`, `ExpiryDate`, `IsActive`, `UsageCount`, `MaxUsage`
 
 ### Cart Identification Strategy
 

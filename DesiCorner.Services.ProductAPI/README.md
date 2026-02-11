@@ -34,7 +34,7 @@ flowchart LR
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `Microsoft.AspNetCore.Authentication.JwtBearer` | 8.0.21 | Secures write endpoints — only admins can create/update/delete |
+| `Microsoft.AspNetCore.Authentication.JwtBearer` | 8.0.21 | Secures write endpoints -- only admins can create/update/delete |
 | `Microsoft.EntityFrameworkCore.SqlServer` | 8.0.21 | ORM for product catalog data in SQL Server |
 | `Microsoft.EntityFrameworkCore.Tools` | 8.0.21 | Migration CLI tooling |
 | `StackExchange.Redis` | 2.9.32 | Caches product listings and category data |
@@ -89,14 +89,14 @@ flowchart LR
 
 ## Database Schema (ProductDb)
 
-**EF Core code-first** — run `dotnet ef database update --project DesiCorner.Services.ProductAPI` to create.
+**EF Core code-first** -- run `dotnet ef database update --project DesiCorner.Services.ProductAPI` to create.
 
 ### Key Entities
 
-- **Product** — `Name`, `Description`, `Price`, `ImageUrl`, `CategoryId` (FK), `IsAvailable`, `IsVegetarian`, `IsVegan`, `IsSpicy`, `SpiceLevel` (0-5), `Allergens`, `PreparationTime`, `AverageRating` (computed), `ReviewCount` (computed), `CreatedAt`, `UpdatedAt`
-- **Category** — `Name`, `Description`, `ImageUrl`, `DisplayOrder`
-- **Review** — `ProductId`, `UserId`, `UserName`, `UserEmail`, `Rating` (1-5), `Title`, `Comment`, `IsVerifiedPurchase`, `IsApproved`, `HelpfulCount`, `NotHelpfulCount`, `CreatedAt`
-- **ReviewVote** — `ReviewId`, `UserId`, `IsHelpful` (boolean)
+- **Product** -- `Name`, `Description`, `Price`, `ImageUrl`, `CategoryId` (FK), `IsAvailable`, `IsVegetarian`, `IsVegan`, `IsSpicy`, `SpiceLevel` (0-5), `Allergens`, `PreparationTime`, `AverageRating` (computed), `ReviewCount` (computed), `CreatedAt`, `UpdatedAt`
+- **Category** -- `Name`, `Description`, `ImageUrl`, `DisplayOrder`
+- **Review** -- `ProductId`, `UserId`, `UserName`, `UserEmail`, `Rating` (1-5), `Title`, `Comment`, `IsVerifiedPurchase`, `IsApproved`, `HelpfulCount`, `NotHelpfulCount`, `CreatedAt`
+- **ReviewVote** -- `ReviewId`, `UserId`, `IsHelpful` (boolean)
 
 ### Relationships
 

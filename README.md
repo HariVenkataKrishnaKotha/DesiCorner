@@ -12,7 +12,7 @@
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)]()
 
-*A 9-service microservices architecture demonstrating distributed system patterns — OAuth 2.0, API gateway routing, distributed caching, and PCI-compliant payments.*
+*A 9-service microservices architecture demonstrating distributed system patterns -- OAuth 2.0, API gateway routing, distributed caching, and PCI-compliant payments.*
 
 </div>
 
@@ -28,7 +28,7 @@
 |----------|-----------------|
 | ![Checkout](docs/images/checkout.png) | ![Admin Dashboard](docs/images/admin-dashboard.png) |
 
-| Login (Angular — PKCE Redirect) | Login (AuthServer — Razor Page) |
+| Login (Angular -- PKCE Redirect) | Login (AuthServer -- Razor Page) |
 |---------------------------------|---------------------------------|
 | ![Client Login](docs/images/client-login.png) | ![AuthServer Login](docs/images/login-page.png) |
 
@@ -163,10 +163,10 @@ sequenceDiagram
 | **[CartAPI](./DesiCorner.Services.CartAPI/)** | 7301 | .NET 8, Redis, EF Core | SQL Server (CartDb) + Redis | Shopping cart with Redis session caching, coupon/discount system |
 | **[OrderAPI](./DesiCorner.Services.OrderAPI/)** | 7401 | .NET 8, EF Core | SQL Server (OrderDb) | Order processing, guest checkout, delivery/pickup options |
 | **[PaymentAPI](./DesiCorner.Services.PaymentAPI/)** | 7501 | .NET 8, Stripe.NET 50.0, Serilog | SQL Server (PaymentDb) | Stripe payment intents, webhooks, PCI-compliant card processing |
-| **[Gateway](./DesiCorner.Gateway/)** | 5000 | YARP 2.3, OpenTelemetry | — | Reverse proxy with JWT validation, rate limiting, distributed tracing |
-| **[MessageBus](./DesiCorner.MessageBus/)** | — | Redis (caching), Azure Service Bus (scaffolded) | — | Redis caching abstraction (active). Azure Service Bus messaging scaffolded but not yet active at runtime |
-| **[Contracts](./DesCorner.Contracts/)** | — | .NET 8 (pure library) | — | Shared DTOs across 9 subdomains |
-| **[Frontend](./desicorner-angular/)** | 4200 | Angular 20, NgRx, Angular Material | — | SPA with OAuth 2.0 PKCE, Stripe Elements, responsive Material Design |
+| **[Gateway](./DesiCorner.Gateway/)** | 5000 | YARP 2.3, OpenTelemetry | -- | Reverse proxy with JWT validation, rate limiting, distributed tracing |
+| **[MessageBus](./DesiCorner.MessageBus/)** | -- | Redis (caching), Azure Service Bus (scaffolded) | -- | Redis caching abstraction (active). Azure Service Bus messaging scaffolded but not yet active at runtime |
+| **[Contracts](./DesCorner.Contracts/)** | -- | .NET 8 (pure library) | -- | Shared DTOs across 9 subdomains |
+| **[Frontend](./desicorner-angular/)** | 4200 | Angular 20, NgRx, Angular Material | -- | SPA with OAuth 2.0 PKCE, Stripe Elements, responsive Material Design |
 
 ---
 
@@ -205,7 +205,7 @@ sequenceDiagram
 
 | Technology | Purpose |
 |-----------|---------|
-| SQL Server | Relational databases (5 separate DBs — database-per-service) |
+| SQL Server | Relational databases (5 separate DBs -- database-per-service) |
 | Redis | Distributed caching, session management, rate limiting |
 | Docker | Containerization (coming soon) |
 | Git + GitHub | Branch-per-feature workflow with 22 merged PRs |
@@ -215,28 +215,28 @@ sequenceDiagram
 ## Key Features
 
 ### Architecture & Infrastructure
-- **Microservices Architecture** — 9 independently deployable services with database-per-service pattern
-- **API Gateway** — YARP reverse proxy with request routing, JWT validation, and Redis-based rate limiting
-- **Event-Driven Messaging (Scaffolded)** — Azure Service Bus infrastructure is implemented (publisher, consumer, message types) but not yet active at runtime. Inter-service communication currently uses synchronous HTTP. Planned for activation in a future phase
-- **Distributed Caching** — Redis for session management, product caching, rate limiting, and OTP storage
-- **Observability** — OpenTelemetry distributed tracing across all services with Serilog structured logging
-- **Shared Contracts** — DTO library across 9 subdomains ensuring type-safe inter-service communication
+- **Microservices Architecture** -- 9 independently deployable services with database-per-service pattern
+- **API Gateway** -- YARP reverse proxy with request routing, JWT validation, and Redis-based rate limiting
+- **Event-Driven Messaging (Scaffolded)** -- Azure Service Bus infrastructure is implemented (publisher, consumer, message types) but not yet active at runtime. Inter-service communication currently uses synchronous HTTP. Planned for activation in a future phase
+- **Distributed Caching** -- Redis for session management, product caching, rate limiting, and OTP storage
+- **Observability** -- OpenTelemetry distributed tracing across all services with Serilog structured logging
+- **Shared Contracts** -- DTO library across 9 subdomains ensuring type-safe inter-service communication
 
 ### Authentication & Security
-- **OAuth 2.0 / OpenID Connect** — Full implementation with OpenIddict (authorization code + PKCE flow)
-- **JWT Authentication** — Stateless token-based auth with dual Cookie+JWT scheme support
-- **Role-Based Access Control** — Admin and Customer roles with per-endpoint authorization
-- **OTP Verification** — Redis-backed OTP for registration and guest checkout (SMS via Twilio, Email via MailKit)
+- **OAuth 2.0 / OpenID Connect** -- Full implementation with OpenIddict (authorization code + PKCE flow)
+- **JWT Authentication** -- Stateless token-based auth with dual Cookie+JWT scheme support
+- **Role-Based Access Control** -- Admin and Customer roles with per-endpoint authorization
+- **OTP Verification** -- Redis-backed OTP for registration and guest checkout (SMS via Twilio, Email via MailKit)
 
 ### Business Features
-- **Product Catalog** — Categories, search, filtering, image upload with local storage
-- **Reviews & Ratings** — Star ratings, written reviews, helpful/not-helpful voting, verified purchase badges
-- **Shopping Cart** — Authenticated + guest cart with Redis session caching
-- **Coupon System** — Percentage and fixed-amount discounts with validation rules
-- **Order Processing** — Delivery and pickup options, order tracking, status workflow
-- **Guest Checkout** — Full checkout without registration using OTP verification
-- **Stripe Payments** — PCI-compliant payment intents, card processing, webhook handling
-- **Admin Dashboard** — Analytics, product/category/coupon management, user/role management, order management
+- **Product Catalog** -- Categories, search, filtering, image upload with local storage
+- **Reviews & Ratings** -- Star ratings, written reviews, helpful/not-helpful voting, verified purchase badges
+- **Shopping Cart** -- Authenticated + guest cart with Redis session caching
+- **Coupon System** -- Percentage and fixed-amount discounts with validation rules
+- **Order Processing** -- Delivery and pickup options, order tracking, status workflow
+- **Guest Checkout** -- Full checkout without registration using OTP verification
+- **Stripe Payments** -- PCI-compliant payment intents, card processing, webhook handling
+- **Admin Dashboard** -- Analytics, product/category/coupon management, user/role management, order management
 
 ---
 
@@ -249,9 +249,9 @@ sequenceDiagram
 | .NET SDK | 8.0+ | `dotnet --version` | [dotnet.microsoft.com](https://dotnet.microsoft.com/download/dotnet/8.0) |
 | Node.js | 18+ | `node --version` | [nodejs.org](https://nodejs.org/) |
 | Angular CLI | 20.x | `ng version` | `npm install -g @angular/cli` |
-| SQL Server | 2019+ | — | [SQL Server](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) or Docker image |
+| SQL Server | 2019+ | -- | [SQL Server](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) or Docker image |
 | Redis | 7.0+ | `redis-cli ping` | [redis.io](https://redis.io/download) or Docker image |
-| Stripe Account | Free test keys | — | [dashboard.stripe.com](https://dashboard.stripe.com/register) |
+| Stripe Account | Free test keys | -- | [dashboard.stripe.com](https://dashboard.stripe.com/register) |
 
 ### Option 1: Docker Compose (Recommended)
 
@@ -271,7 +271,7 @@ Update `appsettings.json` in each service with:
 - Redis connection string
 - Stripe API keys (PaymentAPI)
 - SMTP credentials (AuthServer)
-- Twilio credentials (AuthServer — optional)
+- Twilio credentials (AuthServer -- optional)
 
 #### 2. Start Redis
 
@@ -284,7 +284,7 @@ redis-cli ping
 # Expected: PONG
 ```
 
-#### 3. Run Database Migrations (Code-First — no manual DB setup needed)
+#### 3. Run Database Migrations (Code-First -- no manual DB setup needed)
 
 ```bash
 # AuthServer database
@@ -303,7 +303,7 @@ dotnet ef database update --project DesiCorner.Services.OrderAPI
 dotnet ef database update --project DesiCorner.Services.PaymentAPI
 ```
 
-> **Note:** EF Core code-first migrations create all 5 databases automatically. You only need SQL Server running — no manual schema setup required.
+> **Note:** EF Core code-first migrations create all 5 databases automatically. You only need SQL Server running -- no manual schema setup required.
 
 #### 4. Start Backend Services (each in a separate terminal)
 
@@ -326,8 +326,8 @@ ng serve    # Port 4200
 
 #### 6. Verify Setup
 
-- Open http://localhost:4200 — you should see the DesiCorner homepage
-- Open https://localhost:7001/swagger — AuthServer API docs
+- Open http://localhost:4200 -- you should see the DesiCorner homepage
+- Open https://localhost:7001/swagger -- AuthServer API docs
 - Try the login flow, browse products, add to cart
 
 **Service Access Points:**
@@ -348,7 +348,7 @@ ng serve    # Port 4200
 
 ```
 DesiCorner/
-├── DesCorner.Contracts/            # Shared DTOs — 9 subdomains
+├── DesCorner.Contracts/            # Shared DTOs -- 9 subdomains
 │   ├── Admin/                      #   DashboardStatsDto
 │   ├── Auth/                       #   Login, Register, User, OTP, Address, AdminUser DTOs
 │   ├── Cart/                       #   Cart, CartItem, Coupon DTOs
@@ -408,7 +408,7 @@ DesiCorner/
 │   └── src/app/
 │       ├── core/                   #   Guards, Interceptors, Models, Services
 │       ├── features/               #   Home, Auth, Admin, Cart, Checkout, Products, Profile, Orders
-│       ├── store/                  #   NgRx store (auth, cart, products — actions, reducers, effects, selectors)
+│       ├── store/                  #   NgRx store (auth, cart, products -- actions, reducers, effects, selectors)
 │       └── shared/                 #   Header, Footer, StarRating, ReviewForm components
 │
 ├── docs/                           # Documentation & images
@@ -444,12 +444,12 @@ See each service's individual README for complete endpoint documentation.
 |----------|--------|-----|
 | Auth framework | OpenIddict 7.1 over IdentityServer | OpenIddict is fully open-source (Apache 2.0), actively maintained, and natively integrates with ASP.NET Core Identity. IdentityServer moved to a commercial license. |
 | API Gateway | YARP over Ocelot | YARP is Microsoft's official production-grade reverse proxy (used in Azure services). Higher throughput, direct .NET team support, and more flexible routing configuration. |
-| Database strategy | Database-per-service | Each microservice owns its data. Ensures loose coupling — services can be deployed, scaled, and migrated independently. |
+| Database strategy | Database-per-service | Each microservice owns its data. Ensures loose coupling -- services can be deployed, scaled, and migrated independently. |
 | Cart caching | Redis alongside SQL Server | Hot cart data served from Redis (sub-millisecond reads). SQL Server provides durability. Cart survives Redis eviction. |
 | Messaging | Azure Service Bus (scaffolded) | Service Bus infrastructure is implemented but not yet active. Currently all inter-service communication is synchronous HTTP. Planned for eventual consistency patterns (order-to-payment). |
 | Frontend state | NgRx (Redux pattern) | Predictable state management for complex cart/auth/catalog interactions. DevTools integration for debugging. |
 | Auth flow | JWT + PKCE (not cookies-only) | Stateless JWT tokens work across microservices without shared session state. PKCE prevents authorization code interception for public SPA clients. |
-| Payment processing | Stripe Elements (client-side) | PCI DSS compliance — raw card numbers never touch our servers. Stripe handles all card data. |
+| Payment processing | Stripe Elements (client-side) | PCI DSS compliance -- raw card numbers never touch our servers. Stripe handles all card data. |
 
 ---
 
@@ -461,7 +461,7 @@ This project was developed using **AI pair programming** (Claude Code) as a deve
 - Designed the microservices architecture and defined all service boundaries
 - Selected every technology: OpenIddict over IdentityServer, YARP over Ocelot, Redis for distributed caching, Azure Service Bus for future async messaging
 - Defined all domain models and business rules (Indian restaurant domain knowledge)
-- Independently debugged 7 of 8 production bugs — including a critical 3-bug JWT authentication chain across 4 services (audience mismatch + JWKS key validation + CORS trailing slash)
+- Independently debugged 7 of 8 production bugs -- including a critical 3-bug JWT authentication chain across 4 services (audience mismatch + JWKS key validation + CORS trailing slash)
 - Managed the complete Git workflow: 15 feature branches, 22 merged PRs
 - Handled all security: caught and reverted a Stripe API key exposure within minutes
 - Performed all configuration, testing, and validation
@@ -479,7 +479,7 @@ Architecture Decision (Me) --> Requirements Spec (Me) --> Implementation (Claude
     --> Fix Implementation (Me + Claude Code) --> Git Management (Me)
 ```
 
-This workflow mirrors modern AI-augmented development practices. The distinction between directing AI tooling and writing code from scratch is less relevant than the ability to **design systems, debug distributed architectures, and make sound technical decisions** — skills that AI assistants cannot replace.
+This workflow mirrors modern AI-augmented development practices. The distinction between directing AI tooling and writing code from scratch is less relevant than the ability to **design systems, debug distributed architectures, and make sound technical decisions** -- skills that AI assistants cannot replace.
 
 > For a comprehensive atomic-level breakdown of every commit, bug resolution, and file-level attribution, see the [Development Report](docs/Development_Report.md).
 
@@ -526,4 +526,4 @@ This workflow mirrors modern AI-augmented development practices. The distinction
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE.txt) file for details.
+This project is licensed under the MIT License -- see the [LICENSE](LICENSE.txt) file for details.

@@ -11,7 +11,7 @@
 
 ## Role in the System
 
-The Angular SPA is the customer-facing storefront and admin dashboard. It communicates **exclusively through the YARP API Gateway** (`https://localhost:5000`) — never directly to backend services. Uses `angular-oauth2-oidc` for OAuth 2.0 Authorization Code + PKCE flow, NgRx for predictable state management, and `ngx-stripe` for PCI-compliant payment forms.
+The Angular SPA is the customer-facing storefront and admin dashboard. It communicates **exclusively through the YARP API Gateway** (`https://localhost:5000`) -- never directly to backend services. Uses `angular-oauth2-oidc` for OAuth 2.0 Authorization Code + PKCE flow, NgRx for predictable state management, and `ngx-stripe` for PCI-compliant payment forms.
 
 ```mermaid
 flowchart LR
@@ -135,14 +135,14 @@ flowchart TB
 | Guard | Purpose |
 |-------|---------|
 | `AuthGuard` | Protects routes requiring authentication (cart, checkout, orders, profile) |
-| `AdminGuard` | Protects admin routes — requires Admin role in JWT claims |
+| `AdminGuard` | Protects admin routes -- requires Admin role in JWT claims |
 
 ### Interceptors
 
 | Interceptor | Purpose |
 |-------------|---------|
 | `AuthInterceptor` | Attaches JWT Bearer token to all outgoing API requests |
-| `ErrorInterceptor` | Global error handling — extracts error messages, shows toast notifications |
+| `ErrorInterceptor` | Global error handling -- extracts error messages, shows toast notifications |
 
 ---
 
@@ -150,11 +150,11 @@ flowchart TB
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `@angular/core` | ^20.3.0 | Framework core — components, DI, change detection, signals |
+| `@angular/core` | ^20.3.0 | Framework core -- components, DI, change detection, signals |
 | `@angular/router` | ^20.3.0 | Client-side routing with lazy loading and guards |
 | `@angular/forms` | ^20.3.0 | Template-driven and reactive forms |
 | `@angular/material` | ^20.2.11 | Material Design UI components |
-| `@angular/cdk` | ^20.2.11 | Component Dev Kit — accessibility, overlays, drag-drop |
+| `@angular/cdk` | ^20.2.11 | Component Dev Kit -- accessibility, overlays, drag-drop |
 | `@angular/animations` | ^20.3.10 | Material animations and route transitions |
 | `@angular/common` | ^20.3.0 | Core utilities (HttpClient, pipes, directives) |
 | `@angular/compiler` | ^20.3.0 | Template compilation |
@@ -237,8 +237,8 @@ ng test --code-coverage
 ```
 
 **Dependencies:** Requires the YARP Gateway (`https://localhost:5000`) and at minimum:
-- **AuthServer** (`:7001`) — for authentication
-- **ProductAPI** (`:7101`) — for product listing on the homepage
+- **AuthServer** (`:7001`) -- for authentication
+- **ProductAPI** (`:7101`) -- for product listing on the homepage
 
 All other features require their respective backend services to be running.
 

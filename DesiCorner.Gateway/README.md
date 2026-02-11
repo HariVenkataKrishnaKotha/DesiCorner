@@ -30,7 +30,7 @@ flowchart LR
     Route -->|/api/payment/*| Pay["PaymentAPI :7501"]
 ```
 
-**No database** — the Gateway is stateless. Uses Redis only for rate limiting and response caching.
+**No database** -- the Gateway is stateless. Uses Redis only for rate limiting and response caching.
 
 > 📖 For the overall system architecture, see the [root README](../README.md).
 
@@ -40,7 +40,7 @@ flowchart LR
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `Yarp.ReverseProxy` | 2.3.0 | Microsoft's high-performance reverse proxy — routing, load balancing, health checks, transforms |
+| `Yarp.ReverseProxy` | 2.3.0 | Microsoft's high-performance reverse proxy -- routing, load balancing, health checks, transforms |
 | `Microsoft.Extensions.Caching.StackExchangeRedis` | 9.0.10 | Response caching in Redis to reduce backend load |
 | `Microsoft.IdentityModel.Tokens` | 8.14.0 | Token validation primitives (signing keys, token parameters) |
 | `System.IdentityModel.Tokens.Jwt` | 8.14.0 | JWT token reading and validation |
@@ -51,7 +51,7 @@ flowchart LR
 | `OpenTelemetry.Instrumentation.Http` | 1.13.0 | Auto-instruments outgoing HTTP calls to downstream services |
 | `OpenTelemetry.Instrumentation.Runtime` | 1.13.0 | .NET runtime metrics (GC, thread pool, allocations) |
 
-**Project References:** None (standalone — routes to services via YARP configuration)
+**Project References:** None (standalone -- routes to services via YARP configuration)
 
 ---
 

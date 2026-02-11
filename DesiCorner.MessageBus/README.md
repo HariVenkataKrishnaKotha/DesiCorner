@@ -11,8 +11,8 @@
 
 DesiCorner.MessageBus serves two purposes:
 
-1. **Redis caching abstraction (Active)** — `ICacheService` / `CacheService` is used by ProductAPI to cache product and category data in Redis.
-2. **Azure Service Bus messaging (Scaffolded)** — Publisher, consumer, and four event message types are fully implemented but **not yet wired into any service at runtime**. The Service Bus connection string is empty in configuration, and no service currently publishes or consumes events. All inter-service communication today is synchronous HTTP.
+1. **Redis caching abstraction (Active)** -- `ICacheService` / `CacheService` is used by ProductAPI to cache product and category data in Redis.
+2. **Azure Service Bus messaging (Scaffolded)** -- Publisher, consumer, and four event message types are fully implemented but **not yet wired into any service at runtime**. The Service Bus connection string is empty in configuration, and no service currently publishes or consumes events. All inter-service communication today is synchronous HTTP.
 
 ```mermaid
 flowchart LR
@@ -36,7 +36,7 @@ flowchart LR
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `Azure.Messaging.ServiceBus` | 7.20.1 | Enterprise message broker — scaffolded but not yet active at runtime |
+| `Azure.Messaging.ServiceBus` | 7.20.1 | Enterprise message broker -- scaffolded but not yet active at runtime |
 | `StackExchange.Redis` | 2.9.32 | Redis client used for distributed caching (`ICacheService`) |
 | `System.Text.Json` | 9.0.10 | High-performance JSON serialization for message payloads |
 | `Microsoft.Extensions.Configuration.Abstractions` | 9.0.10 | Configuration abstraction (connection strings, queue names) |
@@ -45,7 +45,7 @@ flowchart LR
 
 ---
 
-## Event Catalog (Scaffolded — Not Yet Active)
+## Event Catalog (Scaffolded -- Not Yet Active)
 
 > **Note:** The four event message types below are fully implemented as C# classes but are **not published or consumed by any service at runtime**. They represent the planned async messaging flow.
 
@@ -85,11 +85,11 @@ sequenceDiagram
 
 | Component | Interface | Implementation | Purpose |
 |-----------|-----------|---------------|---------|
-| Cache | `ICacheService` | `CacheService` | **Active** — Redis caching abstraction with typed get/set/delete |
-| Publisher | `IServiceBusPublisher` | `ServiceBusPublisher` | *Scaffolded* — Publishes events to Azure Service Bus queues/topics |
-| Consumer | `IServiceBusConsumer` | `ServiceBusConsumer` | *Scaffolded* — Subscribes to and processes events |
-| Base Event | `BaseMessage` | *(abstract)* | *Scaffolded* — Base class for all event messages (Id, CreatedAt) |
-| Registration | — | `ServiceCollectionExtensions` | DI helper: `services.AddMessageBus(configuration)` |
+| Cache | `ICacheService` | `CacheService` | **Active** -- Redis caching abstraction with typed get/set/delete |
+| Publisher | `IServiceBusPublisher` | `ServiceBusPublisher` | *Scaffolded* -- Publishes events to Azure Service Bus queues/topics |
+| Consumer | `IServiceBusConsumer` | `ServiceBusConsumer` | *Scaffolded* -- Subscribes to and processes events |
+| Base Event | `BaseMessage` | *(abstract)* | *Scaffolded* -- Base class for all event messages (Id, CreatedAt) |
+| Registration | -- | `ServiceCollectionExtensions` | DI helper: `services.AddMessageBus(configuration)` |
 
 ---
 
