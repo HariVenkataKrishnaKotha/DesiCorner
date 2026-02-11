@@ -1,6 +1,6 @@
 # DesCorner.Contracts
 
-**Shared DTO library containing contract files across 9 subdomains — the single source of truth for inter-service communication in the DesiCorner platform.**
+**Shared DTO library containing contract files across 9 subdomains -- the single source of truth for inter-service communication in the DesiCorner platform.**
 
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square&logo=dotnet&logoColor=white)]()
 [![No Dependencies](https://img.shields.io/badge/Dependencies-None-brightgreen?style=flat-square)]()
@@ -11,7 +11,7 @@
 
 DesCorner.Contracts is a **pure .NET 8.0 class library** with zero external NuGet dependencies. It defines all Data Transfer Objects (DTOs), request/response models, and event contracts shared across microservices. Every backend service references this library to ensure type-safe serialization across service boundaries.
 
-This library contains **no business logic, no database models, and no infrastructure concerns** — only the shapes of data that flow between services via HTTP (and the message bus when activated).
+This library contains **no business logic, no database models, and no infrastructure concerns** -- only the shapes of data that flow between services via HTTP (and the message bus when activated).
 
 ```mermaid
 flowchart TD
@@ -32,9 +32,9 @@ flowchart TD
 
 | Technology | Version | Note |
 |-----------|---------|------|
-| .NET | 8.0 | Pure class library — no NuGet dependencies |
+| .NET | 8.0 | Pure class library -- no NuGet dependencies |
 
-**Zero external dependencies by design** — contracts should never pull in framework-specific packages that would create dependency conflicts in consuming services.
+**Zero external dependencies by design** -- contracts should never pull in framework-specific packages that would create dependency conflicts in consuming services.
 
 ---
 
@@ -56,9 +56,9 @@ flowchart TD
 
 ## Design Conventions
 
-- All DTOs are **POCOs with public getters** — no behavior, no dependencies
+- All DTOs are **POCOs with public getters** -- no behavior, no dependencies
 - Request DTOs use data annotation attributes (`[Required]`, `[StringLength]`, etc.) for validation
-- Response DTOs are **denormalized** where needed — include all fields the frontend requires to avoid extra API calls
+- Response DTOs are **denormalized** where needed -- include all fields the frontend requires to avoid extra API calls
 - `ResponseDto` wraps all API responses with a consistent shape: `IsSuccess`, `Message`, and `Result` properties
 - Naming convention: `{Action}{Domain}Dto` (e.g., `CreateProductDto`, `ApplyCouponDto`)
 
@@ -73,7 +73,7 @@ flowchart TD
 | [CartAPI](../DesiCorner.Services.CartAPI/) | Cart, Coupons, Common |
 | [OrderAPI](../DesiCorner.Services.OrderAPI/) | Orders, Cart, Common |
 | [PaymentAPI](../DesiCorner.Services.PaymentAPI/) | Payment, Common |
-| [MessageBus](../DesiCorner.MessageBus/) | Orders, Payment (event payloads — scaffolded, not yet active) |
+| [MessageBus](../DesiCorner.MessageBus/) | Orders, Payment (event payloads -- scaffolded, not yet active) |
 
 ---
 

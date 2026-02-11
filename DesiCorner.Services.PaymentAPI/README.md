@@ -10,7 +10,7 @@
 
 ## Role in the System
 
-PaymentAPI processes payments via Stripe's Payment Intents API. When the Angular frontend initiates checkout, it calls `create-intent` to get a `client_secret`, uses Stripe Elements (client-side) to collect card details — **raw card numbers never touch our server (PCI DSS compliance)** — and then the frontend confirms payment. Stripe sends async webhook events to confirm the payment status.
+PaymentAPI processes payments via Stripe's Payment Intents API. When the Angular frontend initiates checkout, it calls `create-intent` to get a `client_secret`, uses Stripe Elements (client-side) to collect card details -- **raw card numbers never touch our server (PCI DSS compliance)** -- and then the frontend confirms payment. Stripe sends async webhook events to confirm the payment status.
 
 ```mermaid
 flowchart LR
@@ -36,10 +36,10 @@ flowchart LR
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `Stripe.net` | 50.0.0 | Official Stripe SDK — payment intents, webhooks, refunds |
+| `Stripe.net` | 50.0.0 | Official Stripe SDK -- payment intents, webhooks, refunds |
 | `Microsoft.EntityFrameworkCore.SqlServer` | 8.0.21 | Payment records and transaction logs in SQL Server |
 | `Microsoft.EntityFrameworkCore.Design` | 8.0.21 | Design-time EF Core services for migrations |
-| `Serilog.AspNetCore` | 8.0.3 | **Structured logging** — critical for payment services to have auditable, searchable logs of all financial transactions |
+| `Serilog.AspNetCore` | 8.0.3 | **Structured logging** -- critical for payment services to have auditable, searchable logs of all financial transactions |
 | `Swashbuckle.AspNetCore` | 6.6.2 | Swagger/OpenAPI documentation |
 
 **Project References:** `DesCorner.Contracts`
@@ -94,20 +94,20 @@ sequenceDiagram
 
 ## Database Schema (PaymentDb)
 
-**EF Core code-first** — run `dotnet ef database update --project DesiCorner.Services.PaymentAPI` to create.
+**EF Core code-first** -- run `dotnet ef database update --project DesiCorner.Services.PaymentAPI` to create.
 
 ### Key Entity
 
-- **Payment** — `PaymentIntentId` (Stripe), `UserId` (nullable), `UserEmail`, `AmountInCents`, `Amount`, `Currency`, `Status` (requires_payment_method → processing → succeeded/failed), `PaymentMethodId`, `ChargeId`, `ErrorMessage`, `LastPaymentErrorCode`, `OrderId`, `ClientSecret`, `CreatedAt`, `UpdatedAt`
+- **Payment** -- `PaymentIntentId` (Stripe), `UserId` (nullable), `UserEmail`, `AmountInCents`, `Amount`, `Currency`, `Status` (requires_payment_method → processing → succeeded/failed), `PaymentMethodId`, `ChargeId`, `ErrorMessage`, `LastPaymentErrorCode`, `OrderId`, `ClientSecret`, `CreatedAt`, `UpdatedAt`
 
 ---
 
 ## Stripe Integration Notes
 
-- **Test mode only** — uses `sk_test_*` and `pk_test_*` keys. No production keys are ever committed.
-- **PCI DSS compliance** — raw card data is handled entirely by Stripe Elements on the client side. The server only sees Payment Intent IDs and tokens.
-- **Webhook signature verification** — all webhook events are verified against the `Stripe:WebhookSecret` to prevent spoofed events.
-- **Idempotency** — Payment Intents are idempotent by design (same `paymentIntentId` = same payment).
+- **Test mode only** -- uses `sk_test_*` and `pk_test_*` keys. No production keys are ever committed.
+- **PCI DSS compliance** -- raw card data is handled entirely by Stripe Elements on the client side. The server only sees Payment Intent IDs and tokens.
+- **Webhook signature verification** -- all webhook events are verified against the `Stripe:WebhookSecret` to prevent spoofed events.
+- **Idempotency** -- Payment Intents are idempotent by design (same `paymentIntentId` = same payment).
 
 ---
 

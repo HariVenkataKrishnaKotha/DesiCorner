@@ -1,6 +1,6 @@
 # DesiCorner.AuthServer
 
-**OAuth 2.0 / OpenID Connect identity server — handles user registration, authentication, JWT token issuance, profile management, OTP verification, and role-based access control.**
+**OAuth 2.0 / OpenID Connect identity server -- handles user registration, authentication, JWT token issuance, profile management, OTP verification, and role-based access control.**
 
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square&logo=dotnet&logoColor=white)]()
 [![OpenIddict](https://img.shields.io/badge/OpenIddict-7.1.0-blueviolet?style=flat-square)]()
@@ -56,7 +56,7 @@ sequenceDiagram
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `OpenIddict.AspNetCore` | 7.1.0 | OAuth 2.0 / OIDC server — token issuance, authorization flows, PKCE |
+| `OpenIddict.AspNetCore` | 7.1.0 | OAuth 2.0 / OIDC server -- token issuance, authorization flows, PKCE |
 | `OpenIddict.EntityFrameworkCore` | 7.1.0 | Persists OAuth clients, tokens, scopes in SQL Server |
 | `Microsoft.AspNetCore.Identity.EntityFrameworkCore` | 8.0.21 | User management (registration, login, roles, claims) backed by EF Core |
 | `Microsoft.AspNetCore.Authentication.JwtBearer` | 8.0.21 | JWT Bearer authentication for API endpoints |
@@ -79,14 +79,14 @@ sequenceDiagram
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| `GET/POST` | `/connect/authorize` | Cookie | OAuth 2.0 authorization endpoint — initiates authorization code flow |
-| `POST` | `/connect/token` | Anonymous | Token exchange — authorization code, password grant, or refresh token |
+| `GET/POST` | `/connect/authorize` | Cookie | OAuth 2.0 authorization endpoint -- initiates authorization code flow |
+| `POST` | `/connect/token` | Anonymous | Token exchange -- authorization code, password grant, or refresh token |
 | `GET` | `/connect/userinfo` | Bearer Token | Returns authenticated user's profile claims |
 | `POST` | `/connect/introspect` | Client Credentials | Token introspection for Gateway validation |
 | `GET` | `/.well-known/openid-configuration` | Anonymous | OpenID Connect discovery document |
 | `GET` | `/.well-known/jwks` | Anonymous | JSON Web Key Set for signature verification |
 
-### Account Management (AccountController — `/api/account`)
+### Account Management (AccountController -- `/api/account`)
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
@@ -101,7 +101,7 @@ sequenceDiagram
 | `POST` | `/api/account/addresses` | Bearer Token | Add delivery address |
 | `POST` | `/api/account/change-password` | Bearer Token | Change password |
 
-### Admin User Management (AdminController — `/api/admin`)
+### Admin User Management (AdminController -- `/api/admin`)
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
@@ -117,15 +117,15 @@ sequenceDiagram
 
 ## Database Schema (AuthDb)
 
-**EF Core code-first** — run `dotnet ef database update --project DesiCorner.AuthServer` to create.
+**EF Core code-first** -- run `dotnet ef database update --project DesiCorner.AuthServer` to create.
 
 ### Key Entities
 
-- **ApplicationUser** — Extends ASP.NET Identity with: `DietaryPreference`, `RewardPoints`, `PendingOtp`, `OtpExpiry`, `OtpAttempts`, `CreatedAt`, `LastLoginAt`
-- **ApplicationRole** — Custom role entity with `Description`, `CreatedAt`. Seeded roles: Admin, Customer
-- **DeliveryAddress** — User's saved addresses: `Label`, `AddressLine1/2`, `City`, `State`, `ZipCode`, `IsDefault` (1:N relationship with ApplicationUser)
-- **OpenIddict tables** — Applications, Authorizations, Tokens, Scopes (auto-managed by OpenIddict EF Core)
-- **DataProtectionKeys** — Persisted data protection keys for token encryption across app restarts
+- **ApplicationUser** -- Extends ASP.NET Identity with: `DietaryPreference`, `RewardPoints`, `PendingOtp`, `OtpExpiry`, `OtpAttempts`, `CreatedAt`, `LastLoginAt`
+- **ApplicationRole** -- Custom role entity with `Description`, `CreatedAt`. Seeded roles: Admin, Customer
+- **DeliveryAddress** -- User's saved addresses: `Label`, `AddressLine1/2`, `City`, `State`, `ZipCode`, `IsDefault` (1:N relationship with ApplicationUser)
+- **OpenIddict tables** -- Applications, Authorizations, Tokens, Scopes (auto-managed by OpenIddict EF Core)
+- **DataProtectionKeys** -- Persisted data protection keys for token encryption across app restarts
 
 ---
 
@@ -171,13 +171,13 @@ dotnet run --project DesiCorner.AuthServer
 # https://localhost:7001/.well-known/openid-configuration
 ```
 
-**Dependencies:** Requires Redis (for OTP and caching) and SQL Server (for user data). No other DesiCorner services required — AuthServer is independently runnable.
+**Dependencies:** Requires Redis (for OTP and caching) and SQL Server (for user data). No other DesiCorner services required -- AuthServer is independently runnable.
 
 ---
 
 ## OAuth Login UI (Razor Pages)
 
-The AuthServer hosts its own login/logout pages using Razor Pages. In the OAuth 2.0 PKCE flow, the Angular SPA redirects to the AuthServer's login page rather than collecting credentials directly — credentials never pass through the SPA.
+The AuthServer hosts its own login/logout pages using Razor Pages. In the OAuth 2.0 PKCE flow, the Angular SPA redirects to the AuthServer's login page rather than collecting credentials directly -- credentials never pass through the SPA.
 
 | Page | Path | Purpose |
 |------|------|---------|
