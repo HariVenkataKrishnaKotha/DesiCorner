@@ -45,8 +45,9 @@ builder.Services
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-// Controllers
+// Controllers + Razor Pages (for OAuth login UI)
 builder.Services.AddControllers();
+builder.Services.AddRazorPages();
 
 // Redis
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
@@ -102,6 +103,16 @@ builder.Services.AddAuthentication(options =>
 
     options.Events = new JwtBearerEvents
     {
+        OnChallenge = context =>
+        {
+            // Don't let JWT Bearer set 401 on the authorize endpoint —
+            // cookie auth handles that path with a 302 redirect to login.
+            if (context.Request.Path.StartsWithSegments("/connect/authorize"))
+            {
+                context.HandleResponse();
+            }
+            return Task.CompletedTask;
+        },
         OnTokenValidated = context =>
         {
             var logger = context.HttpContext.RequestServices
@@ -198,10 +209,17 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.ExpireTimeSpan = TimeSpan.FromHours(1);
     options.SlidingExpiration = true;
+    options.LoginPath = "/Account/Login";
 
-    // API-only - return 401 instead of redirecting
+    // Redirect to login page for OAuth authorize requests, return 401 for API requests
     options.Events.OnRedirectToLogin = context =>
     {
+        if (context.Request.Path.StartsWithSegments("/connect/authorize"))
+        {
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        }
+
         context.Response.StatusCode = 401;
         return Task.CompletedTask;
     };
@@ -283,9 +301,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("desicorner-angular");
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapRazorPages();
 
 // Health endpoints
 app.MapGet("/health/ready", () => Results.Ok(new { status = "ready", service = "DesiCorner.AuthServer" }));

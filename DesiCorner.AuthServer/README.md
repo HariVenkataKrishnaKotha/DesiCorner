@@ -12,13 +12,33 @@
 
 The AuthServer is the **centralized identity provider** for the entire DesiCorner platform. It issues JWT access tokens that all other microservices validate. The Angular frontend authenticates via OAuth 2.0 Authorization Code + PKCE flow, receiving JWTs that are forwarded through the YARP gateway to downstream services.
 
-```
-Angular SPA ──[PKCE Auth Code]──> Gateway ──> AuthServer
-                                              │
-                                              ├── Issues JWT tokens
-                                              ├── Manages user accounts & roles
-                                              ├── Handles OTP (Redis-backed)
-                                              └── Sends emails (MailKit) & SMS (Twilio)
+```mermaid
+sequenceDiagram
+    participant SPA as Angular SPA
+    participant AS as AuthServer
+    participant DB as AuthDb
+    participant R as Redis
+
+    SPA->>AS: GET /connect/authorize (PKCE code_challenge)
+    AS-->>SPA: 302 → /Account/Login
+    SPA->>AS: POST /Account/Login (email + password)
+    AS->>DB: Validate credentials (SignInManager)
+    AS-->>SPA: Set cookie, redirect to /connect/authorize
+    AS->>AS: Issue authorization code
+    AS-->>SPA: 302 → /auth/callback?code=AUTH_CODE
+    SPA->>AS: POST /connect/token (code + code_verifier)
+    AS->>AS: Validate PKCE, create tokens
+    AS-->>SPA: { access_token, refresh_token, id_token }
+
+    Note over SPA,R: Registration + OTP Flow
+    SPA->>AS: POST /api/account/register
+    AS->>DB: Create user (email unconfirmed)
+    AS->>R: Store OTP (5-min expiry)
+    AS-->>SPA: OTP sent via email/SMS
+    SPA->>AS: POST /api/account/verify-otp
+    AS->>R: Validate OTP
+    AS->>DB: Confirm email
+    AS-->>SPA: Email verified
 ```
 
 **Communicates with:**
@@ -155,13 +175,32 @@ dotnet run --project DesiCorner.AuthServer
 
 ---
 
+## OAuth Login UI (Razor Pages)
+
+The AuthServer hosts its own login/logout pages using Razor Pages. In the OAuth 2.0 PKCE flow, the Angular SPA redirects to the AuthServer's login page rather than collecting credentials directly — credentials never pass through the SPA.
+
+| Page | Path | Purpose |
+|------|------|---------|
+| Login | `/Account/Login` | DesiCorner-branded login form (email + password). Sets auth cookie on success, redirects back to `/connect/authorize` to issue the auth code. |
+| Logout | `/Account/Logout` | Clears the `.DesiCorner.Auth` cookie and redirects to the Angular app's `postLogoutRedirectUri`. |
+
+**Security features:**
+- Unverified email → shows error with link to Angular's OTP verification page
+- Account lockout after 5 failed attempts (15-minute lockout)
+- ReturnUrl preserved through login → authorize → callback chain
+- Logout endpoint validates `post_logout_redirect_uri` against allowed origins
+
+---
+
 ## Key Components
 
 | Component | File | Purpose |
 |-----------|------|---------|
 | AccountController | `Controllers/AccountController.cs` | User registration, login, profile, OTP, addresses |
-| AuthorizationController | `Controllers/AuthorizationController.cs` | OpenIddict OAuth 2.0 authorization endpoint |
+| AuthorizationController | `Controllers/AuthorizationController.cs` | OpenIddict OAuth 2.0 authorization + token endpoints |
 | AdminController | `Controllers/AdminController.cs` | User/role management (admin only) |
+| LoginModel | `Pages/Account/Login.cshtml.cs` | Razor Page for OAuth login (PKCE flow) |
+| LogoutModel | `Pages/Account/Logout.cshtml.cs` | Razor Page for server-side logout (clears auth cookie) |
 | TokenService | `Services/TokenService.cs` | JWT token generation with claims |
 | EmailService | `Services/EmailService.cs` | SMTP email via MailKit |
 | OtpService | `Services/OtpService.cs` | Redis-backed OTP with expiry |

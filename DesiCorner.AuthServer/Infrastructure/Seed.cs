@@ -93,25 +93,8 @@ public static class Seed
                 }
             });
         }
-        else
-        {
-            var descriptor = new OpenIddictApplicationDescriptor();
-
-            await manager.PopulateAsync(descriptor, angularClient);
-
-            // Update existing client to support password grant
-            descriptor.ClientType = ClientTypes.Confidential;
-            descriptor.ClientSecret = "secret_for_testing_password_grant"; 
-
-            // Ensure Password grant permission exists
-            if (!descriptor.Permissions.Contains(Permissions.GrantTypes.Password))
-            {
-                descriptor.Permissions.Add(Permissions.GrantTypes.Password);
-            }
-
-            // Update the client with modified descriptor
-            await manager.UpdateAsync(angularClient, descriptor);
-        }
+        // Client already exists — no updates needed.
+        // The Angular SPA is a Public client using Authorization Code + PKCE.
 
         // YARP Gateway Client (for introspection)
         var gatewayClient = await manager.FindByClientIdAsync("desicorner-gateway");

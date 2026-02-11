@@ -12,18 +12,22 @@
 
 The Gateway is the **single entry point** for all client requests. The Angular frontend sends every API call to `https://localhost:5000`, and the Gateway routes it to the appropriate backend service. Before routing, it validates JWT tokens, applies rate limiting, and instruments requests with OpenTelemetry distributed tracing.
 
-```
-Angular SPA ──[All API calls]──> YARP Gateway (:5000)
-                                      │
-                                      ├── JWT Validation (JWKS auto-fetch from AuthServer)
-                                      ├── Rate Limiting (Redis sliding window)
-                                      ├── OpenTelemetry Tracing
-                                      │
-                                      ├──> AuthServer (:7001)
-                                      ├──> ProductAPI (:7101)
-                                      ├──> CartAPI (:7301)
-                                      ├──> OrderAPI (:7401)
-                                      └──> PaymentAPI (:7501)
+```mermaid
+flowchart LR
+    SPA["Angular SPA<br/>:4200"] -->|HTTPS| GW["YARP Gateway<br/>:5000"]
+
+    subgraph Gateway Pipeline
+        GW --> JWT["JWT Validation<br/>(JWKS from AuthServer)"]
+        JWT --> RL["Rate Limiting<br/>(Redis sliding window)"]
+        RL --> OT["OpenTelemetry<br/>Tracing"]
+        OT --> Route["Route Matching"]
+    end
+
+    Route -->|/connect/* /api/account/* /api/admin/*| Auth["AuthServer :7001"]
+    Route -->|/api/products/* /api/categories/* /api/reviews/*| Prod["ProductAPI :7101"]
+    Route -->|/api/cart/* /api/coupons/*| Cart["CartAPI :7301"]
+    Route -->|/api/orders/*| Order["OrderAPI :7401"]
+    Route -->|/api/payment/*| Pay["PaymentAPI :7501"]
 ```
 
 **No database** — the Gateway is stateless. Uses Redis only for rate limiting and response caching.

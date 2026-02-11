@@ -14,13 +14,18 @@ DesiCorner.MessageBus serves two purposes:
 1. **Redis caching abstraction (Active)** — `ICacheService` / `CacheService` is used by ProductAPI to cache product and category data in Redis.
 2. **Azure Service Bus messaging (Scaffolded)** — Publisher, consumer, and four event message types are fully implemented but **not yet wired into any service at runtime**. The Service Bus connection string is empty in configuration, and no service currently publishes or consumes events. All inter-service communication today is synchronous HTTP.
 
-```
-── Active ──────────────────────────────────────
-ProductAPI ──[ICacheService]──> Redis
+```mermaid
+flowchart LR
+    subgraph Active
+        Prod["ProductAPI"] -->|ICacheService| Redis["Redis"]
+    end
 
-── Planned (scaffolded, not yet active) ────────
-OrderAPI ──[OrderCreated]──> Azure Service Bus ──> PaymentAPI
-PaymentAPI ──[PaymentSucceeded]──> Azure Service Bus ──> OrderAPI
+    subgraph Planned ["Planned (scaffolded, not yet active)"]
+        OA["OrderAPI"] -->|OrderCreated| SB["Azure Service Bus"]
+        SB -->|OrderCreated| PA["PaymentAPI"]
+        PA -->|PaymentSucceeded| SB2["Azure Service Bus"]
+        SB2 -->|PaymentSucceeded| OA2["OrderAPI"]
+    end
 ```
 
 > 📖 For the overall system architecture, see the [root README](../README.md).

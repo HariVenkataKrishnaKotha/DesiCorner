@@ -1,0 +1,48 @@
+@page
+@model DesiCorner.AuthServer.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Sign In";
+    Layout = "_Layout";
+}
+
+<div class="auth-card">
+    <div class="auth-header">
+        <div class="logo">🍛</div>
+        <h1>Welcome Back</h1>
+        <p>Sign in to your DesiCorner account</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="error-message">
+            @Html.Raw(Model.ErrorMessage)
+        </div>
+    }
+
+    <form method="post">
+        <input type="hidden" asp-for="ReturnUrl" />
+
+        <div class="form-group">
+            <label asp-for="Input.Email">Email</label>
+            <input asp-for="Input.Email" type="email" placeholder="your@email.com" autocomplete="email" required />
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Input.Password">Password</label>
+            <input asp-for="Input.Password" type="password" placeholder="Enter your password" autocomplete="current-password" required />
+        </div>
+
+        <button type="submit" class="submit-btn">Sign In</button>
+    </form>
+
+    <div class="divider"><span>OR</span></div>
+
+    <div class="footer-links">
+        <p>Don't have an account? <a href="http://localhost:4200/auth/register">Sign Up</a></p>
+    </div>
+
+    <div class="security-note">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Secured with OAuth 2.0 PKCE
+    </div>
+</div>

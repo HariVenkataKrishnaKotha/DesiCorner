@@ -13,8 +13,14 @@
 
 The Angular SPA is the customer-facing storefront and admin dashboard. It communicates **exclusively through the YARP API Gateway** (`https://localhost:5000`) — never directly to backend services. Uses `angular-oauth2-oidc` for OAuth 2.0 Authorization Code + PKCE flow, NgRx for predictable state management, and `ngx-stripe` for PCI-compliant payment forms.
 
-```
-Angular SPA (:4200) ──[All requests]──> YARP Gateway (:5000) ──> Backend Services
+```mermaid
+flowchart LR
+    SPA["Angular SPA<br/>:4200"] -->|All API calls| GW["YARP Gateway<br/>:5000"]
+    GW --> Auth["AuthServer :7001"]
+    GW --> Prod["ProductAPI :7101"]
+    GW --> Cart["CartAPI :7301"]
+    GW --> Order["OrderAPI :7401"]
+    GW --> Pay["PaymentAPI :7501"]
 ```
 
 > 📖 For the overall system architecture, see the [root README](../README.md).
@@ -30,6 +36,25 @@ Angular SPA (:4200) ──[All requests]──> YARP Gateway (:5000) ──> Bac
 | Response Type | `code` (Authorization Code + PKCE) |
 | Redirect URI | `{origin}/auth/callback` |
 | Scopes | `openid profile email phone offline_access desicorner.products.read desicorner.cart desicorner.orders.read desicorner.orders.write desicorner.payment` |
+
+### PKCE Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant SPA as Angular SPA
+    participant AS as AuthServer :7001
+
+    SPA->>AS: GET /connect/authorize<br/>(code_challenge + S256)
+    AS-->>SPA: 302 → /Account/Login
+    SPA->>AS: POST /Account/Login (email + password)
+    AS-->>SPA: Set cookie, redirect to /connect/authorize
+    AS->>AS: Issue authorization code
+    AS-->>SPA: 302 → /auth/callback?code=AUTH_CODE
+    SPA->>AS: POST /connect/token<br/>(code + code_verifier)
+    AS-->>SPA: access_token + refresh_token + id_token
+
+    Note over SPA: Tokens stored in localStorage<br/>NgRx dispatches pkceCallbackSuccess
+```
 
 ---
 
@@ -77,6 +102,33 @@ Angular SPA (:4200) ──[All requests]──> YARP Gateway (:5000) ──> Bac
 | Auth | Login, Logout, LoadProfile | User authentication state + JWT tokens |
 | Cart | AddItem, RemoveItem, UpdateQuantity, ApplyCoupon, ClearCart | Shopping cart state |
 | Products | LoadProducts, LoadCategories, FilterProducts | Product catalog state |
+
+```mermaid
+flowchart TB
+    subgraph NgRx Store
+        AS["Auth State<br/>isAuthenticated, profile, error"]
+        CS["Cart State<br/>items, totals, coupon, loading"]
+        PS["Products State<br/>products, categories, filters"]
+    end
+
+    subgraph Effects ["Side Effects"]
+        AE["Auth Effects<br/>PKCE callback → loadProfile"]
+        CE["Cart Effects<br/>API calls → update state"]
+        PE["Product Effects<br/>API calls → update state"]
+    end
+
+    AE -->|dispatch| AS
+    CE -->|dispatch| CS
+    PE -->|dispatch| PS
+    AS -->|logout clears| CS
+
+    Components -->|select| AS
+    Components -->|select| CS
+    Components -->|select| PS
+    Components -->|dispatch actions| AE
+    Components -->|dispatch actions| CE
+    Components -->|dispatch actions| PE
+```
 
 ### Route Guards
 
