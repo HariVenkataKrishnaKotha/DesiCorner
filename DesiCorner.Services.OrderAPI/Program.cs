@@ -94,7 +94,11 @@ if (app.Environment.IsDevelopment())
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
-    context.Database.Migrate();
+    // Non-relational providers (e.g. the EF in-memory provider used by tests) have no migrations
+    if (context.Database.IsRelational())
+    {
+        context.Database.Migrate();
+    }
 }
 
 app.UseCors("AllowGateway");
@@ -108,3 +112,6 @@ app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Service = "OrderAPI" }));
 
 app.Run();
+
+// Exposed so integration tests can host the app with WebApplicationFactory<Program>.
+public partial class Program { }
