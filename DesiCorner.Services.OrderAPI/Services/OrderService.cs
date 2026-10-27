@@ -121,7 +121,7 @@ public class OrderService : IOrderService
             if (await _context.Orders.AnyAsync(o => o.PaymentIntentId == request.PaymentIntentId, ct))
             {
                 _logger.LogWarning("PaymentIntent {PaymentIntentId} is already attached to an order", request.PaymentIntentId);
-                throw new InvalidOperationException("This payment has already been used for an order.");
+                throw new PaymentRejectedException("This payment has already been used for an order.");
             }
 
             _logger.LogInformation("Verifying payment: {PaymentIntentId}", request.PaymentIntentId);
@@ -258,7 +258,7 @@ public class OrderService : IOrderService
                 _logger.LogWarning(
                     "Payment {PaymentIntentId} does not match the cart: paid {PaidAmount} {PaidCurrency}, cart total {ExpectedAmount} {ExpectedCurrency}",
                     request.PaymentIntentId, paidAmountInCents, paidCurrency, expectedAmountInCents, PaymentAmounts.Currency);
-                throw new InvalidOperationException("Payment amount does not match the order total.");
+                throw new PaymentRejectedException("Payment amount does not match the order total.");
             }
         }
 
