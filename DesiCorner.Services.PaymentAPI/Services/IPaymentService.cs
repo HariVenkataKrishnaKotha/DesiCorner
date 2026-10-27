@@ -19,9 +19,12 @@ public interface IPaymentService
         CancellationToken ct = default);
 
     /// <summary>
-    /// Update payment record from Stripe webhook
+    /// Update payment record from a verified Stripe webhook event.
+    /// Returns false if the event was already processed (duplicate delivery).
     /// </summary>
-    Task HandleWebhookEventAsync(
+    Task<bool> HandleWebhookEventAsync(
+        string eventId,
+        string eventType,
         string paymentIntentId,
         string status,
         CancellationToken ct = default);

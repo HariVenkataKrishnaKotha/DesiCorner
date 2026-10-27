@@ -107,6 +107,25 @@ namespace DesiCorner.Services.PaymentAPI.Migrations
 
                     b.ToTable("Payments");
                 });
+
+            modelBuilder.Entity("DesiCorner.Services.PaymentAPI.Models.ProcessedStripeEvent", b =>
+                {
+                    b.Property<string>("EventId")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("ProcessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("EventId");
+
+                    b.ToTable("ProcessedStripeEvents");
+                });
 #pragma warning restore 612, 618
         }
     }
