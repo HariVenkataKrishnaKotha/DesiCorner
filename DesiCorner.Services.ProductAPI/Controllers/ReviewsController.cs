@@ -369,18 +369,11 @@ public class ReviewsController : ControllerBase
     }
 
     // Helper methods to get user info from claims
+    // Identity comes only from the validated JWT; X-Forwarded-* headers are never trusted here.
     private Guid? GetUserId()
     {
-        // Try forwarded header first (from Gateway)
-        var forwardedUserId = Request.Headers["X-Forwarded-UserId"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(forwardedUserId) && Guid.TryParse(forwardedUserId, out var guidFromHeader))
-        {
-            return guidFromHeader;
-        }
-
-        // Fall back to claims
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-            ?? User.FindFirst("sub")?.Value;
+        var userIdClaim = User.FindFirst("sub")?.Value
+            ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (Guid.TryParse(userIdClaim, out var guid))
         {
@@ -399,13 +392,6 @@ public class ReviewsController : ControllerBase
 
     private string? GetUserEmail()
     {
-        // Try forwarded header first (from Gateway)
-        var forwardedEmail = Request.Headers["X-Forwarded-Email"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(forwardedEmail))
-        {
-            return forwardedEmail;
-        }
-
         return User.FindFirst(ClaimTypes.Email)?.Value
             ?? User.FindFirst("email")?.Value;
     }
