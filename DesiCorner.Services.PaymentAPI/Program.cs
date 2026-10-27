@@ -29,6 +29,9 @@ builder.Services.AddDbContext<PaymentDbContext>(options =>
 // Payment Service
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
+// Stripe PaymentIntent client (injected so it can be replaced in tests)
+builder.Services.AddScoped<PaymentIntentService>();
+
 // Configure Stripe
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
@@ -103,3 +106,6 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+// Exposed so integration tests can host the app with WebApplicationFactory<Program>.
+public partial class Program { }

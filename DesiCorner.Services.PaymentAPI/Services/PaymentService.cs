@@ -11,15 +11,18 @@ public class PaymentService : IPaymentService
     private readonly PaymentDbContext _context;
     private readonly ILogger<PaymentService> _logger;
     private readonly IConfiguration _configuration;
+    private readonly PaymentIntentService _paymentIntentService;
 
     public PaymentService(
         PaymentDbContext context,
         ILogger<PaymentService> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        PaymentIntentService paymentIntentService)
     {
         _context = context;
         _logger = logger;
         _configuration = configuration;
+        _paymentIntentService = paymentIntentService;
     }
 
     public async Task<PaymentIntentResponseDto> CreatePaymentIntentAsync(
@@ -58,8 +61,7 @@ public class PaymentService : IPaymentService
                 }
             }
 
-            var service = new PaymentIntentService();
-            var paymentIntent = await service.CreateAsync(options, cancellationToken: ct);
+            var paymentIntent = await _paymentIntentService.CreateAsync(options, cancellationToken: ct);
 
             _logger.LogInformation("Stripe Payment Intent created: {PaymentIntentId}, Status: {Status}",
                 paymentIntent.Id, paymentIntent.Status);
@@ -113,8 +115,7 @@ public class PaymentService : IPaymentService
             _logger.LogInformation("Verifying payment: {PaymentIntentId}", paymentIntentId);
 
             // Retrieve payment intent from Stripe
-            var service = new PaymentIntentService();
-            var paymentIntent = await service.GetAsync(paymentIntentId, cancellationToken: ct);
+            var paymentIntent = await _paymentIntentService.GetAsync(paymentIntentId, cancellationToken: ct);
 
             _logger.LogInformation("Payment Intent Status: {Status}", paymentIntent.Status);
 

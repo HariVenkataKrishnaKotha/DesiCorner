@@ -162,3 +162,6 @@ catch (Exception ex)
 Console.WriteLine("🛒 CartAPI is running on https://localhost:7301");
 
 app.Run();
+
+// Exposed so integration tests can host the app with WebApplicationFactory<Program>.
+public partial class Program { }
