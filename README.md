@@ -7,6 +7,7 @@
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![Angular 20](https://img.shields.io/badge/Angular-20-DD0031?style=for-the-badge&logo=angular&logoColor=white)](https://angular.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE.txt)
+[![CI](https://img.shields.io/github/actions/workflow/status/HariVenkataKrishnaKotha/DesiCorner/ci.yml?branch=master&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/HariVenkataKrishnaKotha/DesiCorner/actions/workflows/ci.yml)
 
 *A portfolio project: 7 runnable services (an OpenIddict auth server, a YARP gateway, four ASP.NET Core APIs and an Angular SPA) plus 2 shared class libraries. It demonstrates OAuth 2.0 Authorization Code + PKCE, API-gateway routing, Redis caching and rate limiting, and Stripe payments.*
 
@@ -579,7 +580,7 @@ This is a portfolio build. These are the known gaps, stated plainly so the rest 
 1. **Identity can be spoofed through a header.** The gateway forwards the user's identity downstream in `X-Forwarded-UserId` / `-Roles` / `-Email` headers but does not strip copies sent by the client. CartAPI trusts that header before the JWT, so a caller could act on another user's cart. Fix: strip inbound `X-Forwarded-*` at the gateway and derive the user from the validated token.
 2. **The client sets the payment amount.** PaymentAPI creates the Stripe PaymentIntent from the amount in the request (on an anonymous endpoint), and OrderAPI does not compare the amount paid with the cart total. Fix: compute the amount on the server and reconcile it before confirming an order.
 3. **The Stripe webhook fails open.** Signature verification runs only when `Stripe:WebhookSecret` is set, and that value is empty by default. Processed events are not de-duplicated, and PaymentIntent creation sends no idempotency key. Fix: require the secret at startup, always verify, and store processed `event.Id`s.
-4. **No automated tests, CI or containers.** See below.
+4. **No containers yet.** Automated tests and CI are in place; see below.
 
 Other items:
 - TLS certificate validation is turned off for service-to-service calls (`DangerousAcceptAnyServerCertificate`, `RequireHttpsMetadata = false`), and the setting is not limited to the Development environment.
@@ -591,9 +592,9 @@ Other items:
 - The Gateway exposes an unauthenticated `/test-token` debug endpoint that echoes token claims.
 
 ### Testing, CI and containerization
-- **.NET:** no test projects.
-- **Angular:** 10 CLI-generated spec files. `ng test` does not compile today, because 6 of them import files or exports that no longer exist.
-- **CI:** no GitHub Actions workflow.
+- **.NET:** xUnit test projects under `tests/` for the Gateway, CartAPI, OrderAPI, PaymentAPI and ProductAPI, using `WebApplicationFactory` with Stripe and other external services faked. Run them with `dotnet test DesiCorner.sln`.
+- **Angular:** Karma/Jasmine specs for the core interceptors, guards and services, the NgRx reducers, selectors and effects, and an app-shell smoke test. Run them headless with `npm run test:ci`, which writes a coverage report to `coverage/`.
+- **CI:** a GitHub Actions workflow (`.github/workflows/ci.yml`) builds and tests the .NET solution and the Angular app on every push and pull request to `master`. Dependabot proposes weekly NuGet, npm and Actions updates.
 - **Containers:** no Dockerfile or docker-compose file. Services are run with `dotnet run` as described above.
 
 ### Other known gaps
@@ -620,8 +621,8 @@ Other items:
 
 ### Planned
 - [ ] Fix the open security items above (header stripping, server-side amounts, fail-closed webhook with event de-duplication and idempotency keys)
-- [ ] Unit and integration tests (xUnit) for the gateway authenticator, cart, order and payment reconciliation; repair the Angular specs
-- [ ] CI pipeline (GitHub Actions: build and test on every pull request)
+- [x] Unit and integration tests: xUnit for the gateway, cart, order, payment and product services; Karma/Jasmine specs for the Angular core and NgRx store
+- [x] CI pipeline (GitHub Actions: build and test on every push and pull request to `master`)
 - [ ] Containerization with docker-compose
 - [ ] Limit dev-only TLS, auth and seeding settings to Development; move all secrets to user-secrets or environment variables
 - [ ] Activate Azure Service Bus event-driven messaging
