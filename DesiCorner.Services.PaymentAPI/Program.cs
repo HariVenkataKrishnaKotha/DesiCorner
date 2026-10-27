@@ -32,6 +32,17 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 // Stripe PaymentIntent client (injected so it can be replaced in tests)
 builder.Services.AddScoped<PaymentIntentService>();
 
+// Cart lookup, used to compute the amount to charge server-side.
+// CartAPI is reached through the gateway with the caller's own credentials.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICartClient, CartClient>();
+builder.Services.AddHttpClient("CartAPI", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ServiceUrls:Gateway"]
+        ?? "https://localhost:5000");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 // Configure Stripe
 StripeConfiguration.ApiKey = builder.Configuration["Stripe:SecretKey"];
 
