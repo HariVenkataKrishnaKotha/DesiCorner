@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (.NET)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore DesiCorner.sln
+
+      - name: Build
+        run: dotnet build DesiCorner.sln -c Release --no-restore
+
+      # Runs every test project in the solution; passes (with nothing to run) if there are none.
+      - name: Test
+        run: dotnet test DesiCorner.sln -c Release --no-build
+
+  frontend:
+    name: Frontend (Angular)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: desicorner-angular
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desicorner-angular/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # Headless Chrome (the runner's preinstalled Chrome) with --no-sandbox, see karma.conf.js
+      - name: Unit tests with coverage
+        run: npm run test:ci
+
+      - name: Production build
+        run: npx ng build --configuration production
+
+      - name: Upload coverage
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: angular-coverage
+          path: desicorner-angular/coverage/
+          if-no-files-found: warn
