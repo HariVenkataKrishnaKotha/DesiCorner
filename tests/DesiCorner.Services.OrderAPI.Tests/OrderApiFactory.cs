@@ -36,6 +36,9 @@ public sealed class OrderApiFactory : WebApplicationFactory<Program>
     public string VerifyResultJson { get; set; } =
         """{"isSuccess":true,"status":"succeeded","amount":100.00,"amountInCents":10000,"currency":"usd"}""";
 
+    /// <summary>When set, the AuthServer user lookup reports this registered user for any guest.</summary>
+    public Guid? RegisteredUserId { get; set; }
+
     public Func<RecordedRequest, HttpResponseMessage> Respond { get; set; }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -52,6 +55,10 @@ public sealed class OrderApiFactory : WebApplicationFactory<Program>
             {
                 services.AddHttpClient(name).ConfigurePrimaryHttpMessageHandler(() => Downstream);
             }
+
+            // OrderService asks for an "AuthServer" client that Program never registers; give it
+            // an address so the guest-to-registered-user lookup path can be exercised.
+            services.AddHttpClient("AuthServer", c => c.BaseAddress = new Uri("https://auth.test.local"));
         });
     }
 
@@ -81,6 +88,11 @@ public sealed class OrderApiFactory : WebApplicationFactory<Program>
         if (request.Method == HttpMethod.Post && path == "/api/payment/verify")
         {
             return RecordingHandler.Json("""{"isSuccess":true,"message":"","result":""" + VerifyResultJson + "}");
+        }
+
+        if (request.Method == HttpMethod.Get && path == "/api/account/user-lookup" && RegisteredUserId is { } registered)
+        {
+            return RecordingHandler.Json(JsonSerializer.Serialize(new ResponseDto { Result = new { UserId = registered } }));
         }
 
         return new HttpResponseMessage(HttpStatusCode.NotFound);
