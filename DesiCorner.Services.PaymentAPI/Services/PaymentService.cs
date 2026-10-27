@@ -12,17 +12,20 @@ public class PaymentService : IPaymentService
     private readonly ILogger<PaymentService> _logger;
     private readonly IConfiguration _configuration;
     private readonly PaymentIntentService _paymentIntentService;
+    private readonly ICartClient _cartClient;
 
     public PaymentService(
         PaymentDbContext context,
         ILogger<PaymentService> logger,
         IConfiguration configuration,
-        PaymentIntentService paymentIntentService)
+        PaymentIntentService paymentIntentService,
+        ICartClient cartClient)
     {
         _context = context;
         _logger = logger;
         _configuration = configuration;
         _paymentIntentService = paymentIntentService;
+        _cartClient = cartClient;
     }
 
     public async Task<PaymentIntentResponseDto> CreatePaymentIntentAsync(
@@ -31,17 +34,33 @@ public class PaymentService : IPaymentService
     {
         try
         {
-            _logger.LogInformation("Creating payment intent for OrderId: {OrderId}, Amount: {Amount}",
-                request.OrderId, request.Amount);
+            // The amount charged is the caller's cart total as CartAPI computes it.
+            // request.Amount and request.Currency are client-supplied and only logged.
+            var cart = await _cartClient.GetCallerCartAsync(ct);
+            if (cart == null || cart.Items.Count == 0 || cart.Total <= 0)
+            {
+                throw new InvalidOperationException("Cart is empty or unavailable. Add items before paying.");
+            }
 
-            // Convert amount to cents (Stripe requires smallest currency unit)
-            var amountInCents = (long)(request.Amount * 100);
+            var amount = cart.Total;
+            var amountInCents = PaymentAmounts.ToMinorUnits(amount);
+            var currency = PaymentAmounts.Currency;
+
+            if (request.Amount != amount || !string.Equals(request.Currency, currency, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning(
+                    "Client requested {RequestedAmount} {RequestedCurrency} but cart total is {CartTotal} {Currency}; charging the cart total",
+                    request.Amount, request.Currency, amount, currency);
+            }
+
+            _logger.LogInformation("Creating payment intent for OrderId: {OrderId}, Amount: {Amount}",
+                request.OrderId, amount);
 
             // Create Stripe Payment Intent
             var options = new PaymentIntentCreateOptions
             {
                 Amount = amountInCents,
-                Currency = request.Currency.ToLower(),
+                Currency = currency,
                 AutomaticPaymentMethods = new PaymentIntentAutomaticPaymentMethodsOptions
                 {
                     Enabled = true, // Enables card, wallets, etc.
@@ -73,8 +92,8 @@ public class PaymentService : IPaymentService
                 PaymentIntentId = paymentIntent.Id,
                 OrderId = request.OrderId,
                 AmountInCents = amountInCents,
-                Amount = request.Amount,
-                Currency = request.Currency.ToLower(),
+                Amount = amount,
+                Currency = currency,
                 Status = paymentIntent.Status,
                 ClientSecret = paymentIntent.ClientSecret,
                 CreatedAt = DateTime.UtcNow,
@@ -91,7 +110,7 @@ public class PaymentService : IPaymentService
                 PaymentIntentId = paymentIntent.Id,
                 ClientSecret = paymentIntent.ClientSecret,
                 Status = paymentIntent.Status,
-                Amount = request.Amount
+                Amount = amount
             };
         }
         catch (StripeException ex)
@@ -127,6 +146,11 @@ public class PaymentService : IPaymentService
             {
                 payment.Status = paymentIntent.Status;
                 payment.PaymentMethodId = paymentIntent.PaymentMethodId;
+
+                // Record what Stripe says the intent charges, not what was requested
+                payment.AmountInCents = paymentIntent.Amount;
+                payment.Amount = paymentIntent.Amount / 100m;
+                payment.Currency = paymentIntent.Currency;
                 payment.UpdatedAt = DateTime.UtcNow;
 
                 // If succeeded, save charge ID

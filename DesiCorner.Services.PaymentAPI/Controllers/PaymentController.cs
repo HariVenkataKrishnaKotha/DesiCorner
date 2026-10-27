@@ -33,8 +33,8 @@ public class PaymentController : ControllerBase
     /// The client secret is used by the frontend to complete payment.
     /// 
     /// **Flow:**
-    /// 1. Frontend calls this endpoint with order amount
-    /// 2. PaymentAPI creates Stripe Payment Intent
+    /// 1. Frontend calls this endpoint (any amount it sends is ignored)
+    /// 2. PaymentAPI fetches the caller's cart and creates a Stripe Payment Intent for its total
     /// 3. Returns client_secret to frontend
     /// 4. Frontend uses client_secret with Stripe.js to collect payment
     /// </remarks>
@@ -143,6 +143,8 @@ public class PaymentController : ControllerBase
                     IsSuccess = isSuccess,
                     Status = payment.Status,
                     Amount = payment.Amount,
+                    AmountInCents = payment.AmountInCents,
+                    Currency = payment.Currency,
                     ErrorMessage = payment.ErrorMessage
                 }
             });
