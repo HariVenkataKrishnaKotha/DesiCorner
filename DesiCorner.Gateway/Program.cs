@@ -99,6 +99,14 @@ var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Gat
 
 // MIDDLEWARE PIPELINE
 
+// Drop client-supplied identity headers before anything else runs. Only the auth
+// middleware below may set them, from a validated token.
+app.Use(async (ctx, next) =>
+{
+    ForwardingTransforms.StripInboundIdentityHeaders(ctx);
+    await next();
+});
+
 app.UseHttpsRedirection();
 
 // Security headers
