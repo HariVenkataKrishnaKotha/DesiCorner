@@ -88,6 +88,15 @@ public class OrdersController : ControllerBase
                 Message = ex.Message
             });
         }
+        catch (PaymentRejectedException ex)
+        {
+            // The payment does not match this order, or already paid for another one
+            return Conflict(new ResponseDto
+            {
+                IsSuccess = false,
+                Message = ex.Message
+            });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating order");
