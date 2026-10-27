@@ -137,6 +137,10 @@ namespace DesiCorner.Services.OrderAPI.Migrations
                     b.HasIndex("OrderNumber")
                         .IsUnique();
 
+                    b.HasIndex("PaymentIntentId")
+                        .IsUnique()
+                        .HasFilter("[PaymentIntentId] IS NOT NULL");
+
                     b.HasIndex("Status");
 
                     b.HasIndex("UserId");
