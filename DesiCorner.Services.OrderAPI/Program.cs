@@ -19,11 +19,16 @@ builder.Services.AddDbContext<OrderDbContext>(options =>
 builder.Services.AddScoped<IOrderService, OrderService>();
 
 // HttpClient for inter-service communication
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<ForwardAuthorizationHandler>();
+
+// CartAPI is reached through the gateway; the caller's bearer token identifies the cart
 builder.Services.AddHttpClient("CartAPI", client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ServiceUrls:Gateway"]
         ?? "https://localhost:5000");
-});
+})
+.AddHttpMessageHandler<ForwardAuthorizationHandler>();
 
 builder.Services.AddHttpClient("AuthAPI", client =>
 {

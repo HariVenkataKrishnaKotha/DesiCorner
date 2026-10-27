@@ -183,33 +183,14 @@ public class OrderService : IOrderService
         _logger.LogInformation("Fetching cart for user {UserId} or session {SessionId}", finalUserId, request.SessionId);
 
         var cartClient = _httpClientFactory.CreateClient("CartAPI");
-        HttpResponseMessage cartResponse;
 
-        // Build cart request URL based on user type
-        if (finalUserId.HasValue)
-        {
-            // Authenticated user - fetch by userId via X-Forwarded-UserId header
-            var cartRequest = new HttpRequestMessage(HttpMethod.Get, "/api/cart");
-            cartRequest.Headers.Add("X-Forwarded-UserId", finalUserId.Value.ToString());
-            cartResponse = await cartClient.SendAsync(cartRequest, ct);
+        var cartResponse = await cartClient.SendAsync(
+            CreateCartRequest(HttpMethod.Get, "/api/cart", isGuestCheckout, request.SessionId), ct);
 
-            _logger.LogInformation("Cart API response status: {StatusCode}", cartResponse.StatusCode);
+        _logger.LogInformation("Cart API response status: {StatusCode}", cartResponse.StatusCode);
 
-            var responseBody = await cartResponse.Content.ReadAsStringAsync(ct);
-            _logger.LogInformation("Cart API raw response: {Response}", responseBody);
-        }
-        else
-        {
-            // Guest user - fetch by sessionId via X-Session-Id header
-            var cartRequest = new HttpRequestMessage(HttpMethod.Get, "/api/cart");
-            cartRequest.Headers.Add("X-Session-Id", request.SessionId);
-            cartResponse = await cartClient.SendAsync(cartRequest, ct);
-
-            _logger.LogInformation("Cart API response status: {StatusCode}", cartResponse.StatusCode);
-
-            var responseBody = await cartResponse.Content.ReadAsStringAsync(ct);
-            _logger.LogInformation("Cart API raw response: {Response}", responseBody);
-        }
+        var responseBody = await cartResponse.Content.ReadAsStringAsync(ct);
+        _logger.LogInformation("Cart API raw response: {Response}", responseBody);
 
         if (!cartResponse.IsSuccessStatusCode)
         {
@@ -317,22 +298,8 @@ public class OrderService : IOrderService
         {
             _logger.LogInformation("Clearing cart for user {UserId} or session {SessionId}", finalUserId, request.SessionId);
 
-            HttpResponseMessage clearResponse;
-
-            if (finalUserId.HasValue)
-            {
-                // Authenticated user - clear by userId
-                var clearRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/cart/clear");
-                clearRequest.Headers.Add("X-Forwarded-UserId", finalUserId.Value.ToString());
-                clearResponse = await cartClient.SendAsync(clearRequest, ct);
-            }
-            else
-            {
-                // Guest user - clear by sessionId
-                var clearRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/cart/clear");
-                clearRequest.Headers.Add("X-Session-Id", request.SessionId);
-                clearResponse = await cartClient.SendAsync(clearRequest, ct);
-            }
+            var clearResponse = await cartClient.SendAsync(
+                CreateCartRequest(HttpMethod.Delete, "/api/cart/clear", isGuestCheckout, request.SessionId), ct);
 
             if (clearResponse.IsSuccessStatusCode)
             {
@@ -449,6 +416,22 @@ public class OrderService : IOrderService
     {
         return await _context.Orders
             .CountAsync(o => o.UserId == userId, ct);
+    }
+
+    /// <summary>
+    /// Builds a CartAPI request that acts as the caller. Authenticated callers are identified
+    /// by their bearer token, which ForwardAuthorizationHandler attaches; guests by their
+    /// session id. A guest order linked to a registered account still uses the guest's own
+    /// session cart, never the account's.
+    /// </summary>
+    private static HttpRequestMessage CreateCartRequest(HttpMethod method, string path, bool isGuestCheckout, string? sessionId)
+    {
+        var cartRequest = new HttpRequestMessage(method, path);
+        if (isGuestCheckout)
+        {
+            cartRequest.Headers.Add("X-Session-Id", sessionId);
+        }
+        return cartRequest;
     }
 
     private static string GenerateOrderNumber()
