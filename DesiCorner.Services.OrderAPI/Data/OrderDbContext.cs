@@ -30,6 +30,11 @@ public class OrderDbContext : DbContext
 
             entity.HasIndex(e => e.OrderDate);
 
+            // A Stripe payment can only ever pay for one order
+            entity.HasIndex(e => e.PaymentIntentId)
+                  .IsUnique()
+                  .HasFilter("[PaymentIntentId] IS NOT NULL");
+
             // Configure one-to-many relationship
             entity.HasMany(e => e.Items)
                   .WithOne(e => e.Order)

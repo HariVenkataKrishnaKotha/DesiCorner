@@ -104,12 +104,24 @@ public class OrderService : IOrderService
             }
         }
 
+        // What the PaymentIntent actually charged, as reported by PaymentAPI from Stripe.
+        // Checked against the cart total once the cart has been fetched.
+        long? paidAmountInCents = null;
+        string? paidCurrency = null;
+
         // === VERIFY PAYMENT (only for Stripe payments) ===
         if (request.PaymentMethod == "Stripe")
         {
             if (string.IsNullOrWhiteSpace(request.PaymentIntentId))
             {
                 throw new ArgumentException("PaymentIntentId is required for Stripe payments");
+            }
+
+            // One payment pays for one order (also enforced by a unique index)
+            if (await _context.Orders.AnyAsync(o => o.PaymentIntentId == request.PaymentIntentId, ct))
+            {
+                _logger.LogWarning("PaymentIntent {PaymentIntentId} is already attached to an order", request.PaymentIntentId);
+                throw new InvalidOperationException("This payment has already been used for an order.");
             }
 
             _logger.LogInformation("Verifying payment: {PaymentIntentId}", request.PaymentIntentId);
@@ -154,8 +166,11 @@ public class OrderService : IOrderService
                 throw new InvalidOperationException($"Payment not completed. Status: {verifyResult.Status}");
             }
 
-            _logger.LogInformation("Payment verified successfully: {PaymentIntentId}, Amount: {Amount}",
-                request.PaymentIntentId, verifyResult.Amount);
+            paidAmountInCents = verifyResult.AmountInCents;
+            paidCurrency = verifyResult.Currency;
+
+            _logger.LogInformation("Payment verified successfully: {PaymentIntentId}, Amount: {AmountInCents} {Currency}",
+                request.PaymentIntentId, paidAmountInCents, paidCurrency);
         }
         else if (request.PaymentMethod == "PayAtPickup")
         {
@@ -230,6 +245,22 @@ public class OrderService : IOrderService
 
         _logger.LogInformation("Cart fetched successfully with {ItemCount} items, Total: {Total}",
             cart.Items.Count, cart.Total);
+
+        // === CHECK THE PAYMENT COVERS EXACTLY THIS CART (Stripe only) ===
+        if (request.PaymentMethod == "Stripe")
+        {
+            var expectedAmountInCents = PaymentAmounts.ToMinorUnits(cart.Total);
+
+            // A missing amount or currency fails the check: never assume the payment is right
+            if (paidAmountInCents != expectedAmountInCents ||
+                !string.Equals(paidCurrency, PaymentAmounts.Currency, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning(
+                    "Payment {PaymentIntentId} does not match the cart: paid {PaidAmount} {PaidCurrency}, cart total {ExpectedAmount} {ExpectedCurrency}",
+                    request.PaymentIntentId, paidAmountInCents, paidCurrency, expectedAmountInCents, PaymentAmounts.Currency);
+                throw new InvalidOperationException("Payment amount does not match the order total.");
+            }
+        }
 
         // === CREATE ORDER FROM CART ===
 
