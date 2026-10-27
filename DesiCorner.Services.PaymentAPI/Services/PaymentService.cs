@@ -196,15 +196,32 @@ public class PaymentService : IPaymentService
         }
     }
 
-    public async Task HandleWebhookEventAsync(
+    public async Task<bool> HandleWebhookEventAsync(
+        string eventId,
+        string eventType,
         string paymentIntentId,
         string status,
         CancellationToken ct = default)
     {
         try
         {
-            _logger.LogInformation("Handling webhook for PaymentIntent: {PaymentIntentId}, Status: {Status}",
-                paymentIntentId, status);
+            _logger.LogInformation("Handling webhook {EventId} for PaymentIntent: {PaymentIntentId}, Status: {Status}",
+                eventId, paymentIntentId, status);
+
+            // Stripe delivers events at least once; apply each event id only once
+            if (await _context.ProcessedStripeEvents.AnyAsync(e => e.EventId == eventId, ct))
+            {
+                _logger.LogInformation("Webhook event {EventId} already processed, skipping", eventId);
+                return false;
+            }
+
+            // Recorded in the same SaveChanges as the payment update, so both happen or neither does
+            _context.ProcessedStripeEvents.Add(new ProcessedStripeEvent
+            {
+                EventId = eventId,
+                EventType = eventType,
+                ProcessedAt = DateTime.UtcNow
+            });
 
             var payment = await _context.Payments
                 .FirstOrDefaultAsync(p => p.PaymentIntentId == paymentIntentId, ct);
@@ -212,22 +229,48 @@ public class PaymentService : IPaymentService
             if (payment == null)
             {
                 _logger.LogWarning("Payment not found for webhook: {PaymentIntentId}", paymentIntentId);
-                return;
+            }
+            else
+            {
+                payment.Status = status;
+                payment.UpdatedAt = DateTime.UtcNow;
             }
 
-            payment.Status = status;
-            payment.UpdatedAt = DateTime.UtcNow;
+            try
+            {
+                await _context.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException)
+            {
+                if (!await IsEventRecordedAsync(eventId, ct))
+                {
+                    throw;
+                }
 
-            await _context.SaveChangesAsync(ct);
+                // A concurrent delivery of the same event won the insert
+                _logger.LogInformation("Webhook event {EventId} processed concurrently, skipping", eventId);
+                return false;
+            }
 
-            _logger.LogInformation("Payment status updated via webhook: {PaymentIntentId} -> {Status}",
-                paymentIntentId, status);
+            if (payment != null)
+            {
+                _logger.LogInformation("Payment status updated via webhook: {PaymentIntentId} -> {Status}",
+                    paymentIntentId, status);
+            }
+
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling webhook event");
             throw;
         }
+    }
+
+    private async Task<bool> IsEventRecordedAsync(string eventId, CancellationToken ct)
+    {
+        _context.ChangeTracker.Clear();
+        return await _context.ProcessedStripeEvents.AnyAsync(e => e.EventId == eventId, ct);
     }
 
     public async Task<Payment?> GetPaymentByIntentIdAsync(

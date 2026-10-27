@@ -76,6 +76,15 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Webhook events are only trusted when their Stripe signature verifies. Outside
+// Development, refuse to start without the signing secret. It comes from user-secrets
+// or the Stripe__WebhookSecret environment variable, never from appsettings*.json.
+if (!app.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(app.Configuration["Stripe:WebhookSecret"]))
+{
+    throw new InvalidOperationException(
+        "Stripe:WebhookSecret is not configured. Set it with user-secrets or the Stripe__WebhookSecret environment variable.");
+}
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {

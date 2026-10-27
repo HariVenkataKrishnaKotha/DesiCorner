@@ -224,7 +224,12 @@ public class PaymentController : ControllerBase
     /// 1. Go to Stripe Dashboard → Developers → Webhooks
     /// 2. Add endpoint: https://yourdomain.com/api/payment/webhook
     /// 3. Select events: payment_intent.*
-    /// 4. Copy webhook signing secret to appsettings.json
+    /// 4. Provide the signing secret as Stripe:WebhookSecret via user-secrets
+    ///    (development) or the Stripe__WebhookSecret environment variable.
+    ///    Never put it in appsettings*.json.
+    ///
+    /// Every event must carry a valid Stripe-Signature. Without a configured secret
+    /// no event is processed. Each event id is processed at most once.
     /// </remarks>
     [HttpPost("webhook")]
     [AllowAnonymous]
@@ -232,31 +237,32 @@ public class PaymentController : ControllerBase
     {
         var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync(ct);
 
+        var webhookSecret = _configuration["Stripe:WebhookSecret"];
+        if (string.IsNullOrWhiteSpace(webhookSecret))
+        {
+            // Fail closed: an unverifiable event must never change payment state
+            _logger.LogError("Stripe webhook rejected: Stripe:WebhookSecret is not configured");
+            return StatusCode(500);
+        }
+
         try
         {
-            var stripeEvent = EventUtility.ParseEvent(json);
-            var signatureHeader = Request.Headers["Stripe-Signature"];
-
-            // Verify webhook signature (if webhook secret is configured)
-            var webhookSecret = _configuration["Stripe:WebhookSecret"];
-            if (!string.IsNullOrEmpty(webhookSecret))
+            Event stripeEvent;
+            try
             {
-                try
-                {
-                    stripeEvent = EventUtility.ConstructEvent(
-                        json,
-                        signatureHeader,
-                        webhookSecret
-                    );
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "Webhook signature verification failed");
-                    return BadRequest();
-                }
+                stripeEvent = EventUtility.ConstructEvent(
+                    json,
+                    Request.Headers["Stripe-Signature"],
+                    webhookSecret
+                );
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, "Webhook signature verification failed");
+                return BadRequest();
             }
 
-            _logger.LogInformation("Webhook received: {EventType}", stripeEvent.Type);
+            _logger.LogInformation("Webhook received: {EventId} {EventType}", stripeEvent.Id, stripeEvent.Type);
 
             // Handle payment_intent events
             if (stripeEvent.Type.StartsWith("payment_intent."))
@@ -264,20 +270,26 @@ public class PaymentController : ControllerBase
                 var paymentIntent = stripeEvent.Data.Object as PaymentIntent;
                 if (paymentIntent != null)
                 {
-                    await _paymentService.HandleWebhookEventAsync(
+                    var processed = await _paymentService.HandleWebhookEventAsync(
+                        stripeEvent.Id,
+                        stripeEvent.Type,
                         paymentIntent.Id,
                         paymentIntent.Status,
                         ct
                     );
 
-                    _logger.LogInformation(
-                        "Processed webhook for PaymentIntent: {PaymentIntentId}, Status: {Status}",
-                        paymentIntent.Id,
-                        paymentIntent.Status
-                    );
+                    if (processed)
+                    {
+                        _logger.LogInformation(
+                            "Processed webhook for PaymentIntent: {PaymentIntentId}, Status: {Status}",
+                            paymentIntent.Id,
+                            paymentIntent.Status
+                        );
+                    }
                 }
             }
 
+            // Duplicates are acknowledged too, so Stripe stops redelivering them
             return Ok();
         }
         catch (StripeException ex)
