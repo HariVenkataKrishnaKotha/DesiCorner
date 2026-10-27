@@ -1,3 +1,6 @@
+using System.Text.Json;
+using DesiCorner.Contracts.Cart;
+using DesiCorner.Contracts.Common;
 using DesiCorner.Services.PaymentAPI.Data;
 using DesiCorner.Tests.Shared;
 using Microsoft.AspNetCore.Hosting;
@@ -25,11 +28,32 @@ public sealed class PaymentApiFactory : WebApplicationFactory<Program>
     {
         _webhookSecret = webhookSecret;
         _environment = environment;
+        Downstream = new RecordingHandler(RespondFromCart);
     }
 
     public FakePaymentIntentService Stripe { get; } = new();
 
-    public RecordingHandler Downstream { get; } = new();
+    public RecordingHandler Downstream { get; }
+
+    /// <summary>Total CartAPI reports for the caller's cart; null means an empty cart.</summary>
+    public decimal? CartTotal { get; set; } = 100.00m;
+
+    private HttpResponseMessage RespondFromCart(RecordedRequest request)
+    {
+        if (request.Method != HttpMethod.Get || request.Uri.AbsolutePath != "/api/cart")
+        {
+            return new HttpResponseMessage(System.Net.HttpStatusCode.NotFound);
+        }
+
+        var cart = new CartDto { Id = Guid.NewGuid() };
+        if (CartTotal is { } total)
+        {
+            cart.Items.Add(new CartItemDto { Id = Guid.NewGuid(), ProductId = Guid.NewGuid(), ProductName = "Samosa", Price = total, Quantity = 1 });
+            cart.SubTotal = total;
+            cart.Total = total;
+        }
+        return RecordingHandler.Json(JsonSerializer.Serialize(new ResponseDto { Result = cart }));
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
