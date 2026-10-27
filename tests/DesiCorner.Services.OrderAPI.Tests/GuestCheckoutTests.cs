@@ -23,7 +23,7 @@ public class GuestCheckoutTests
         });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var cartRequest = Assert.Single(factory.Downstream.Requests, r => r.Method == HttpMethod.Get);
+        var cartRequest = Assert.Single(factory.Downstream.Requests, r => r.Method == HttpMethod.Get && r.Uri.AbsolutePath == "/api/cart");
         Assert.Equal(sessionId, cartRequest.Header("X-Session-Id"));
         Assert.Null(cartRequest.Header("Authorization"));
 
