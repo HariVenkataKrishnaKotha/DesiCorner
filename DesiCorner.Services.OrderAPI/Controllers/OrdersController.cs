@@ -35,15 +35,15 @@ public class OrdersController : ControllerBase
         {
             var userId = GetUserId();
 
-            // For authenticated users, get email and phone from forwarded headers
             string? email = request.Email;
             string? phone = request.Phone;
 
             if (userId.HasValue)
             {
-                // Override with forwarded headers for authenticated users
-                email = Request.Headers["X-Forwarded-Email"].FirstOrDefault() ?? email;
-                phone = Request.Headers["X-Forwarded-Phone"].FirstOrDefault() ?? phone;
+                // Authenticated users: contact details come from the validated token,
+                // never from client-settable X-Forwarded-* headers
+                email = GetUserEmail() ?? email;
+                phone = GetUserPhone() ?? phone;
             }
 
             var order = await _orderService.CreateOrderAsync(userId?.ToString(), request, email, phone, ct);
