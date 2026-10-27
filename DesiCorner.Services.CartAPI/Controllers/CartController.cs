@@ -105,8 +105,9 @@ public class CartController : ControllerBase
                 });
             }
 
+            // request.UserId is client-controlled and deliberately ignored
             var cart = await _cartService.AddToCartAsync(
-                userId ?? request.UserId,
+                userId,
                 sessionId,
                 request.ProductId,
                 request.Quantity,
@@ -377,16 +378,11 @@ public class CartController : ControllerBase
 
     private Guid? GetUserId()
     {
-        // First, try to get userId from forwarded header (from Gateway)
-        var forwardedUserId = Request.Headers["X-Forwarded-UserId"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(forwardedUserId) && Guid.TryParse(forwardedUserId, out var userId))
-        {
-            return userId;
-        }
-
-        // Fallback: try to get from JWT claims (direct access without Gateway)
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        return Guid.TryParse(userIdClaim, out var fallbackUserId) ? fallbackUserId : null;
+        // Identity comes only from the validated JWT. X-Forwarded-UserId is never trusted
+        // here: anything that reaches this service without the gateway could set it.
+        // MapInboundClaims is off, so the user id is in "sub".
+        var userIdClaim = User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(userIdClaim, out var userId) ? userId : null;
     }
 
     private string? GetSessionId()
