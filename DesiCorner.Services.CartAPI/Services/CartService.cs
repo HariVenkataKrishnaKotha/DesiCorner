@@ -1,13 +1,11 @@
 ﻿using DesiCorner.Contracts.Coupons;
 using DesiCorner.Services.CartAPI.Models;
-using Newtonsoft.Json;
-using StackExchange.Redis;
 
 namespace DesiCorner.Services.CartAPI.Services;
 
 public class CartService : ICartService
 {
-    private readonly IDatabase _redisDb;
+    private readonly ICartStore _cartStore;
     private readonly IProductService _productService;
     private readonly ICouponService _couponService;
     private readonly ILogger<CartService> _logger;
@@ -17,12 +15,12 @@ public class CartService : ICartService
     private const decimal FREE_DELIVERY_THRESHOLD = 50.00m;
 
     public CartService(
-        IConnectionMultiplexer redis,
+        ICartStore cartStore,
         IProductService productService,
         ICouponService couponService,
         ILogger<CartService> logger)
     {
-        _redisDb = redis.GetDatabase();
+        _cartStore = cartStore;
         _productService = productService;
         _couponService = couponService;
         _logger = logger;
@@ -33,14 +31,7 @@ public class CartService : ICartService
         try
         {
             var key = GetCartKey(userId, sessionId);
-            var cartJson = await _redisDb.StringGetAsync(key);
-
-            if (cartJson.IsNullOrEmpty)
-            {
-                return null;
-            }
-
-            var cart = JsonConvert.DeserializeObject<Cart>(cartJson!);
+            var cart = await _cartStore.GetAsync(key);
 
             if (cart != null)
             {
@@ -198,7 +189,7 @@ public class CartService : ICartService
         try
         {
             var key = GetCartKey(userId, sessionId);
-            await _redisDb.KeyDeleteAsync(key);
+            await _cartStore.DeleteAsync(key);
 
             _logger.LogInformation("Cleared cart for key {Key}", key);
 
@@ -329,8 +320,7 @@ public class CartService : ICartService
     private async Task SaveCartAsync(Cart cart)
     {
         var key = GetCartKey(cart.UserId, cart.SessionId);
-        var cartJson = JsonConvert.SerializeObject(cart);
-        await _redisDb.StringSetAsync(key, cartJson, TimeSpan.FromDays(30));
+        await _cartStore.SaveAsync(key, cart, TimeSpan.FromDays(30));
     }
 
     private string GetCartKey(Guid? userId, string? sessionId)
@@ -350,19 +340,11 @@ public class CartService : ICartService
 
     private async Task<Cart?> FindCartByIdAsync(Guid cartId)
     {
-        var server = _redisDb.Multiplexer.GetServer(_redisDb.Multiplexer.GetEndPoints().First());
-        var keys = server.Keys(pattern: "cart:*");
-
-        foreach (var key in keys)
+        await foreach (var cart in _cartStore.GetAllAsync())
         {
-            var cartJson = await _redisDb.StringGetAsync(key);
-            if (!cartJson.IsNullOrEmpty)
+            if (cart.Id == cartId)
             {
-                var cart = JsonConvert.DeserializeObject<Cart>(cartJson!);
-                if (cart?.Id == cartId)
-                {
-                    return cart;
-                }
+                return cart;
             }
         }
 
@@ -371,19 +353,11 @@ public class CartService : ICartService
 
     private async Task<Cart?> FindCartByItemIdAsync(Guid cartItemId)
     {
-        var server = _redisDb.Multiplexer.GetServer(_redisDb.Multiplexer.GetEndPoints().First());
-        var keys = server.Keys(pattern: "cart:*");
-
-        foreach (var key in keys)
+        await foreach (var cart in _cartStore.GetAllAsync())
         {
-            var cartJson = await _redisDb.StringGetAsync(key);
-            if (!cartJson.IsNullOrEmpty)
+            if (cart.Items.Any(i => i.Id == cartItemId))
             {
-                var cart = JsonConvert.DeserializeObject<Cart>(cartJson!);
-                if (cart?.Items.Any(i => i.Id == cartItemId) == true)
-                {
-                    return cart;
-                }
+                return cart;
             }
         }
 
