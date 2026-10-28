@@ -132,11 +132,9 @@ describe('AuthEffects', () => {
       expect(router.navigate).toHaveBeenCalledOnceWith(['/']);
     });
 
-    // BUG: logout resets the in-memory cart (cartReducer handles AuthActions.logout) but leaves
-    // the persisted copy in localStorage. CartEffects falls back to that copy whenever the cart
-    // API call fails or returns no cart, so the previous user's cart can reappear for the next
-    // visitor on the same browser.
-    xit('also clears the persisted cart', () => {
+    // Regression: logout reset the in-memory cart but left the persisted copy, which
+    // CartEffects falls back to, so the previous user's cart could reappear.
+    it('also clears the persisted cart', () => {
       localStorage.setItem('desicorner_cart', JSON.stringify({ items: [{ productId: 'p1' }] }));
       actions$ = of(AuthActions.logout());
 
