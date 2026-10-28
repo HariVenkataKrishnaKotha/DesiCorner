@@ -1,4 +1,4 @@
-using DesiCorner.Services.CartAPI.Models;
+﻿using DesiCorner.Services.CartAPI.Models;
 using DesiCorner.Services.CartAPI.Services;
 using DesiCorner.Tests.Shared;
 using Microsoft.AspNetCore.Hosting;
@@ -62,15 +62,15 @@ public sealed class RecordingCartService : ICartService
         return Task.FromResult(true);
     }
 
-    public Task<Cart> UpdateCartItemAsync(Guid cartItemId, int quantity, CancellationToken ct = default) =>
+    public Task<Cart?> UpdateCartItemAsync(Guid? userId, string? sessionId, Guid cartItemId, int quantity, CancellationToken ct = default) =>
         throw new NotSupportedException();
 
-    public Task<bool> RemoveFromCartAsync(Guid cartItemId, CancellationToken ct = default) =>
+    public Task<bool> RemoveFromCartAsync(Guid? userId, string? sessionId, Guid cartItemId, CancellationToken ct = default) =>
         throw new NotSupportedException();
 
-    public Task<Cart> ApplyCouponAsync(Guid cartId, string couponCode, CancellationToken ct = default) =>
+    public Task<Cart?> ApplyCouponAsync(Guid? userId, string? sessionId, Guid cartId, string couponCode, CancellationToken ct = default) =>
         throw new NotSupportedException();
 
-    public Task<Cart> RemoveCouponAsync(Guid cartId, CancellationToken ct = default) =>
+    public Task<Cart?> RemoveCouponAsync(Guid? userId, string? sessionId, Guid cartId, CancellationToken ct = default) =>
         throw new NotSupportedException();
 }

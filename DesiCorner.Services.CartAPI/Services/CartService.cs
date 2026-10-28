@@ -107,22 +107,16 @@ public class CartService : ICartService
         }
     }
 
-    public async Task<Cart> UpdateCartItemAsync(Guid cartItemId, int quantity, CancellationToken ct = default)
+    public async Task<Cart?> UpdateCartItemAsync(Guid? userId, string? sessionId, Guid cartItemId, int quantity, CancellationToken ct = default)
     {
         try
         {
-            var cart = await FindCartByItemIdAsync(cartItemId);
+            var cart = await GetCartAsync(userId, sessionId, ct);
+            var item = cart?.Items.FirstOrDefault(i => i.Id == cartItemId);
 
-            if (cart == null)
+            if (cart == null || item == null)
             {
-                throw new ArgumentException($"Cart item {cartItemId} not found");
-            }
-
-            var item = cart.Items.FirstOrDefault(i => i.Id == cartItemId);
-
-            if (item == null)
-            {
-                throw new ArgumentException($"Cart item {cartItemId} not found");
+                return null;
             }
 
             item.Quantity = quantity;
@@ -142,20 +136,14 @@ public class CartService : ICartService
         }
     }
 
-    public async Task<bool> RemoveFromCartAsync(Guid cartItemId, CancellationToken ct = default)
+    public async Task<bool> RemoveFromCartAsync(Guid? userId, string? sessionId, Guid cartItemId, CancellationToken ct = default)
     {
         try
         {
-            var cart = await FindCartByItemIdAsync(cartItemId);
+            var cart = await GetCartAsync(userId, sessionId, ct);
+            var item = cart?.Items.FirstOrDefault(i => i.Id == cartItemId);
 
-            if (cart == null)
-            {
-                return false;
-            }
-
-            var item = cart.Items.FirstOrDefault(i => i.Id == cartItemId);
-
-            if (item == null)
+            if (cart == null || item == null)
             {
                 return false;
             }
@@ -202,15 +190,15 @@ public class CartService : ICartService
         }
     }
 
-    public async Task<Cart> ApplyCouponAsync(Guid cartId, string couponCode, CancellationToken ct = default)
+    public async Task<Cart?> ApplyCouponAsync(Guid? userId, string? sessionId, Guid cartId, string couponCode, CancellationToken ct = default)
     {
         try
         {
-            var cart = await FindCartByIdAsync(cartId);
+            var cart = await GetCartAsync(userId, sessionId, ct);
 
-            if (cart == null)
+            if (cart == null || cart.Id != cartId)
             {
-                throw new ArgumentException($"Cart {cartId} not found");
+                return null;
             }
 
             // Validate coupon
@@ -247,15 +235,15 @@ public class CartService : ICartService
         }
     }
 
-    public async Task<Cart> RemoveCouponAsync(Guid cartId, CancellationToken ct = default)
+    public async Task<Cart?> RemoveCouponAsync(Guid? userId, string? sessionId, Guid cartId, CancellationToken ct = default)
     {
         try
         {
-            var cart = await FindCartByIdAsync(cartId);
+            var cart = await GetCartAsync(userId, sessionId, ct);
 
-            if (cart == null)
+            if (cart == null || cart.Id != cartId)
             {
-                throw new ArgumentException($"Cart {cartId} not found");
+                return null;
             }
 
             cart.CouponCode = null;
@@ -336,31 +324,5 @@ public class CartService : ICartService
         }
 
         throw new ArgumentException("Either userId or sessionId must be provided");
-    }
-
-    private async Task<Cart?> FindCartByIdAsync(Guid cartId)
-    {
-        await foreach (var cart in _cartStore.GetAllAsync())
-        {
-            if (cart.Id == cartId)
-            {
-                return cart;
-            }
-        }
-
-        return null;
-    }
-
-    private async Task<Cart?> FindCartByItemIdAsync(Guid cartItemId)
-    {
-        await foreach (var cart in _cartStore.GetAllAsync())
-        {
-            if (cart.Items.Any(i => i.Id == cartItemId))
-            {
-                return cart;
-            }
-        }
-
-        return null;
     }
 }

@@ -10,9 +10,4 @@ public interface ICartStore
     Task<Cart?> GetAsync(string key);
     Task SaveAsync(string key, Cart cart, TimeSpan ttl);
     Task DeleteAsync(string key);
-
-    /// <summary>
-    /// Enumerates every stored cart. Expensive: scans all cart keys.
-    /// </summary>
-    IAsyncEnumerable<Cart> GetAllAsync();
 }

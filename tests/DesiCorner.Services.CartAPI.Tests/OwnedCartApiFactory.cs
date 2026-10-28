@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using DesiCorner.Contracts.Coupons;
 using DesiCorner.Services.CartAPI.Models;
@@ -88,15 +88,6 @@ public sealed class InMemoryCartStore : ICartStore
     {
         _carts.TryRemove(key, out _);
         return Task.CompletedTask;
-    }
-
-    public async IAsyncEnumerable<Cart> GetAllAsync()
-    {
-        foreach (var json in _carts.Values)
-        {
-            await Task.Yield();
-            yield return JsonConvert.DeserializeObject<Cart>(json)!;
-        }
     }
 }
 
