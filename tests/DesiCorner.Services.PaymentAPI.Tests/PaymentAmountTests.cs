@@ -92,14 +92,15 @@ public class PaymentAmountTests
     {
         using var factory = new PaymentApiFactory(webhookSecret: "unused");
         factory.Stripe.Add(new Stripe.PaymentIntent { Id = "pi_cheap", Amount = 50, Currency = "usd", Status = "succeeded" });
+        var owner = Guid.NewGuid();
         using (var db = factory.CreateDbContext())
         {
             // The stored record says $100; only Stripe knows what was really charged.
-            db.Payments.Add(new Payment { Id = Guid.NewGuid(), PaymentIntentId = "pi_cheap", AmountInCents = 10000, Amount = 100m, Status = "succeeded" });
+            db.Payments.Add(new Payment { Id = Guid.NewGuid(), PaymentIntentId = "pi_cheap", UserId = owner, AmountInCents = 10000, Amount = 100m, Status = "succeeded" });
             await db.SaveChangesAsync();
         }
 
-        var response = await factory.CreateClient().PostAsJsonAsync("/api/payment/verify", new VerifyPaymentRequest { PaymentIntentId = "pi_cheap" });
+        var response = await factory.ClientForUser(owner).PostAsJsonAsync("/api/payment/verify", new VerifyPaymentRequest { PaymentIntentId = "pi_cheap" });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
