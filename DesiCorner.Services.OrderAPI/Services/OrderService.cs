@@ -47,7 +47,7 @@ public class OrderService : IOrderService
             // Check if this email/phone matches an existing registered user
             try
             {
-                var authClient = _httpClientFactory.CreateClient("AuthServer");
+                var authClient = _httpClientFactory.CreateClient("AuthAPI");
                 var lookupResponse = await authClient.GetAsync(
                     $"/api/account/user-lookup?email={Uri.EscapeDataString(request.Email)}&phone={Uri.EscapeDataString(request.Phone)}",
                     ct);
