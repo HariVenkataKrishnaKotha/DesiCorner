@@ -21,6 +21,13 @@ public class Payment
     public Guid? UserId { get; set; }
 
     /// <summary>
+    /// X-Session-Id of the guest who created the payment (null for signed-in users).
+    /// Only that session may read the payment without signing in.
+    /// </summary>
+    [MaxLength(100)]
+    public string? GuestSessionId { get; set; }
+
+    /// <summary>
     /// User email (required for Stripe receipt)
     /// </summary>
     [MaxLength(255)]

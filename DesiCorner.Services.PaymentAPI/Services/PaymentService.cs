@@ -30,6 +30,7 @@ public class PaymentService : IPaymentService
 
     public async Task<PaymentIntentResponseDto> CreatePaymentIntentAsync(
         PaymentIntentRequestDto request,
+        PaymentOwner owner,
         CancellationToken ct = default)
     {
         try
@@ -91,6 +92,8 @@ public class PaymentService : IPaymentService
                 Id = Guid.NewGuid(),
                 PaymentIntentId = paymentIntent.Id,
                 OrderId = request.OrderId,
+                UserId = owner.UserId,
+                GuestSessionId = owner.GuestSessionId,
                 AmountInCents = amountInCents,
                 Amount = amount,
                 Currency = currency,

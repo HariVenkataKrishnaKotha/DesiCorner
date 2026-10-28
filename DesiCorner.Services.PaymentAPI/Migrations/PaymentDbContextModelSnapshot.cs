@@ -57,6 +57,10 @@ namespace DesiCorner.Services.PaymentAPI.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<string>("GuestSessionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("LastPaymentErrorCode")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
