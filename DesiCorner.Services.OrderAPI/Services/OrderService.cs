@@ -132,7 +132,18 @@ public class OrderService : IOrderService
                 PaymentIntentId = request.PaymentIntentId
             };
 
-            var verifyResponse = await paymentClient.PostAsJsonAsync("/api/payment/verify", verifyRequest, ct);
+            // PaymentAPI answers only the payment's creator: signed-in callers are identified by
+            // the bearer token ForwardAuthorizationHandler attaches, guests by their session id.
+            var verifyHttpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/payment/verify")
+            {
+                Content = JsonContent.Create(verifyRequest)
+            };
+            if (isGuestCheckout)
+            {
+                verifyHttpRequest.Headers.Add("X-Session-Id", request.SessionId);
+            }
+
+            var verifyResponse = await paymentClient.SendAsync(verifyHttpRequest, ct);
 
             if (!verifyResponse.IsSuccessStatusCode)
             {

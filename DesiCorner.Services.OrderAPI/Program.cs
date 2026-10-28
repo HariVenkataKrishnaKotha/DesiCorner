@@ -42,6 +42,8 @@ builder.Services.AddHttpClient("PaymentAPI", client =>
         ?? "https://localhost:7501");
     client.Timeout = TimeSpan.FromSeconds(30);
 })
+// PaymentAPI answers /verify only for the payment's creator: forward the caller's token
+.AddHttpMessageHandler<ForwardAuthorizationHandler>()
 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
 {
     ServerCertificateCustomValidationCallback = (_, _, _, _) => true
