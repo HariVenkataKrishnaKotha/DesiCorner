@@ -20,15 +20,27 @@ public class ProductService : IProductService
 
     public async Task<ProductDetails?> GetProductAsync(Guid productId, CancellationToken ct = default)
     {
+        var lookup = await LookupProductAsync(productId, ct);
+        return lookup.Product;
+    }
+
+    public async Task<ProductLookup> LookupProductAsync(Guid productId, CancellationToken ct = default)
+    {
         try
         {
             var client = _httpClientFactory.CreateClient();
             var response = await client.GetAsync($"{_productApiUrl}/api/products/{productId}", ct);
 
-            if (!response.IsSuccessStatusCode)
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
                 _logger.LogWarning("Product {ProductId} not found", productId);
-                return null;
+                return ProductLookup.NotFound;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("ProductAPI returned {StatusCode} for product {ProductId}", response.StatusCode, productId);
+                return ProductLookup.Failed;
             }
 
             var json = await response.Content.ReadAsStringAsync(ct);
@@ -36,22 +48,22 @@ public class ProductService : IProductService
 
             if (apiResponse?.IsSuccess != true || apiResponse.Result == null)
             {
-                return null;
+                return ProductLookup.NotFound;
             }
 
-            return new ProductDetails
+            return new ProductLookup(ProductLookupStatus.Found, new ProductDetails
             {
                 Id = apiResponse.Result.Id,
                 Name = apiResponse.Result.Name,
                 Price = apiResponse.Result.Price,
                 ImageUrl = apiResponse.Result.ImageUrl,
                 IsAvailable = apiResponse.Result.IsAvailable
-            };
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching product {ProductId}", productId);
-            return null;
+            return ProductLookup.Failed;
         }
     }
 
