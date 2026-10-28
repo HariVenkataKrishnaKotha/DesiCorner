@@ -16,6 +16,11 @@ public class Order
 
     public bool IsGuestOrder { get; set; }
 
+    // X-Session-Id of the guest checkout that placed the order (null for signed-in checkouts).
+    // Only that session may read the order without signing in.
+    [MaxLength(100)]
+    public string? GuestSessionId { get; set; }
+
     [Required]
     [MaxLength(255)]
     public string UserEmail { get; set; } = string.Empty;

@@ -63,6 +63,10 @@ namespace DesiCorner.Services.OrderAPI.Migrations
                     b.Property<DateTime?>("EstimatedDeliveryTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("GuestSessionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<bool>("IsGuestOrder")
                         .HasColumnType("bit");
 
