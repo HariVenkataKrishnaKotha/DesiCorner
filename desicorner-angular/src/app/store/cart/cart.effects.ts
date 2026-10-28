@@ -2,13 +2,14 @@ import { inject, Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
 import { HttpClient } from '@angular/common/http';
-import { switchMap, map, catchError, tap } from 'rxjs/operators';
+import { switchMap, exhaustMap, map, catchError, tap } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { CartActions } from './cart.actions';
 import { AuthActions } from '../auth/auth.actions';
 import { selectCart } from './cart.selectors';
 import { AppState } from '../index';
 import { environment } from '@env/environment';
+import { GuestSessionService } from '../../core/services/guest-session.service';
 import { ApiResponse } from '../../core/models/response.models';
 import { Cart, CartItem } from '../../core/models/cart.models';
 import { Product } from '../../core/models/product.models';
@@ -18,16 +19,73 @@ export class CartEffects {
   private actions$ = inject(Actions);
   private http = inject(HttpClient);
   private store = inject(Store<AppState>);
+  private guestSessionService = inject(GuestSessionService);
 
   private readonly CART_STORAGE_KEY = 'desicorner_cart';
   private readonly TAX_RATE = 0.06;
   private readonly DELIVERY_FEE = 5.00;
   private readonly FREE_DELIVERY_THRESHOLD = 50;
 
-  /** Load cart after auth check completes */
+  /**
+   * Load the cart once the auth check on app start is known. A fresh sign-in loads it
+   * after the guest cart merge instead (see mergeGuestCartOnSignIn$), so that the
+   * pre-merge cart is never shown.
+   */
   loadCartOnAuthReady$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(AuthActions.checkAuthSuccess, AuthActions.checkAuthNoToken, AuthActions.loadUserProfileSuccess),
+      ofType(AuthActions.checkAuthSuccess, AuthActions.checkAuthNoToken),
+      map(() => CartActions.loadCart())
+    )
+  );
+
+  /**
+   * After a fresh sign-in (not a page load with a stored token), merge the guest cart into
+   * the account. The interceptor sends only the bearer token once signed in, so the guest
+   * session id goes on this request explicitly. Without a guest session there is nothing
+   * to merge, so just load the cart.
+   */
+  mergeGuestCartOnSignIn$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(AuthActions.signInCompleted),
+      exhaustMap(() => {
+        if (!this.guestSessionService.hasSession()) {
+          return of(CartActions.loadCart());
+        }
+
+        return this.http.post<ApiResponse<unknown>>(
+          `${environment.gatewayUrl}/api/cart/merge`,
+          {},
+          { headers: { 'X-Session-Id': this.guestSessionService.getSessionId() } }
+        ).pipe(
+          map(response => response?.isSuccess
+            ? CartActions.mergeGuestCartSuccess()
+            : CartActions.mergeGuestCartFailure({ error: response?.message || 'Failed to merge guest cart' })),
+          catchError(error => of(CartActions.mergeGuestCartFailure({
+            error: error.error?.message || 'Failed to merge guest cart'
+          })))
+        );
+      })
+    )
+  );
+
+  /**
+   * The server deleted the guest cart, and while signed in the interceptor never sends the
+   * session id, so it no longer identifies anything useful. It is also the credential for guest
+   * order and payment reads, so it is not left in storage. On failure it is kept, so the guest
+   * cart can still be merged at a later sign-in.
+   */
+  clearGuestSessionAfterMerge$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(CartActions.mergeGuestCartSuccess),
+      tap(() => this.guestSessionService.clearSession())
+    ),
+    { dispatch: false }
+  );
+
+  /** Load the (merged) cart once the merge has finished, whatever the outcome */
+  loadCartAfterMerge$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(CartActions.mergeGuestCartSuccess, CartActions.mergeGuestCartFailure),
       map(() => CartActions.loadCart())
     )
   );

@@ -145,12 +145,20 @@ describe('CartEffects', () => {
     });
 
     it('clears the guest session after a successful merge', () => {
-      actions$ = of(AuthActions.signInCompleted());
+      // provideMockActions doesn't feed emitted actions back in, so send the success directly
+      actions$ = of(CartActions.mergeGuestCartSuccess());
+
       runAll();
 
-      httpMock.expectOne(mergeUrl).flush(merged);
-
       expect(localStorage.getItem(GUEST_SESSION_KEY)).toBeNull();
+    });
+
+    it('keeps the guest session when the merge fails', () => {
+      actions$ = of(CartActions.mergeGuestCartFailure({ error: 'x' }));
+
+      runAll();
+
+      expect(localStorage.getItem(GUEST_SESSION_KEY)).toBe('guest-1');
     });
 
     it('keeps the guest session and reports failure when the merge fails', () => {

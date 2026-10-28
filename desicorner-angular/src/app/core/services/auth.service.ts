@@ -80,7 +80,8 @@ export class AuthService {
     try {
       const loggedIn = await this.oauthService.loadDiscoveryDocumentAndTryLogin();
       if (loggedIn && this.oauthService.hasValidAccessToken()) {
-        this.store.dispatch(AuthActions.pkceCallbackSuccess());
+        // A fresh sign-in (the code was just exchanged): merges the guest cart, then loads the cart
+        this.store.dispatch(AuthActions.signInCompleted());
         return true;
       }
       return false;
