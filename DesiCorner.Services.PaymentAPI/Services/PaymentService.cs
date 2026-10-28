@@ -93,7 +93,8 @@ public class PaymentService : IPaymentService
                 PaymentIntentId = paymentIntent.Id,
                 OrderId = request.OrderId,
                 UserId = owner.UserId,
-                GuestSessionId = owner.GuestSessionId,
+                // A signed-in creator owns the payment by user id; the session only identifies guests
+                GuestSessionId = owner.UserId.HasValue ? null : owner.GuestSessionId,
                 AmountInCents = amountInCents,
                 Amount = amount,
                 Currency = currency,
