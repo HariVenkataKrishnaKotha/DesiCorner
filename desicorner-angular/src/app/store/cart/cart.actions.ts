@@ -40,6 +40,10 @@ export const CartActions = createActionGroup({
     'Clear Cart Success': emptyProps(),
     'Clear Cart Failure': props<{ error: string }>(),
 
+    // Merge the guest cart into the account after a fresh sign-in
+    'Merge Guest Cart Success': emptyProps(),
+    'Merge Guest Cart Failure': props<{ error: string }>(),
+
     // Local-only: set delivery fee based on order type
     'Set Delivery Fee': props<{ orderType: 'Delivery' | 'Pickup' }>(),
   },

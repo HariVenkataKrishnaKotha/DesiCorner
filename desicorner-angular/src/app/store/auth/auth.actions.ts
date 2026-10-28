@@ -16,7 +16,12 @@ export const AuthActions = createActionGroup({
     'Check Auth No Token': emptyProps(),
 
     // PKCE Login (Authorization Code + PKCE flow)
+    // Tokens are present. Also dispatched on every page load with a stored token, because
+    // angular-oauth2-oidc's tryLogin() resolves true for the code flow even without a code.
     'Pkce Callback Success': emptyProps(),
+    // A fresh sign-in: the callback page has just exchanged the authorization code.
+    // Dispatched once per sign-in, never on a page refresh.
+    'Sign In Completed': emptyProps(),
 
     // Login Failure (shown in UI for error display)
     'Login Failure': props<{ error: string }>(),
