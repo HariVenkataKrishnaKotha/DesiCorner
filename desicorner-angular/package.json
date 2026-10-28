@@ -32,7 +32,7 @@
     "@angular/material": "^20.2.11",
     "@angular/platform-browser": "^20.3.0",
     "@angular/router": "^20.3.0",
-    "@ngrx/effects": "^20.1.0",
+    "@ngrx/effects": "^22.0.1",
     "@ngrx/store": "^20.1.0",
     "@ngrx/store-devtools": "^20.1.0",
     "@stripe/stripe-js": "^8.5.3",
