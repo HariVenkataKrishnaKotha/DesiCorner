@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Action } from '@ngrx/store';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { provideMockActions } from '@ngrx/effects/testing';
+import { getEffectsMetadata } from '@ngrx/effects';
 import { Observable, of } from 'rxjs';
 import { environment } from '@env/environment';
 import { Cart } from '../../core/models/cart.models';
@@ -14,6 +15,7 @@ import { CartEffects } from './cart.effects';
 import { initialCartState } from './cart.reducer';
 
 const STORAGE_KEY = 'desicorner_cart';
+const GUEST_SESSION_KEY = 'desicorner_guest_session';
 
 describe('CartEffects', () => {
   const cartApi = `${environment.gatewayUrl}/api/cart`;
@@ -91,13 +93,110 @@ describe('CartEffects', () => {
   });
 
   it('loads the cart once auth state is known', () => {
-    for (const action of [
-      AuthActions.checkAuthSuccess(),
-      AuthActions.checkAuthNoToken(),
-      AuthActions.loadUserProfileSuccess({ profile: {} as never }),
-    ]) {
+    for (const action of [AuthActions.checkAuthSuccess(), AuthActions.checkAuthNoToken()]) {
       actions$ = of(action);
       expect(run(effects.loadCartOnAuthReady$)).withContext(action.type).toEqual([CartActions.loadCart()]);
+    }
+  });
+
+  it('does not load the cart when the profile arrives (a sign-in loads it after the merge)', () => {
+    actions$ = of(AuthActions.loadUserProfileSuccess({ profile: {} as never }));
+
+    expect(run(effects.loadCartOnAuthReady$)).toEqual([]);
+  });
+
+  describe('guest cart merge on sign-in', () => {
+    const mergeUrl = `${cartApi}/merge`;
+
+    /** Runs every effect CartEffects registers and collects what the dispatching ones emit. */
+    function runAll(): Action[] {
+      const out: Action[] = [];
+      const metadata = getEffectsMetadata(effects);
+      for (const key of Object.keys(metadata) as (keyof CartEffects)[]) {
+        const effect = effects[key] as unknown as Observable<Action>;
+        if (metadata[key]?.dispatch === false) {
+          effect.subscribe();
+        } else {
+          effect.subscribe(a => out.push(a));
+        }
+      }
+      return out;
+    }
+
+    const merged = {
+      isSuccess: true,
+      message: 'Guest cart merged',
+      result: { cart: { ...backendCart }, droppedItems: [], droppedCouponCode: null },
+    };
+
+    beforeEach(() => localStorage.setItem(GUEST_SESSION_KEY, 'guest-1'));
+    afterEach(() => localStorage.removeItem(GUEST_SESSION_KEY));
+
+    it('on a fresh sign-in, POSTs the guest session to /api/cart/merge and reports success', () => {
+      actions$ = of(AuthActions.signInCompleted());
+      const out = runAll();
+
+      const req = httpMock.expectOne(mergeUrl);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.headers.get('X-Session-Id')).toBe('guest-1');
+      req.flush(merged);
+
+      expect(out).toEqual([CartActions.mergeGuestCartSuccess()]);
+    });
+
+    it('clears the guest session after a successful merge', () => {
+      actions$ = of(AuthActions.signInCompleted());
+      runAll();
+
+      httpMock.expectOne(mergeUrl).flush(merged);
+
+      expect(localStorage.getItem(GUEST_SESSION_KEY)).toBeNull();
+    });
+
+    it('keeps the guest session and reports failure when the merge fails', () => {
+      actions$ = of(AuthActions.signInCompleted());
+      const out = runAll();
+
+      httpMock.expectOne(mergeUrl).flush(
+        { isSuccess: false, message: 'Products could not be checked right now' },
+        { status: 503, statusText: 'Service Unavailable' });
+
+      expect(out).toEqual([CartActions.mergeGuestCartFailure({ error: 'Products could not be checked right now' })]);
+      expect(localStorage.getItem(GUEST_SESSION_KEY)).toBe('guest-1');
+    });
+
+    it('without a guest session, skips the merge and loads the cart', () => {
+      localStorage.removeItem(GUEST_SESSION_KEY);
+      actions$ = of(AuthActions.signInCompleted());
+
+      const out = runAll();
+
+      httpMock.expectNone(mergeUrl);
+      expect(out).toEqual([CartActions.loadCart()]);
+    });
+
+    for (const finished of [CartActions.mergeGuestCartSuccess(), CartActions.mergeGuestCartFailure({ error: 'x' })]) {
+      it(`loads the cart after ${finished.type}`, () => {
+        actions$ = of(finished);
+
+        expect(runAll()).toEqual([CartActions.loadCart()]);
+      });
+    }
+
+    for (const notASignIn of [
+      AuthActions.checkAuthSuccess(),
+      AuthActions.pkceCallbackSuccess(),
+      AuthActions.loadUserProfileSuccess({ profile: {} as never }),
+    ]) {
+      it(`does not merge on ${notASignIn.type} (a page load with a stored token)`, () => {
+        actions$ = of(notASignIn);
+
+        const out = runAll();
+
+        httpMock.expectNone(mergeUrl);
+        expect(out.map(a => a.type)).not.toContain(CartActions.mergeGuestCartSuccess.type);
+        expect(localStorage.getItem(GUEST_SESSION_KEY)).toBe('guest-1');
+      });
     }
   });
 
