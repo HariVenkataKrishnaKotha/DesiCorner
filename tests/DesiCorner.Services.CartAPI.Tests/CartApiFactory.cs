@@ -73,4 +73,7 @@ public sealed class RecordingCartService : ICartService
 
     public Task<Cart?> RemoveCouponAsync(Guid? userId, string? sessionId, Guid cartId, CancellationToken ct = default) =>
         throw new NotSupportedException();
+
+    public Task<CartMergeResult> MergeGuestCartAsync(Guid userId, string sessionId, CancellationToken ct = default) =>
+        Task.FromResult(new CartMergeResult(Record("merge", userId, sessionId), Array.Empty<DroppedCartItem>(), null));
 }

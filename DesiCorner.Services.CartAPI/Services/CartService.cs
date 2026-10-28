@@ -1,4 +1,7 @@
-﻿using DesiCorner.Contracts.Coupons;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Reflection;
+using DesiCorner.Contracts.Cart;
+using DesiCorner.Contracts.Coupons;
 using DesiCorner.Services.CartAPI.Models;
 
 namespace DesiCorner.Services.CartAPI.Services;
@@ -13,6 +16,12 @@ public class CartService : ICartService
     private const decimal TAX_RATE = 0.06m; // 6% tax
     private const decimal DELIVERY_FEE = 5.00m;
     private const decimal FREE_DELIVERY_THRESHOLD = 50.00m;
+
+    // The per-line quantity limit the API already declares ([Range] on UpdateCartItemDto.Quantity).
+    // Read from the contract so a merge can't put a line above what an update would accept.
+    private static readonly int MaxQuantityPerItem = (int)typeof(UpdateCartItemDto)
+        .GetProperty(nameof(UpdateCartItemDto.Quantity))!
+        .GetCustomAttribute<RangeAttribute>()!.Maximum;
 
     public CartService(
         ICartStore cartStore,
@@ -260,6 +269,117 @@ public class CartService : ICartService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error removing coupon");
+            throw;
+        }
+    }
+
+    public async Task<CartMergeResult> MergeGuestCartAsync(Guid userId, string sessionId, CancellationToken ct = default)
+    {
+        try
+        {
+            // Read exactly this session's cart by its key; never search other carts.
+            var guestKey = GetCartKey(null, sessionId);
+            var guestCart = await _cartStore.GetAsync(guestKey);
+
+            if (guestCart == null || guestCart.Items.Count == 0)
+            {
+                if (guestCart != null)
+                {
+                    await _cartStore.DeleteAsync(guestKey);
+                }
+
+                return new CartMergeResult(await GetCartAsync(userId, null, ct), Array.Empty<DroppedCartItem>(), null);
+            }
+
+            // Look every guest product up first, so an outage aborts before anything changes.
+            var lookups = new List<(CartItem Item, ProductLookup Lookup)>();
+            foreach (var item in guestCart.Items)
+            {
+                var lookup = await _productService.LookupProductAsync(item.ProductId, ct);
+                if (lookup.Status == ProductLookupStatus.Failed)
+                {
+                    throw new ProductCatalogUnavailableException(
+                        $"Could not look up product {item.ProductId}; the guest cart was not merged");
+                }
+                lookups.Add((item, lookup));
+            }
+
+            var userCart = await _cartStore.GetAsync(GetCartKey(userId, null)) ?? new Cart { UserId = userId };
+            var dropped = new List<DroppedCartItem>();
+
+            foreach (var (item, lookup) in lookups)
+            {
+                var product = lookup.Product;
+                if (product == null || !product.IsAvailable)
+                {
+                    dropped.Add(new DroppedCartItem(item.ProductId, item.ProductName, item.Quantity,
+                        product == null ? DroppedCartItem.NotFound : DroppedCartItem.Unavailable));
+                    continue;
+                }
+
+                // Same rules as AddToCartAsync: an existing line keeps its price and gains the
+                // quantity; a new line takes the current ProductAPI price, never the stored guest price.
+                var existing = userCart.Items.FirstOrDefault(i => i.ProductId == item.ProductId);
+                if (existing != null)
+                {
+                    existing.Quantity = Math.Min(existing.Quantity + item.Quantity, MaxQuantityPerItem);
+                }
+                else
+                {
+                    userCart.Items.Add(new CartItem
+                    {
+                        ProductId = product.Id,
+                        ProductName = product.Name,
+                        ProductImage = product.ImageUrl,
+                        Price = product.Price,
+                        Quantity = Math.Min(item.Quantity, MaxQuantityPerItem)
+                    });
+                }
+            }
+
+            // Coupon: the user's own coupon wins. Otherwise carry the guest's over only if it is
+            // still valid for this user and the merged cart.
+            string? droppedCoupon = null;
+            if (string.IsNullOrEmpty(userCart.CouponCode) && !string.IsNullOrEmpty(guestCart.CouponCode))
+            {
+                var validation = await _couponService.ValidateCouponAsync(new ValidateCouponRequestDto
+                {
+                    Code = guestCart.CouponCode,
+                    CartTotal = userCart.Items.Sum(i => i.Total),
+                    UserId = userId
+                }, ct);
+
+                if (validation.IsValid)
+                {
+                    userCart.CouponCode = guestCart.CouponCode;
+                    userCart.DiscountAmount = validation.DiscountAmount;
+                }
+                else
+                {
+                    droppedCoupon = guestCart.CouponCode;
+                }
+            }
+
+            Cart? merged = null;
+            if (userCart.Items.Count > 0)
+            {
+                userCart.UpdatedAt = DateTime.UtcNow;
+                await RecalculateCartAsync(userCart, ct);
+                await SaveCartAsync(userCart);
+                merged = userCart;
+            }
+
+            await _cartStore.DeleteAsync(guestKey);
+
+            _logger.LogInformation(
+                "Merged guest cart into user {UserId}: {Moved} line(s) moved, {Dropped} dropped",
+                userId, guestCart.Items.Count - dropped.Count, dropped.Count);
+
+            return new CartMergeResult(merged, dropped, droppedCoupon);
+        }
+        catch (Exception ex) when (ex is not ProductCatalogUnavailableException)
+        {
+            _logger.LogError(ex, "Error merging guest cart");
             throw;
         }
     }

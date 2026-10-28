@@ -129,6 +129,12 @@ public sealed class CatalogProductService : IProductService
         // The real ProductService also returns null when ProductAPI cannot be reached
         Task.FromResult(!Unreachable && _products.TryGetValue(productId, out var p) ? Copy(p) : null);
 
+    public Task<ProductLookup> LookupProductAsync(Guid productId, CancellationToken ct = default) =>
+        Task.FromResult(
+            Unreachable ? ProductLookup.Failed :
+            _products.TryGetValue(productId, out var p) ? new ProductLookup(ProductLookupStatus.Found, Copy(p)) :
+            ProductLookup.NotFound);
+
     private static ProductDetails Copy(ProductDetails p) =>
         new() { Id = p.Id, Name = p.Name, Price = p.Price, ImageUrl = p.ImageUrl, IsAvailable = p.IsAvailable };
 }
