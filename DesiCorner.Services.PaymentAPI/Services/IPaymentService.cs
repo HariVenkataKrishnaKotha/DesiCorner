@@ -9,6 +9,7 @@ public interface IPaymentService
     /// </summary>
     Task<PaymentIntentResponseDto> CreatePaymentIntentAsync(
         PaymentIntentRequestDto request,
+        PaymentOwner owner,
         CancellationToken ct = default);
 
     /// <summary>

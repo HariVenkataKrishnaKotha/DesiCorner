@@ -1,6 +1,8 @@
 using DesiCorner.Services.PaymentAPI.Data;
 using DesiCorner.Services.PaymentAPI.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Stripe;
 
@@ -58,6 +60,29 @@ builder.Services.AddHttpClient("OrderAPI", client =>
     ServerCertificateCustomValidationCallback = (_, _, _, _) => true
 });
 
+// JWT Authentication - identifies who created a payment and who may read it.
+// Endpoints stay [AllowAnonymous] (guests pay too); ownership is checked per payment.
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = builder.Configuration["OpenIddict:Issuer"];
+        // Keep original claim types: the user id is in "sub"
+        options.MapInboundClaims = false;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["OpenIddict:Issuer"],
+            ValidateAudience = true,
+            ValidAudiences = new[] { "desicorner-api", "desicorner-angular" },
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(60),
+            ValidateIssuerSigningKey = true,
+            RoleClaimType = "role",
+            NameClaimType = "name"
+        };
+    });
+
 // CORS - Allow Gateway and Angular app
 builder.Services.AddCors(options =>
 {
@@ -97,6 +122,7 @@ app.UseHttpsRedirection();
 // Use CORS
 app.UseCors("AllowGateway");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

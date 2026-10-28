@@ -55,7 +55,7 @@ public class PaymentController : ControllerBase
                 });
             }
 
-            var result = await _paymentService.CreatePaymentIntentAsync(request, ct);
+            var result = await _paymentService.CreatePaymentIntentAsync(request, PaymentOwner.FromRequest(HttpContext), ct);
 
             return Ok(new ResponseDto
             {
@@ -94,8 +94,11 @@ public class PaymentController : ControllerBase
     /// **Flow:**
     /// 1. Frontend completes payment with Stripe
     /// 2. Frontend calls OrderAPI to create order
-    /// 3. OrderAPI calls this endpoint to verify payment succeeded
+    /// 3. OrderAPI calls this endpoint to verify payment succeeded, forwarding the
+    ///    caller's bearer token (or the guest's X-Session-Id)
     /// 4. If verified, OrderAPI creates the order
+    ///
+    /// Only the caller who created the payment gets an answer; anyone else gets 404.
     /// </remarks>
     [HttpPost("verify")]
     [AllowAnonymous]
@@ -114,6 +117,13 @@ public class PaymentController : ControllerBase
                 });
             }
 
+            // Check ownership before touching Stripe or the stored record
+            var owned = await _paymentService.GetPaymentByIntentIdAsync(request.PaymentIntentId, ct);
+            if (owned == null || !PaymentOwner.FromRequest(HttpContext).Owns(owned))
+            {
+                return PaymentNotFound();
+            }
+
             var confirmation = await _paymentService.VerifyPaymentAsync(
                 request.PaymentIntentId,
                 ct);
@@ -125,11 +135,7 @@ public class PaymentController : ControllerBase
 
             if (payment == null)
             {
-                return NotFound(new ResponseDto
-                {
-                    IsSuccess = false,
-                    Message = "Payment not found"
-                });
+                return PaymentNotFound();
             }
 
             // Check if payment succeeded
@@ -175,13 +181,10 @@ public class PaymentController : ControllerBase
                 paymentIntentId,
                 ct);
 
-            if (payment == null)
+            // Someone else's payment looks exactly like one that doesn't exist
+            if (payment == null || !PaymentOwner.FromRequest(HttpContext).Owns(payment))
             {
-                return NotFound(new ResponseDto
-                {
-                    IsSuccess = false,
-                    Message = "Payment not found"
-                });
+                return PaymentNotFound();
             }
 
             return Ok(new ResponseDto
@@ -303,6 +306,12 @@ public class PaymentController : ControllerBase
             return StatusCode(500);
         }
     }
+
+    private NotFoundObjectResult PaymentNotFound() => NotFound(new ResponseDto
+    {
+        IsSuccess = false,
+        Message = "Payment not found"
+    });
 
     /// <summary>
     /// Get Stripe publishable key (for frontend)
