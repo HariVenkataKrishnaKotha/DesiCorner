@@ -262,7 +262,7 @@ export class AdminService {
   }
 
   toggleCouponStatus(id: string): Observable<ApiResponse> {
-    return this.http.patch<ApiResponse>(`${this.baseUrl}/api/coupons/${id}/toggle`, {});
+    return this.http.post<ApiResponse>(`${this.baseUrl}/api/coupons/${id}/toggle`, {});
   }
 
   // ==================== PRODUCT STATS ====================
