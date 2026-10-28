@@ -70,6 +70,9 @@ describe('AuthEffects', () => {
 
     actions$ = of(AuthActions.pkceCallbackSuccess());
     expect(run(effects.pkceCallbackLoadProfile$)).toEqual([AuthActions.loadUserProfile()]);
+
+    actions$ = of(AuthActions.signInCompleted());
+    expect(run(effects.pkceCallbackLoadProfile$)).toEqual([AuthActions.loadUserProfile()]);
   });
 
   describe('loadUserProfile$', () => {

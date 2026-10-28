@@ -16,6 +16,12 @@ describe('authReducer', () => {
     expect(authReducer(undefined, { type: 'unknown' })).toEqual(initialAuthState);
   });
 
+  it('signInCompleted marks the user authenticated but still loading the profile', () => {
+    const state = authReducer({ ...initialAuthState, error: 'old' }, AuthActions.signInCompleted());
+
+    expect(state).toEqual({ ...initialAuthState, isAuthenticated: true, loading: true, error: null });
+  });
+
   it('pkceCallbackSuccess marks the user authenticated but still loading the profile', () => {
     const state = authReducer({ ...initialAuthState, error: 'old' }, AuthActions.pkceCallbackSuccess());
 

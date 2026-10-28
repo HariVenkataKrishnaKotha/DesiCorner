@@ -105,13 +105,14 @@ describe('AuthService', () => {
   });
 
   describe('handlePkceCallback', () => {
-    it('returns true and dispatches pkceCallbackSuccess when tokens were received', async () => {
+    it('returns true and dispatches signInCompleted (a fresh sign-in) when tokens were received', async () => {
       const service = create();
       oauth.loadDiscoveryDocumentAndTryLogin.and.resolveTo(true);
       oauth.hasValidAccessToken.and.returnValue(true);
+      (store.dispatch as jasmine.Spy).calls.reset();
 
       expect(await service.handlePkceCallback()).toBeTrue();
-      expect(store.dispatch).toHaveBeenCalledWith(AuthActions.pkceCallbackSuccess());
+      expect(store.dispatch).toHaveBeenCalledOnceWith(AuthActions.signInCompleted());
     });
 
     it('returns false when there is no valid token', async () => {
