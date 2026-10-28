@@ -51,14 +51,11 @@ public sealed class OrderApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<DbContextOptions<OrderDbContext>>();
             services.AddDbContext<OrderDbContext>(o => o.UseInMemoryDatabase(_dbName));
 
-            foreach (var name in new[] { "CartAPI", "PaymentAPI", "AuthAPI", "AuthServer" })
+            // Only the clients Program registers; their base addresses come from Program too.
+            foreach (var name in new[] { "CartAPI", "PaymentAPI", "AuthAPI" })
             {
                 services.AddHttpClient(name).ConfigurePrimaryHttpMessageHandler(() => Downstream);
             }
-
-            // OrderService asks for an "AuthServer" client that Program never registers; give it
-            // an address so the guest-to-registered-user lookup path can be exercised.
-            services.AddHttpClient("AuthServer", c => c.BaseAddress = new Uri("https://auth.test.local"));
         });
     }
 
