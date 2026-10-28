@@ -44,7 +44,7 @@ export class AuthEffects {
   /** After PKCE callback success, load user profile */
   pkceCallbackLoadProfile$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(AuthActions.pkceCallbackSuccess),
+      ofType(AuthActions.pkceCallbackSuccess, AuthActions.signInCompleted),
       map(() => AuthActions.loadUserProfile())
     )
   );

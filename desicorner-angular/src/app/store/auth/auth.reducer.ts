@@ -20,7 +20,7 @@ export const authReducer = createReducer(
   initialAuthState,
 
   // PKCE Callback Success (tokens received via Authorization Code + PKCE)
-  on(AuthActions.pkceCallbackSuccess, (state) => ({
+  on(AuthActions.pkceCallbackSuccess, AuthActions.signInCompleted, (state) => ({
     ...state,
     isAuthenticated: true,
     loading: true, // still loading until profile arrives
