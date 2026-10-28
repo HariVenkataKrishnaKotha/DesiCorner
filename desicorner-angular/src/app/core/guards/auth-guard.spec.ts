@@ -1,5 +1,6 @@
 import { authGuard } from './auth-guard';
-import { runGuard } from './guard-test-helpers';
+import { BehaviorSubject } from 'rxjs';
+import { GuardAuthState, runGuard, startGuard } from './guard-test-helpers';
 
 describe('authGuard', () => {
   it('allows an authenticated user', async () => {
@@ -20,18 +21,30 @@ describe('authGuard', () => {
     });
   });
 
-  it('blocks without redirecting while auth state is loading', async () => {
-    const { result, router } = await runGuard(authGuard, [{ isAuthenticated: true, loading: true }]);
+  it('makes no decision and no redirect while auth state is still loading', () => {
+    const authState$ = new BehaviorSubject<GuardAuthState>({ isAuthenticated: true, loading: true });
+    const { result$, router } = startGuard(authGuard, authState$);
+    const results: unknown[] = [];
 
-    expect(result).toBeFalse();
+    result$.subscribe(r => results.push(r));
+
+    expect(results).toEqual([]);
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  // BUG: the guard decides on the first authState$ emission (take(1)). After a page refresh
-  // with a stored token, checkAuthSuccess leaves loading=true until the profile request
-  // returns, so a logged-in user deep-linking to a protected route has the navigation
-  // cancelled (no redirect, blank page). The guard should wait for loading to finish.
-  xit('waits for auth loading to finish, then allows the authenticated user', async () => {
+  it('denies once loading ends in failure (profile could not be loaded)', async () => {
+    const { result, router } = await runGuard(authGuard, [
+      { isAuthenticated: true, loading: true },
+      { isAuthenticated: false, loading: false },
+    ]);
+
+    expect(result).toBeFalse();
+    expect(router.navigate).toHaveBeenCalledOnceWith(['/auth/login'], { queryParams: { returnUrl: '/orders' } });
+  });
+
+  // Regression: the guard used take(1) on the first emission, so a refresh with a stored
+  // token (loading=true until the profile returns) cancelled the navigation.
+  it('waits for auth loading to finish, then allows the authenticated user', async () => {
     const { result } = await runGuard(authGuard, [
       { isAuthenticated: true, loading: true },
       { isAuthenticated: true, loading: false },
