@@ -256,9 +256,8 @@ describe('AdminService', () => {
       expectRequest('DELETE', `${api}/api/coupons/k1`).flush({ isSuccess: true });
     });
 
-    // BUG: CouponsController declares [HttpPost("{id}/toggle")], but toggleCouponStatus sends
-    // PATCH, so the admin coupons page's activate/deactivate toggle gets 405 Method Not Allowed.
-    xit('toggleCouponStatus POSTs to /api/coupons/{id}/toggle (the verb the API accepts)', () => {
+    // CouponsController declares [HttpPost("{id}/toggle")]; any other verb gets 405.
+    it('toggleCouponStatus POSTs to /api/coupons/{id}/toggle (the verb the API accepts)', () => {
       service.toggleCouponStatus('k1').subscribe();
 
       expectRequest('POST', `${api}/api/coupons/k1/toggle`).flush({ isSuccess: true });
