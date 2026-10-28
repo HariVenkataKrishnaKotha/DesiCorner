@@ -405,6 +405,88 @@ public class CartController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Merge the caller's guest cart (X-Session-Id) into their own cart, after sign-in
+    /// </summary>
+    /// <remarks>
+    /// Requires a signed-in caller (401 otherwise) and the guest's X-Session-Id (400 otherwise).
+    /// Only that session's cart is read; it is deleted once merged. Calling again, or with a
+    /// session that has no cart, returns the user's cart unchanged. If ProductAPI can't be
+    /// reached, nothing changes and the response is 503.
+    /// </remarks>
+    [HttpPost("merge")]
+    [Authorize]
+    public async Task<IActionResult> MergeGuestCart(CancellationToken ct)
+    {
+        try
+        {
+            var userId = GetUserId();
+            if (!userId.HasValue)
+            {
+                return Unauthorized(new ResponseDto
+                {
+                    IsSuccess = false,
+                    Message = "A signed-in user is required to merge a guest cart"
+                });
+            }
+
+            var sessionId = GetSessionId();
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                return BadRequest(new ResponseDto
+                {
+                    IsSuccess = false,
+                    Message = "X-Session-Id header must be provided to merge a guest cart"
+                });
+            }
+
+            var merge = await _cartService.MergeGuestCartAsync(userId.Value, sessionId, ct);
+
+            return Ok(new ResponseDto
+            {
+                IsSuccess = true,
+                Message = "Guest cart merged",
+                Result = new MergeCartResultDto
+                {
+                    Cart = merge.Cart != null ? MapToDto(merge.Cart) : new CartDto
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = userId,
+                        Items = new List<CartItemDto>(),
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    },
+                    DroppedItems = merge.DroppedItems.Select(d => new DroppedCartItemDto
+                    {
+                        ProductId = d.ProductId,
+                        ProductName = d.ProductName,
+                        Quantity = d.Quantity,
+                        Reason = d.Reason
+                    }).ToList(),
+                    DroppedCouponCode = merge.DroppedCouponCode
+                }
+            });
+        }
+        catch (ProductCatalogUnavailableException ex)
+        {
+            _logger.LogWarning(ex, "Guest cart merge postponed: product catalog unavailable");
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new ResponseDto
+            {
+                IsSuccess = false,
+                Message = "Products could not be checked right now; your guest cart was kept. Please try again."
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error merging guest cart");
+            return StatusCode(500, new ResponseDto
+            {
+                IsSuccess = false,
+                Message = "Error merging guest cart"
+            });
+        }
+    }
+
     private Guid? GetUserId()
     {
         // Identity comes only from the validated JWT. X-Forwarded-UserId is never trusted

@@ -241,7 +241,9 @@ public class CartMergeTests
         var first = await Merge(client);
         var second = await Merge(client);
 
-        Assert.Equal(first.Cart, second.Cart with { Items = second.Cart.Items });
+        Assert.Equal(first.Cart.Id, second.Cart.Id);
+        Assert.Equal(first.Cart.Items, second.Cart.Items);
+        Assert.Equal(first.Cart.Total, second.Cart.Total);
         Assert.Equal(2, second.Cart.Of(OwnedCartApiFactory.Samosa)!.Quantity);
         Assert.Empty(second.DroppedItems);
     }

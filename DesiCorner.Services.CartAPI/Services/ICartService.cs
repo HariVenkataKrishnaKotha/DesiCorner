@@ -15,4 +15,11 @@ public interface ICartService
     Task<bool> RemoveFromCartAsync(Guid? userId, string? sessionId, Guid cartItemId, CancellationToken ct = default);
     Task<Cart?> ApplyCouponAsync(Guid? userId, string? sessionId, Guid cartId, string couponCode, CancellationToken ct = default);
     Task<Cart?> RemoveCouponAsync(Guid? userId, string? sessionId, Guid cartId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Merges the cart of exactly this guest session into the user's cart, then deletes the guest
+    /// cart. A missing or empty guest cart leaves the user's cart unchanged. Throws
+    /// <see cref="ProductCatalogUnavailableException"/>, changing nothing, if ProductAPI can't be asked.
+    /// </summary>
+    Task<CartMergeResult> MergeGuestCartAsync(Guid userId, string sessionId, CancellationToken ct = default);
 }
