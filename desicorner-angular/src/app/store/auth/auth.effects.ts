@@ -102,6 +102,8 @@ export class AuthEffects {
         localStorage.removeItem('token_expiry');
         localStorage.removeItem(this.USER_KEY);
         localStorage.removeItem('guest_session_id');
+        // Persisted cart (CartEffects falls back to it; must not leak to the next visitor)
+        localStorage.removeItem('desicorner_cart');
         this.guestSessionService.clearSession();
         this.router.navigate(['/']);
       })
