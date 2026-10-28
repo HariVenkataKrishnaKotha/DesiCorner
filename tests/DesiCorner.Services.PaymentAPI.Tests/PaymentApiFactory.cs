@@ -68,6 +68,8 @@ public sealed class PaymentApiFactory : WebApplicationFactory<Program>
         });
         builder.ConfigureTestServices(services =>
         {
+            services.UseTestJwtBearer();
+
             services.RemoveAll<DbContextOptions<PaymentDbContext>>();
             services.AddDbContext<PaymentDbContext>(o => o.UseInMemoryDatabase(_dbName));
 
@@ -76,6 +78,23 @@ public sealed class PaymentApiFactory : WebApplicationFactory<Program>
 
             services.AddHttpClient("CartAPI").ConfigurePrimaryHttpMessageHandler(() => Downstream);
         });
+    }
+
+    /// <summary>A client that sends the given user's bearer token.</summary>
+    public HttpClient ClientForUser(Guid userId)
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", TestJwt.CreateToken(userId));
+        return client;
+    }
+
+    /// <summary>A client that sends the given guest session id.</summary>
+    public HttpClient ClientForGuest(string sessionId)
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Add("X-Session-Id", sessionId);
+        return client;
     }
 
     public PaymentDbContext CreateDbContext() =>

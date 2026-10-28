@@ -12,13 +12,14 @@ public class PaymentSmokeTests
     {
         using var factory = new PaymentApiFactory(webhookSecret: "unused");
         factory.Stripe.Add(new Stripe.PaymentIntent { Id = "pi_ok", Amount = 2500, Currency = "usd", Status = "succeeded" });
+        var owner = Guid.NewGuid();
         using (var db = factory.CreateDbContext())
         {
-            db.Payments.Add(new Payment { Id = Guid.NewGuid(), PaymentIntentId = "pi_ok", AmountInCents = 2500, Amount = 25m, Status = "requires_payment_method" });
+            db.Payments.Add(new Payment { Id = Guid.NewGuid(), PaymentIntentId = "pi_ok", UserId = owner, AmountInCents = 2500, Amount = 25m, Status = "requires_payment_method" });
             await db.SaveChangesAsync();
         }
 
-        var response = await factory.CreateClient().PostAsJsonAsync("/api/payment/verify", new VerifyPaymentRequest { PaymentIntentId = "pi_ok" });
+        var response = await factory.ClientForUser(owner).PostAsJsonAsync("/api/payment/verify", new VerifyPaymentRequest { PaymentIntentId = "pi_ok" });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
