@@ -150,7 +150,21 @@ public class CartController : ControllerBase
     {
         try
         {
-            var cart = await _cartService.UpdateCartItemAsync(request.CartItemId, request.Quantity, ct);
+            var userId = GetUserId();
+            var sessionId = GetSessionId();
+
+            if (!userId.HasValue && string.IsNullOrEmpty(sessionId))
+            {
+                return MissingIdentity();
+            }
+
+            var cart = await _cartService.UpdateCartItemAsync(userId, sessionId, request.CartItemId, request.Quantity, ct);
+
+            if (cart == null)
+            {
+                return CartItemNotFound();
+            }
+
             var cartDto = MapToDto(cart);
 
             return Ok(new ResponseDto
@@ -191,31 +205,18 @@ public class CartController : ControllerBase
             var userId = GetUserId();
             var sessionId = GetSessionId();
 
-            // First get the cart to return after removal
-            var cart = await _cartService.GetCartAsync(userId, sessionId, ct);
-
-            if (cart == null)
+            if (!userId.HasValue && string.IsNullOrEmpty(sessionId))
             {
-                return NotFound(new ResponseDto
-                {
-                    IsSuccess = false,
-                    Message = "Cart not found"
-                });
+                return MissingIdentity();
             }
 
-            var result = await _cartService.RemoveFromCartAsync(cartItemId, ct);
-
-            if (!result)
+            if (!await _cartService.RemoveFromCartAsync(userId, sessionId, cartItemId, ct))
             {
-                return NotFound(new ResponseDto
-                {
-                    IsSuccess = false,
-                    Message = "Cart item not found"
-                });
+                return CartItemNotFound();
             }
 
             // Get updated cart after removal
-            cart = await _cartService.GetCartAsync(userId, sessionId, ct);
+            var cart = await _cartService.GetCartAsync(userId, sessionId, ct);
 
             if (cart == null)
             {
@@ -309,7 +310,21 @@ public class CartController : ControllerBase
     {
         try
         {
-            var cart = await _cartService.ApplyCouponAsync(request.CartId, request.CouponCode, ct);
+            var userId = GetUserId();
+            var sessionId = GetSessionId();
+
+            if (!userId.HasValue && string.IsNullOrEmpty(sessionId))
+            {
+                return MissingIdentity();
+            }
+
+            var cart = await _cartService.ApplyCouponAsync(userId, sessionId, request.CartId, request.CouponCode, ct);
+
+            if (cart == null)
+            {
+                return CartNotFound();
+            }
+
             var cartDto = MapToDto(cart);
 
             return Ok(new ResponseDto
@@ -347,7 +362,21 @@ public class CartController : ControllerBase
     {
         try
         {
-            var cart = await _cartService.RemoveCouponAsync(cartId, ct);
+            var userId = GetUserId();
+            var sessionId = GetSessionId();
+
+            if (!userId.HasValue && string.IsNullOrEmpty(sessionId))
+            {
+                return MissingIdentity();
+            }
+
+            var cart = await _cartService.RemoveCouponAsync(userId, sessionId, cartId, ct);
+
+            if (cart == null)
+            {
+                return CartNotFound();
+            }
+
             var cartDto = MapToDto(cart);
 
             return Ok(new ResponseDto
@@ -389,6 +418,25 @@ public class CartController : ControllerBase
     {
         return Request.Headers["X-Session-Id"].FirstOrDefault();
     }
+
+    private BadRequestObjectResult MissingIdentity() => BadRequest(new ResponseDto
+    {
+        IsSuccess = false,
+        Message = "Either user must be authenticated or X-Session-Id header must be provided"
+    });
+
+    // An id outside the caller's cart gets the same answer whether it exists elsewhere or not
+    private NotFoundObjectResult CartItemNotFound() => NotFound(new ResponseDto
+    {
+        IsSuccess = false,
+        Message = "Cart item not found"
+    });
+
+    private NotFoundObjectResult CartNotFound() => NotFound(new ResponseDto
+    {
+        IsSuccess = false,
+        Message = "Cart not found"
+    });
 
     private static CartDto MapToDto(Models.Cart cart)
     {

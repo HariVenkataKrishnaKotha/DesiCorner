@@ -29,18 +29,4 @@ public class RedisCartStore : ICartStore
     {
         await _redisDb.KeyDeleteAsync(key);
     }
-
-    public async IAsyncEnumerable<Cart> GetAllAsync()
-    {
-        var server = _redisDb.Multiplexer.GetServer(_redisDb.Multiplexer.GetEndPoints().First());
-
-        foreach (var key in server.Keys(pattern: "cart:*"))
-        {
-            var cart = await GetAsync(key!);
-            if (cart != null)
-            {
-                yield return cart;
-            }
-        }
-    }
 }
