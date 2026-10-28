@@ -21,10 +21,15 @@ namespace DesiCorner.Services.CartAPI.Tests;
 public sealed class OwnedCartApiFactory : WebApplicationFactory<Program>
 {
     public const string ValidCoupon = "SAVE5";
+    /// <summary>A coupon only guests may use (it fails validation once a UserId is present).</summary>
+    public const string GuestOnlyCoupon = "NEWUSER";
     public static readonly Guid Samosa = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
     public static readonly Guid Chai = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000002");
 
     public InMemoryCartStore Store { get; } = new();
+
+    /// <summary>The product catalog CartAPI sees. Tests may change prices and availability.</summary>
+    public CatalogProductService Products { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -36,7 +41,7 @@ public sealed class OwnedCartApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<ICartStore>();
             services.AddSingleton<ICartStore>(Store);
             services.RemoveAll<IProductService>();
-            services.AddSingleton<IProductService, FixedProductService>();
+            services.AddSingleton<IProductService>(Products);
             services.RemoveAll<ICouponService>();
             services.AddSingleton<ICouponService, FixedCouponService>();
 
@@ -45,6 +50,15 @@ public sealed class OwnedCartApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<IConnectionMultiplexer>(_ =>
                 ConnectionMultiplexer.Connect("localhost:6379,abortConnect=false,connectTimeout=100,asyncTimeout=100,syncTimeout=100"));
         });
+    }
+
+    /// <summary>A signed-in user's client that also sends a guest session id, as after sign-in.</summary>
+    public HttpClient ClientFor(Guid userId, string guestSessionId)
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", TestJwt.CreateToken(userId));
+        client.DefaultRequestHeaders.Add("X-Session-Id", guestSessionId);
+        return client;
     }
 
     /// <summary>A client acting as the given caller: a signed-in user or a guest session.</summary>
@@ -91,21 +105,42 @@ public sealed class InMemoryCartStore : ICartStore
     }
 }
 
-public sealed class FixedProductService : IProductService
+/// <summary>
+/// Fixed starting catalog (Samosa $4.50, Chai $3.00) that tests can change. When
+/// <see cref="Unreachable"/> is set, lookups behave like ProductAPI being down.
+/// </summary>
+public sealed class CatalogProductService : IProductService
 {
+    private readonly ConcurrentDictionary<Guid, ProductDetails> _products = new()
+    {
+        [OwnedCartApiFactory.Samosa] = new ProductDetails { Id = OwnedCartApiFactory.Samosa, Name = "Samosa", Price = 4.50m, IsAvailable = true },
+        [OwnedCartApiFactory.Chai] = new ProductDetails { Id = OwnedCartApiFactory.Chai, Name = "Chai", Price = 3.00m, IsAvailable = true },
+    };
+
+    public bool Unreachable { get; set; }
+
+    public void SetPrice(Guid productId, decimal price) => _products[productId].Price = price;
+
+    public void SetAvailable(Guid productId, bool available) => _products[productId].IsAvailable = available;
+
+    public void Remove(Guid productId) => _products.TryRemove(productId, out _);
+
     public Task<ProductDetails?> GetProductAsync(Guid productId, CancellationToken ct = default) =>
-        Task.FromResult<ProductDetails?>(
-            productId == OwnedCartApiFactory.Samosa ? new ProductDetails { Id = productId, Name = "Samosa", Price = 4.50m, IsAvailable = true } :
-            productId == OwnedCartApiFactory.Chai ? new ProductDetails { Id = productId, Name = "Chai", Price = 3.00m, IsAvailable = true } :
-            null);
+        // The real ProductService also returns null when ProductAPI cannot be reached
+        Task.FromResult(!Unreachable && _products.TryGetValue(productId, out var p) ? Copy(p) : null);
+
+    private static ProductDetails Copy(ProductDetails p) =>
+        new() { Id = p.Id, Name = p.Name, Price = p.Price, ImageUrl = p.ImageUrl, IsAvailable = p.IsAvailable };
 }
 
 public sealed class FixedCouponService : ICouponService
 {
     public Task<ValidateCouponResponseDto> ValidateCouponAsync(ValidateCouponRequestDto request, CancellationToken ct = default) =>
-        Task.FromResult(request.Code == OwnedCartApiFactory.ValidCoupon
-            ? new ValidateCouponResponseDto { IsValid = true, DiscountAmount = 1.00m }
-            : new ValidateCouponResponseDto { IsValid = false, Message = "Invalid coupon code" });
+        Task.FromResult(
+            request.Code == OwnedCartApiFactory.ValidCoupon ||
+            (request.Code == OwnedCartApiFactory.GuestOnlyCoupon && request.UserId == null)
+                ? new ValidateCouponResponseDto { IsValid = true, DiscountAmount = 1.00m }
+                : new ValidateCouponResponseDto { IsValid = false, Message = "Invalid coupon code" });
 
     public Task<List<CouponDto>> GetAllCouponsAsync(CouponFilterDto filter, CancellationToken ct = default) => throw new NotSupportedException();
     public Task<CouponDto?> GetCouponByIdAsync(Guid id, CancellationToken ct = default) => throw new NotSupportedException();
