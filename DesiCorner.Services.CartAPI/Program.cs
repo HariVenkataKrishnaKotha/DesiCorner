@@ -65,6 +65,7 @@ builder.Services.AddDbContext<CartDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("CartDb")));
 
 // Services
+builder.Services.AddScoped<ICartStore, RedisCartStore>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICouponService, CouponService>();
