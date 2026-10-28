@@ -133,7 +133,4 @@ describe('ReviewService', () => {
 
     expect(status).toBe(400);
   });
-
-  // getMyReviews is not tested: it calls GET /api/reviews/my-reviews, which ReviewsController
-  // does not expose, and nothing in the app calls it. Listed as a finding in the PR.
 });

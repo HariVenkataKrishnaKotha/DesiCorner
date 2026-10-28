@@ -124,20 +124,4 @@ export class ReviewService {
       map(response => response.result!)
     );
   }
-
-  /**
-   * Get all reviews by the current user
-   */
-  getMyReviews(page: number = 1, pageSize: number = 10): Observable<PaginatedReviews> {
-    const params = new HttpParams()
-      .set('page', page.toString())
-      .set('pageSize', pageSize.toString());
-
-    return this.http.get<ApiResponse<PaginatedReviews>>(
-      `${this.baseUrl}/my-reviews`, 
-      { params }
-    ).pipe(
-      map(response => response.result!)
-    );
-  }
 }
