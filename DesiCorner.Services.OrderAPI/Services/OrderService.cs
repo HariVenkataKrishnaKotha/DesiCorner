@@ -270,6 +270,7 @@ public class OrderService : IOrderService
             OrderNumber = GenerateOrderNumber(),
             UserId = finalUserId,
             IsGuestOrder = isGuestOrder,
+            GuestSessionId = isGuestCheckout ? request.SessionId : null,
             UserEmail = email,
             UserPhone = phone,
 

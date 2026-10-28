@@ -112,14 +112,22 @@ public class OrdersController : ControllerBase
     /// Get order by ID
     /// </summary>
     [HttpGet("{orderId:guid}")]
-    [AllowAnonymous]  // Allow guests to view their order briefly after creation
+    [AllowAnonymous]  // Guests read their own order with the X-Session-Id that placed it
     public async Task<IActionResult> GetOrder(Guid orderId, CancellationToken ct)
     {
         try
         {
             var order = await _orderService.GetOrderByIdAsync(orderId, ct);
 
-            if (order == null)
+            var userId = GetUserId();
+            var sessionId = Request.Headers["X-Session-Id"].FirstOrDefault();
+
+            var isOwner = userId.HasValue && order?.UserId == userId;
+            var isPlacingSession = !string.IsNullOrEmpty(sessionId) &&
+                                   string.Equals(order?.GuestSessionId, sessionId, StringComparison.Ordinal);
+
+            // Someone else's order looks exactly like an order that doesn't exist
+            if (order == null || !(IsAdmin() || isOwner || isPlacingSession))
             {
                 return NotFound(new ResponseDto
                 {
@@ -128,20 +136,9 @@ public class OrdersController : ControllerBase
                 });
             }
 
-            var userId = GetUserId();
-
-            // Authorization logic
-            if (userId.HasValue)
+            if (!isOwner && !IsAdmin())
             {
-                // Authenticated user - check ownership (unless admin)
-                if (!IsAdmin() && order.UserId != userId)
-                {
-                    return Forbid();
-                }
-            }
-            else
-            {
-                // Guest user - only allow viewing within 5 minutes of order creation
+                // Placing guest session - only allow viewing within 5 minutes of order creation
                 // This allows guests to see their confirmation page immediately
                 var orderAge = DateTime.UtcNow - order.OrderDate;
                 if (orderAge > TimeSpan.FromMinutes(5))
