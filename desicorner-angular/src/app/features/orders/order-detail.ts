@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ToastrService } from 'ngx-toastr';
 
 import { OrderService } from '../../core/services/order.service';
+import { AuthService } from '../../core/services/auth.service';
 import { Order } from '../../core/models/order.models';
 
 @Component({
@@ -33,10 +34,13 @@ export class OrderDetailComponent implements OnInit {
   private router = inject(Router);
   private orderService = inject(OrderService);
   private toastr = inject(ToastrService);
+  authService = inject(AuthService);
 
   order?: Order;
   loading = true;
   error = '';
+  /** The API answered 404: unknown order, someone else's, or a guest past the viewing window. */
+  notFound = false;
   cancelling = false;
 
   ngOnInit(): void {
@@ -52,6 +56,7 @@ export class OrderDetailComponent implements OnInit {
   private loadOrder(orderId: string): void {
     this.loading = true;
     this.error = '';
+    this.notFound = false;
 
     this.orderService.getOrderById(orderId).subscribe({
       next: (response) => {
@@ -64,7 +69,11 @@ export class OrderDetailComponent implements OnInit {
       },
       error: (err) => {
         this.loading = false;
-        this.error = err.error?.message || 'Failed to load order';
+        if (err.status === 404) {
+          this.notFound = true;
+        } else {
+          this.error = err.error?.message || 'Failed to load order';
+        }
       }
     });
   }

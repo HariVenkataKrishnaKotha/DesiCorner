@@ -20,6 +20,28 @@
     </mat-card>
   }
 
+  @if (notFound && !loading) {
+    <mat-card class="error-card">
+      <mat-card-content>
+        <mat-icon>search_off</mat-icon>
+        <h2>Order not found</h2>
+        <p>We couldn't find this order. Check the link, or sign in with the account that placed it.</p>
+        <p>If you checked out as a guest, your order details are shown on this device for a few minutes after purchase.</p>
+        @if (authService.isAuthenticated) {
+          <button mat-raised-button color="primary" routerLink="/orders">
+            <mat-icon>arrow_back</mat-icon>
+            View All Orders
+          </button>
+        } @else {
+          <button mat-raised-button color="primary" routerLink="/products">
+            <mat-icon>restaurant_menu</mat-icon>
+            Continue Shopping
+          </button>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
   @if (order && !loading) {
     <div class="order-header">
       <div class="header-info">
