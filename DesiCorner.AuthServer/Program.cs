@@ -306,10 +306,10 @@ using (var scope = app.Services.CreateScope())
 
     await Seed.InitializeAsync(app.Services, cfg["OpenIddict:Issuer"]!);
 
-    // Also seed with DbInitializer for roles
+    // Roles everywhere; demo accounts only in Development, otherwise an optional bootstrap admin
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
-    await DbInitializer.Initialize(db, userManager, roleManager);
+    await DbInitializer.Initialize(db, userManager, roleManager, app.Environment, cfg, app.Logger);
 }
 
 // Configure pipeline
