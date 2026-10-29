@@ -8,6 +8,8 @@ namespace DesiCorner.Gateway.Auth;
 
 public sealed class IntrospectionClient : IIntrospectionClient
 {
+    public const string ClientSecretKey = "Gateway:Introspection:ClientSecret";
+
     private readonly HttpClient _httpClient;
     private readonly IDistributedCache _cache;
     private readonly IConfiguration _cfg;
@@ -38,7 +40,12 @@ public sealed class IntrospectionClient : IIntrospectionClient
 
         var endpoint = _cfg["Gateway:Introspection:Endpoint"]!;
         var clientId = _cfg["Gateway:Introspection:ClientId"]!;
-        var clientSecret = _cfg["Gateway:Introspection:ClientSecret"]!;
+        var clientSecret = _cfg[ClientSecretKey];
+        if (string.IsNullOrWhiteSpace(clientSecret))
+        {
+            _log.LogWarning("Introspection skipped: {Key} is not configured", ClientSecretKey);
+            return (false, null, "introspection_unavailable");
+        }
 
         _httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Basic",
