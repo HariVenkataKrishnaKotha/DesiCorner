@@ -41,6 +41,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesiCorner.Services.Payment
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesiCorner.Services.ProductAPI.Tests", "tests\DesiCorner.Services.ProductAPI.Tests\DesiCorner.Services.ProductAPI.Tests.csproj", "{E3011868-65C3-4E83-B87A-A12A4C03A614}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesiCorner.AuthServer.Tests", "tests\DesiCorner.AuthServer.Tests\DesiCorner.AuthServer.Tests.csproj", "{C66E3745-A109-43C7-A3A2-3F7B257C8780}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -103,6 +105,10 @@ Global
 		{E3011868-65C3-4E83-B87A-A12A4C03A614}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E3011868-65C3-4E83-B87A-A12A4C03A614}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E3011868-65C3-4E83-B87A-A12A4C03A614}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C66E3745-A109-43C7-A3A2-3F7B257C8780}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C66E3745-A109-43C7-A3A2-3F7B257C8780}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C66E3745-A109-43C7-A3A2-3F7B257C8780}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C66E3745-A109-43C7-A3A2-3F7B257C8780}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -122,6 +128,7 @@ Global
 		{4E0B333D-EF98-4B15-9D2C-EB85AF47AA99} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{26A2991C-210A-4983-808D-6A9F990E71CE} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{E3011868-65C3-4E83-B87A-A12A4C03A614} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{C66E3745-A109-43C7-A3A2-3F7B257C8780} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {AC712697-1F00-4011-9503-AC6F983A8797}
