@@ -28,16 +28,16 @@ builder.Services.AddSingleton<IRedisRateLimiter, RedisRateLimiter>();
 builder.Services.AddScoped<ITokenAuthenticator, TokenAuthenticator>();
 
 builder.Services.AddHttpClient<IJwksProvider, JwksProvider>()
-    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-    {
-        ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-    });
+    .ConfigurePrimaryHttpMessageHandler(() => builder.Environment.IsDevelopment()
+        // Development only: accept the local dev certificate. Elsewhere certificates are validated.
+        ? new HttpClientHandler { ServerCertificateCustomValidationCallback = (_, _, _, _) => true }
+        : new HttpClientHandler());
 
 builder.Services.AddHttpClient<IIntrospectionClient, IntrospectionClient>()
-    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-    {
-        ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-    });
+    .ConfigurePrimaryHttpMessageHandler(() => builder.Environment.IsDevelopment()
+        // Development only: accept the local dev certificate. Elsewhere certificates are validated.
+        ? new HttpClientHandler { ServerCertificateCustomValidationCallback = (_, _, _, _) => true }
+        : new HttpClientHandler());
 
 // OpenTelemetry
 builder.Services.AddOpenTelemetry()

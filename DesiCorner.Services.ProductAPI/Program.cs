@@ -36,7 +36,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.SaveToken = true;
-        options.RequireHttpsMetadata = false; // Dev only!
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment(); // HTTP metadata only in Development
         // IMPORTANT: Disable claim mapping to keep original claim types
         options.MapInboundClaims = false;
 

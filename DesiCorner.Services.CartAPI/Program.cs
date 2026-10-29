@@ -80,7 +80,7 @@ builder.Services.AddAuthentication(options =>
 {
     // Use Authority to fetch JWKS from OpenIddict
     options.Authority = builder.Configuration["OpenIddict:Issuer"];
-    options.RequireHttpsMetadata = false; // Dev only
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment(); // HTTP metadata only in Development
     // IMPORTANT: Disable claim mapping to keep original claim types
     options.MapInboundClaims = false;
 
