@@ -15,6 +15,7 @@ public static class Seed
 
         await SeedRolesAsync(scope.ServiceProvider);
         await SeedClientsAsync(scope.ServiceProvider, issuer);
+        await SeedServiceClientsAsync(scope.ServiceProvider);
         await SeedScopesAsync(scope.ServiceProvider);
     }
 
@@ -115,6 +116,39 @@ public static class Seed
         }
     }
 
+    private static async Task SeedServiceClientsAsync(IServiceProvider services)
+    {
+        var manager = services.GetRequiredService<IOpenIddictApplicationManager>();
+        var configuration = services.GetRequiredService<IConfiguration>();
+        var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(Seed));
+
+        // OrderAPI (confidential): client-credentials only, for the user-lookup scope
+        var secret = configuration[InternalApi.OrderServiceSecretKey];
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            logger.LogWarning("{Key} is not configured; the {ClientId} client is not seeded and guest-order account linking is unavailable",
+                InternalApi.OrderServiceSecretKey, InternalApi.OrderServiceClientId);
+            return;
+        }
+
+        if (await manager.FindByClientIdAsync(InternalApi.OrderServiceClientId) is null)
+        {
+            await manager.CreateAsync(new OpenIddictApplicationDescriptor
+            {
+                ClientId = InternalApi.OrderServiceClientId,
+                ClientSecret = secret,
+                ClientType = ClientTypes.Confidential,
+                DisplayName = "DesiCorner Order Service",
+                Permissions =
+                {
+                    Permissions.Endpoints.Token,
+                    Permissions.GrantTypes.ClientCredentials,
+                    Permissions.Prefixes.Scope + InternalApi.UserLookupScope
+                }
+            });
+        }
+    }
+
     private static async Task SeedScopesAsync(IServiceProvider services)
     {
         var manager = services.GetRequiredService<IOpenIddictScopeManager>();
@@ -127,7 +161,8 @@ public static class Seed
             new { Name = "desicorner.orders.read", DisplayName = "Read orders", Description = "View order history" },
             new { Name = "desicorner.orders.write", DisplayName = "Write orders", Description = "Create and manage orders" },
             new { Name = "desicorner.payment", DisplayName = "Payment", Description = "Process payments" },
-            new { Name = "desicorner.admin", DisplayName = "Admin access", Description = "Full administrative access" }
+            new { Name = "desicorner.admin", DisplayName = "Admin access", Description = "Full administrative access" },
+            new { Name = InternalApi.UserLookupScope, DisplayName = "User lookup (service)", Description = "Service-to-service: find an account by email or phone" }
         };
 
         foreach (var scope in scopes)
