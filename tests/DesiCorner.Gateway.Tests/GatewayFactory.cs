@@ -4,6 +4,7 @@ using DesiCorner.Tests.Shared;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Yarp.ReverseProxy.Forwarder;
@@ -16,13 +17,35 @@ namespace DesiCorner.Gateway.Tests;
 /// </summary>
 public sealed class GatewayFactory : WebApplicationFactory<Program>
 {
+    public const string IntrospectionSecretKey = "Gateway:Introspection:ClientSecret";
+    public const string TestIntrospectionSecret = "gateway-test-secret";
+
+    public string EnvironmentName { get; init; } = "Testing";
+
+    /// <summary>Null leaves the secret unconfigured.</summary>
+    public string? IntrospectionSecret { get; init; } = TestIntrospectionSecret;
+
     public RecordingHandler Upstream { get; } = new();
+
+    /// <summary>Stands in for AuthServer's introspection endpoint.</summary>
+    public RecordingHandler Introspection { get; } = new(_ => RecordingHandler.Json("{\"active\":false}"));
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(EnvironmentName);
+        if (IntrospectionSecret != null)
+        {
+            builder.UseSetting(IntrospectionSecretKey, IntrospectionSecret);
+        }
+
         builder.ConfigureTestServices(services =>
         {
+            services.RemoveAll<IDistributedCache>();
+            services.AddDistributedMemoryCache();
+
+            services.AddHttpClient<IIntrospectionClient, IntrospectionClient>()
+                .ConfigurePrimaryHttpMessageHandler(() => Introspection);
+
             services.RemoveAll<IRedisRateLimiter>();
             services.AddSingleton<IRedisRateLimiter, NoRateLimiter>();
 
