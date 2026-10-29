@@ -53,10 +53,10 @@ builder.Services.AddHttpClient("PaymentAPI", client =>
 })
 // PaymentAPI answers /verify only for the payment's creator: forward the caller's token
 .AddHttpMessageHandler<ForwardAuthorizationHandler>()
-.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-{
-    ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-});
+.ConfigurePrimaryHttpMessageHandler(() => builder.Environment.IsDevelopment()
+    // Development only: accept the local dev certificate. Elsewhere certificates are validated.
+    ? new HttpClientHandler { ServerCertificateCustomValidationCallback = (_, _, _, _) => true }
+    : new HttpClientHandler());
 
 // Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -64,7 +64,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         options.Authority = builder.Configuration["Authentication:Authority"];
         options.Audience = builder.Configuration["Authentication:Audience"];
-        options.RequireHttpsMetadata = false;
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         // IMPORTANT: Disable claim mapping to keep original claim types
         options.MapInboundClaims = false;
 

@@ -55,10 +55,10 @@ builder.Services.AddHttpClient("OrderAPI", client =>
         ?? "https://localhost:7401");
     client.Timeout = TimeSpan.FromSeconds(30);
 })
-.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-{
-    ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-});
+.ConfigurePrimaryHttpMessageHandler(() => builder.Environment.IsDevelopment()
+    // Development only: accept the local dev certificate. Elsewhere certificates are validated.
+    ? new HttpClientHandler { ServerCertificateCustomValidationCallback = (_, _, _, _) => true }
+    : new HttpClientHandler());
 
 // JWT Authentication - identifies who created a payment and who may read it.
 // Endpoints stay [AllowAnonymous] (guests pay too); ownership is checked per payment.

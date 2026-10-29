@@ -77,7 +77,7 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     options.SaveToken = true;
-    options.RequireHttpsMetadata = false; // Dev only!
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment(); // HTTP metadata only in Development
     // IMPORTANT: Disable claim mapping to keep original claim types
     options.MapInboundClaims = false;
 
@@ -159,8 +159,12 @@ builder.Services.AddOpenIddict()
         opt.SetIssuer(new Uri(cfg["OpenIddict:Issuer"]!));
         opt.DisableAccessTokenEncryption();
 
-        // Development only - remove in production!
-        opt.UseAspNetCore().DisableTransportSecurityRequirement();
+        // Plain HTTP is accepted only in Development; elsewhere OpenIddict requires HTTPS
+        var aspNetCore = opt.UseAspNetCore();
+        if (builder.Environment.IsDevelopment())
+        {
+            aspNetCore.DisableTransportSecurityRequirement();
+        }
 
         // Endpoints
         opt.SetAuthorizationEndpointUris("/connect/authorize")
