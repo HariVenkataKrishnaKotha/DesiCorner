@@ -67,7 +67,6 @@ public static class Seed
 
                 Permissions.GrantTypes.AuthorizationCode,
                 Permissions.GrantTypes.RefreshToken,
-                Permissions.GrantTypes.Password,
 
                 Permissions.ResponseTypes.Code,
 

@@ -169,10 +169,9 @@ builder.Services.AddOpenIddict()
            .SetRevocationEndpointUris("/connect/revocation")
            .SetUserInfoEndpointUris("/connect/userinfo");
 
-        // Flows - ADD PASSWORD FLOW HERE
+        // Flows. The resource-owner password grant is deliberately not enabled: the SPA uses code + PKCE.
         opt.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange();
         opt.AllowRefreshTokenFlow();
-        opt.AllowPasswordFlow();
         opt.AllowClientCredentialsFlow(); // service-to-service (OrderAPI user lookup)
 
         // Development keys (use proper keys in production!)
