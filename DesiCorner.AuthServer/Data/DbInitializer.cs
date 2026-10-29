@@ -8,10 +8,13 @@ public static class DbInitializer
 {
     public const string BootstrapAdminEmailKey = "BootstrapAdmin:Email";
     public const string BootstrapAdminPasswordKey = "BootstrapAdmin:Password";
+    public const string BootstrapAdminResetKey = "BootstrapAdmin:ResetPassword";
 
     /// <summary>
     /// Seeds roles everywhere. Demo accounts with fixed passwords exist only in Development;
     /// elsewhere an admin is created only from BootstrapAdmin:Email and BootstrapAdmin:Password.
+    /// An existing account with that email is left unchanged unless BootstrapAdmin:ResetPassword
+    /// is true (meant for one restart): then its password and Admin role are reset.
     /// </summary>
     public static async Task Initialize(
         ApplicationDbContext context,
@@ -64,9 +67,19 @@ public static class DbInitializer
             return;
         }
 
-        if (await userManager.FindByEmailAsync(email) != null)
+        var existing = await userManager.FindByEmailAsync(email);
+        if (existing != null)
         {
-            logger.LogInformation("Bootstrap admin {Email} already exists; left unchanged", email);
+            if (configuration.GetValue<bool>(BootstrapAdminResetKey))
+            {
+                await ResetBootstrapAdminAsync(userManager, existing, password, logger);
+            }
+            else
+            {
+                logger.LogInformation("Bootstrap admin {Email} already exists; left unchanged (set {ResetKey}=true for one restart to reset it)",
+                    email, BootstrapAdminResetKey);
+            }
+
             return;
         }
 
@@ -89,6 +102,40 @@ public static class DbInitializer
 
         await userManager.AddToRoleAsync(admin, "Admin");
         logger.LogInformation("Bootstrap admin {Email} created", email);
+    }
+
+    /// <summary>
+    /// Recovery: sets the configured password (through Identity's reset, so the password policy
+    /// applies and existing sessions are invalidated), then confirms the email, clears any
+    /// lockout and makes the account an Admin. A rejected password changes nothing.
+    /// </summary>
+    private static async Task ResetBootstrapAdminAsync(
+        UserManager<ApplicationUser> userManager, ApplicationUser user, string password, ILogger logger)
+    {
+        var token = await userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await userManager.ResetPasswordAsync(user, token, password);
+        if (!result.Succeeded)
+        {
+            logger.LogError("Bootstrap admin {Email} was not reset: {Errors}",
+                user.Email, string.Join("; ", result.Errors.Select(e => e.Description)));
+            return;
+        }
+
+        if (!user.EmailConfirmed)
+        {
+            user.EmailConfirmed = true;
+            await userManager.UpdateAsync(user);
+        }
+
+        await userManager.SetLockoutEndDateAsync(user, null);
+        await userManager.ResetAccessFailedCountAsync(user);
+        if (!await userManager.IsInRoleAsync(user, "Admin"))
+        {
+            await userManager.AddToRoleAsync(user, "Admin");
+        }
+
+        logger.LogWarning("Bootstrap admin {Email} password and Admin role reset; remove {ResetKey} from configuration",
+            user.Email, BootstrapAdminResetKey);
     }
 
     /// <summary>Development only: well-known accounts with fixed passwords.</summary>
