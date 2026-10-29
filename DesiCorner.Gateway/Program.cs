@@ -97,6 +97,19 @@ builder.Services.AddReverseProxy()
 var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Gateway");
 
+// The introspection client secret comes only from configuration (user-secrets or environment)
+if (string.IsNullOrWhiteSpace(cfg[IntrospectionClient.ClientSecretKey]))
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException(
+            $"Missing configuration: {IntrospectionClient.ClientSecretKey} " +
+            $"(set the {IntrospectionClient.ClientSecretKey.Replace(":", "__")} environment variable)");
+    }
+
+    logger.LogWarning("{Key} is not configured; token introspection is unavailable", IntrospectionClient.ClientSecretKey);
+}
+
 // MIDDLEWARE PIPELINE
 
 // Drop client-supplied identity headers before anything else runs. Only the auth
