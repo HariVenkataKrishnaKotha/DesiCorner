@@ -182,19 +182,15 @@ public class OrdersController : ControllerBase
             var userId = GetUserId();
             var order = await _orderService.GetOrderByNumberAsync(orderNumber, ct);
 
-            if (order == null)
+            // Someone else's order gets the same answer as an unknown number, so the
+            // response never reveals that the number exists (same rule as GET {orderId})
+            if (order == null || (!IsAdmin() && order.UserId != userId))
             {
                 return NotFound(new ResponseDto
                 {
                     IsSuccess = false,
                     Message = "Order not found"
                 });
-            }
-
-            // Check if user owns this order (unless admin)
-            if (!IsAdmin() && order.UserId != userId)
-            {
-                return Forbid();
             }
 
             var orderDto = MapToDto(order);
