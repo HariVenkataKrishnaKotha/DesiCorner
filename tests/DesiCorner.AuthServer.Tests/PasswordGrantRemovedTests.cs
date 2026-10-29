@@ -23,7 +23,8 @@ public class PasswordGrantRemovedTests
             ["grant_type"] = "password",
             ["client_id"] = "desicorner-angular",
             ["username"] = "test@desicorner.com",
-            ["password"] = "Test@123",
+            // Any password: an unsupported grant is refused before credentials are checked
+            ["password"] = ServiceSecrets.New(),
             ["scope"] = "openid desicorner.cart"
         }));
 
