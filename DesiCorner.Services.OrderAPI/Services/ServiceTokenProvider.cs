@@ -9,6 +9,9 @@ namespace DesiCorner.Services.OrderAPI.Services;
 /// </summary>
 public interface IServiceTokenProvider
 {
+    /// <summary>False when no client secret is configured: no token can ever be obtained.</summary>
+    bool IsConfigured { get; }
+
     Task<string?> GetTokenAsync(CancellationToken ct);
 }
 
@@ -43,6 +46,8 @@ public sealed class ServiceTokenProvider : IServiceTokenProvider
         _time = time;
         _logger = logger;
     }
+
+    public bool IsConfigured => !string.IsNullOrWhiteSpace(_configuration[ClientSecretKey]);
 
     public async Task<string?> GetTokenAsync(CancellationToken ct)
     {
