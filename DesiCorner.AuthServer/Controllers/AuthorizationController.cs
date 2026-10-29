@@ -1,4 +1,5 @@
 ﻿using DesiCorner.AuthServer.Identity;
+using DesiCorner.AuthServer.Infrastructure;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -140,6 +141,27 @@ public class AuthorizationController : ControllerBase
             request.GrantType, request.ClientId);
 
         ClaimsPrincipal principal;
+
+        // CLIENT CREDENTIALS GRANT - service-to-service. OpenIddict has already authenticated
+        // the client and checked that it may use this grant and the requested scopes.
+        if (request.IsClientCredentialsGrantType())
+        {
+            var identity = new ClaimsIdentity(
+                OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, Claims.Name, Claims.Role);
+
+            // The principal is the client itself: no user claims
+            identity.SetClaim(Claims.Subject, request.ClientId);
+            identity.SetClaim(Claims.Name, request.ClientId);
+
+            principal = new ClaimsPrincipal(identity);
+            principal.SetScopes(request.GetScopes().Where(scope => scope == InternalApi.UserLookupScope));
+            principal.SetResources("desicorner-api");
+            principal.SetDestinations(static _ => new[] { Destinations.AccessToken });
+
+            _logger.LogInformation("Client credentials token issued to {ClientId}", request.ClientId);
+
+            return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        }
 
         // PASSWORD GRANT - NEW
         if (request.IsPasswordGrantType())

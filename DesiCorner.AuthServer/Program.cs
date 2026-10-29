@@ -140,6 +140,15 @@ builder.Services.AddAuthorization(options =>
         .Build();
 
     options.DefaultPolicy = defaultPolicy;
+
+    // Service-to-service only: a client-credentials token that carries the user-lookup scope.
+    // User tokens (an admin's included) have the same audience but never this scope.
+    options.AddPolicy(InternalApi.UserLookupPolicy, policy => policy
+        .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        .RequireAssertion(context => context.User.FindAll("scope")
+            .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .Contains(InternalApi.UserLookupScope)));
 });
 
 // OpenIddict
@@ -164,6 +173,7 @@ builder.Services.AddOpenIddict()
         opt.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange();
         opt.AllowRefreshTokenFlow();
         opt.AllowPasswordFlow();
+        opt.AllowClientCredentialsFlow(); // service-to-service (OrderAPI user lookup)
 
         // Development keys (use proper keys in production!)
         opt.AddEphemeralEncryptionKey()
@@ -182,7 +192,8 @@ builder.Services.AddOpenIddict()
             "desicorner.orders.read",
             "desicorner.orders.write",
             "desicorner.payment",
-            "desicorner.admin");
+            "desicorner.admin",
+            InternalApi.UserLookupScope);
 
         // Token lifetimes
         opt.SetAccessTokenLifetime(TimeSpan.FromMinutes(30));

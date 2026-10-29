@@ -1,5 +1,6 @@
 ﻿using DesiCorner.AuthServer.Data;
 using DesiCorner.AuthServer.Identity;
+using DesiCorner.AuthServer.Infrastructure;
 using DesiCorner.AuthServer.Services;
 using DesiCorner.Contracts.Auth;
 using DesiCorner.Contracts.Common;
@@ -326,8 +327,13 @@ public class AccountController : ControllerBase
     /// <summary>
     /// Check if user exists by email or phone (for guest checkout user linking)
     /// </summary>
+    /// <remarks>
+    /// Service-to-service only: requires a client-credentials token with the
+    /// desicorner.internal.user-lookup scope (OrderAPI). Anyone else would be able to
+    /// find out which emails and phone numbers have accounts.
+    /// </remarks>
     [HttpGet("user-lookup")]
-    [AllowAnonymous]
+    [Authorize(Policy = InternalApi.UserLookupPolicy)]
     public async Task<IActionResult> UserLookup([FromQuery] string? email, [FromQuery] string? phone)
     {
         if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(phone))
