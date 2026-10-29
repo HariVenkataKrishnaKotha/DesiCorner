@@ -30,10 +30,19 @@ builder.Services.AddHttpClient("CartAPI", client =>
 })
 .AddHttpMessageHandler<ForwardAuthorizationHandler>();
 
+// AuthServer's user lookup is service-only: OrderAPI authenticates with its own
+// client-credentials token, fetched on a separate client so the handler never recurses
+var authServerUrl = new Uri(builder.Configuration["ServiceUrls:AuthAPI"] ?? "https://localhost:7001");
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IServiceTokenProvider, ServiceTokenProvider>();
+builder.Services.AddTransient<ServiceTokenHandler>();
+builder.Services.AddHttpClient(ServiceTokenProvider.HttpClientName, client => client.BaseAddress = authServerUrl);
+
 builder.Services.AddHttpClient("AuthAPI", client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["ServiceUrls:AuthAPI"] ?? "https://localhost:7001");
-});
+    client.BaseAddress = authServerUrl;
+})
+.AddHttpMessageHandler<ServiceTokenHandler>();
 
 // HttpClient for PaymentAPI
 builder.Services.AddHttpClient("PaymentAPI", client =>
@@ -89,6 +98,20 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// The client-credentials secret comes only from configuration (user-secrets or environment)
+if (string.IsNullOrWhiteSpace(app.Configuration[ServiceTokenProvider.ClientSecretKey]))
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException(
+            $"Missing configuration: {ServiceTokenProvider.ClientSecretKey} " +
+            $"(set the {ServiceTokenProvider.ClientSecretKey.Replace(":", "__")} environment variable)");
+    }
+
+    app.Logger.LogWarning("{Key} is not configured; guest orders are not linked to registered accounts",
+        ServiceTokenProvider.ClientSecretKey);
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
