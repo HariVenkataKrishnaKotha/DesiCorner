@@ -278,11 +278,18 @@ var app = builder.Build();
 // Migrate and seed
 using (var scope = app.Services.CreateScope())
 {
+    // Non-relational providers (the EF in-memory provider used by tests) have no migrations
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await db.Database.MigrateAsync();
+    if (db.Database.IsRelational())
+    {
+        await db.Database.MigrateAsync();
+    }
 
     var dp = scope.ServiceProvider.GetRequiredService<DataProtectionKeyContext>();
-    await dp.Database.MigrateAsync();
+    if (dp.Database.IsRelational())
+    {
+        await dp.Database.MigrateAsync();
+    }
 
     await Seed.InitializeAsync(app.Services, cfg["OpenIddict:Issuer"]!);
 
@@ -325,3 +332,6 @@ app.MapGet("/health/redis", async (IConnectionMultiplexer mux) =>
 });
 
 app.Run();
+
+// Exposed so integration tests can host the app with WebApplicationFactory<Program>.
+public partial class Program { }

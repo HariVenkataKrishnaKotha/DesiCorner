@@ -11,8 +11,11 @@ public static class DbInitializer
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager)
     {
-        // Ensure database is created
-        await context.Database.MigrateAsync();
+        // Ensure database is created (non-relational test providers have no migrations)
+        if (context.Database.IsRelational())
+        {
+            await context.Database.MigrateAsync();
+        }
 
         // Seed Roles
         var roles = new[]
