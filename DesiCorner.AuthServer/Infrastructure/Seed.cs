@@ -97,14 +97,23 @@ public static class Seed
         // Client already exists — no updates needed.
         // The Angular SPA is a Public client using Authorization Code + PKCE.
 
-        // YARP Gateway Client (for introspection)
+        // YARP Gateway Client (for introspection). The secret comes only from configuration.
+        var gatewaySecret = services.GetRequiredService<IConfiguration>()[ClientSecrets.GatewayKey];
+        if (string.IsNullOrWhiteSpace(gatewaySecret))
+        {
+            services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(Seed)).LogWarning(
+                "{Key} is not configured; the desicorner-gateway client is not seeded and token introspection is unavailable",
+                ClientSecrets.GatewayKey);
+            return;
+        }
+
         var gatewayClient = await manager.FindByClientIdAsync("desicorner-gateway");
         if (gatewayClient is null)
         {
             await manager.CreateAsync(new OpenIddictApplicationDescriptor
             {
                 ClientId = "desicorner-gateway",
-                ClientSecret = "desicorner-gateway-secret-change-in-production",
+                ClientSecret = gatewaySecret,
                 ClientType = ClientTypes.Confidential,
                 DisplayName = "DesiCorner API Gateway",
                 Permissions =
@@ -123,11 +132,11 @@ public static class Seed
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(Seed));
 
         // OrderAPI (confidential): client-credentials only, for the user-lookup scope
-        var secret = configuration[InternalApi.OrderServiceSecretKey];
+        var secret = configuration[ClientSecrets.OrderServiceKey];
         if (string.IsNullOrWhiteSpace(secret))
         {
             logger.LogWarning("{Key} is not configured; the {ClientId} client is not seeded and guest-order account linking is unavailable",
-                InternalApi.OrderServiceSecretKey, InternalApi.OrderServiceClientId);
+                ClientSecrets.OrderServiceKey, InternalApi.OrderServiceClientId);
             return;
         }
 

@@ -286,6 +286,9 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+// Confidential client secrets come only from configuration; outside Development they are required
+ClientSecrets.EnsureConfigured(app.Configuration, app.Environment);
+
 // Migrate and seed
 using (var scope = app.Services.CreateScope())
 {
