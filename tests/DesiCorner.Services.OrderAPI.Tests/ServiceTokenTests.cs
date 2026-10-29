@@ -109,6 +109,8 @@ public class ServiceTokenTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Empty(factory.TokenRequests);
+        // Without a secret OrderAPI cannot be authorized, so it does not call the lookup at all
+        Assert.Empty(factory.LookupRequests);
         using var db = factory.CreateDbContext();
         Assert.True(Assert.Single(db.Orders).IsGuestOrder);
     }
