@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\DesiCorner.AuthServer\DesiCorner.AuthServer.csproj" />
+    <ProjectReference Include="..\DesiCorner.Tests.Shared\DesiCorner.Tests.Shared.csproj" />
   </ItemGroup>
 
 </Project>

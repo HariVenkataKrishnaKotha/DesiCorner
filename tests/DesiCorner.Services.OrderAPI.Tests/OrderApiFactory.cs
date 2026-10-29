@@ -60,6 +60,9 @@ public sealed class OrderApiFactory : WebApplicationFactory<Program>
 
     public ManualClock Clock { get; } = new();
 
+    /// <summary>False keeps Program's own primary handlers (to inspect their TLS settings).</summary>
+    public bool StubDownstream { get; init; } = true;
+
     public IReadOnlyList<RecordedRequest> TokenRequests =>
         Downstream.Requests.Where(r => r.Uri.AbsolutePath == "/connect/token").ToList();
 
@@ -85,7 +88,7 @@ public sealed class OrderApiFactory : WebApplicationFactory<Program>
             services.AddDbContext<OrderDbContext>(o => o.UseInMemoryDatabase(_dbName));
 
             // Only the clients Program registers; their base addresses come from Program too.
-            foreach (var name in new[] { "CartAPI", "PaymentAPI", "AuthAPI", "AuthServerToken" })
+            foreach (var name in StubDownstream ? new[] { "CartAPI", "PaymentAPI", "AuthAPI", "AuthServerToken" } : Array.Empty<string>())
             {
                 services.AddHttpClient(name).ConfigurePrimaryHttpMessageHandler(() => Downstream);
             }

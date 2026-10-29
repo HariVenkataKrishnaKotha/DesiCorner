@@ -25,6 +25,9 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
     /// <summary>Null leaves the secret unconfigured.</summary>
     public string? IntrospectionSecret { get; init; } = TestIntrospectionSecret;
 
+    /// <summary>False keeps Program's own introspection handler (to inspect its TLS settings).</summary>
+    public bool StubIntrospection { get; init; } = true;
+
     public RecordingHandler Upstream { get; } = new();
 
     /// <summary>Stands in for AuthServer's introspection endpoint.</summary>
@@ -43,8 +46,11 @@ public sealed class GatewayFactory : WebApplicationFactory<Program>
             services.RemoveAll<IDistributedCache>();
             services.AddDistributedMemoryCache();
 
-            services.AddHttpClient<IIntrospectionClient, IntrospectionClient>()
-                .ConfigurePrimaryHttpMessageHandler(() => Introspection);
+            if (StubIntrospection)
+            {
+                services.AddHttpClient<IIntrospectionClient, IntrospectionClient>()
+                    .ConfigurePrimaryHttpMessageHandler(() => Introspection);
+            }
 
             services.RemoveAll<IRedisRateLimiter>();
             services.AddSingleton<IRedisRateLimiter, NoRateLimiter>();
